@@ -1,6 +1,22 @@
 package com.ezzdigi.ezzgameboost
 
+import android.Manifest
 import android.animation.ValueAnimator
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.pm.PackageManager
+import android.net.VpnService
+import android.os.ParcelFileDescriptor
+import java.io.ByteArrayOutputStream
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.util.concurrent.atomic.AtomicLong
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.ClipData
@@ -60,6 +76,7 @@ private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 
 class AppItem(val label: String, val pkg: String, val isGame: Boolean)
+class DnsProvider(val name: String, val primary: String, val secondary: String)
 class BatteryState(val pct: Int, val temp: Float, val charging: Boolean)
 
 // ---------------------------------------------------------------------------
@@ -332,6 +349,80 @@ class BoostView(
     }
 }
 
+class LogoView(ctx: Context, private val ringColor: Int, private val bgColor: Int) : View(ctx) {
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val body = Path()
+    private val dpad = Path()
+    private val bolt = Path()
+
+    init {
+        body.moveTo(36f, 46f)
+        body.lineTo(72f, 46f)
+        body.quadTo(80f, 46f, 82f, 58f)
+        body.lineTo(83.5f, 68f)
+        body.quadTo(84.5f, 76f, 78f, 76f)
+        body.quadTo(73f, 76f, 70f, 71f)
+        body.lineTo(67f, 66f)
+        body.lineTo(41f, 66f)
+        body.lineTo(38f, 71f)
+        body.quadTo(35f, 76f, 30f, 76f)
+        body.quadTo(23.5f, 76f, 24.5f, 68f)
+        body.lineTo(26f, 58f)
+        body.quadTo(28f, 46f, 36f, 46f)
+        body.close()
+
+        dpad.moveTo(37f, 52f)
+        dpad.lineTo(40f, 52f)
+        dpad.lineTo(40f, 56f)
+        dpad.lineTo(44f, 56f)
+        dpad.lineTo(44f, 59f)
+        dpad.lineTo(40f, 59f)
+        dpad.lineTo(40f, 63f)
+        dpad.lineTo(37f, 63f)
+        dpad.lineTo(37f, 59f)
+        dpad.lineTo(33f, 59f)
+        dpad.lineTo(33f, 56f)
+        dpad.lineTo(37f, 56f)
+        dpad.close()
+
+        bolt.moveTo(57f, 27f)
+        bolt.lineTo(48f, 39f)
+        bolt.lineTo(53f, 39f)
+        bolt.lineTo(50f, 47f)
+        bolt.lineTo(60f, 34f)
+        bolt.lineTo(55f, 34f)
+        bolt.close()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val s = minOf(width, height) / 108f
+        canvas.save()
+        canvas.scale(s, s)
+        p.style = Paint.Style.FILL
+        p.color = bgColor
+        canvas.drawRoundRect(0f, 0f, 108f, 108f, 26f, 26f, p)
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = 3.5f
+        p.color = ringColor
+        canvas.drawCircle(54f, 54f, 38f, p)
+        p.style = Paint.Style.FILL
+        canvas.save()
+        canvas.scale(0.88f, 0.88f, 54f, 61f)
+        p.color = Color.rgb(242, 243, 247)
+        canvas.drawPath(body, p)
+        p.color = bgColor
+        canvas.drawPath(dpad, p)
+        p.color = ringColor
+        canvas.drawCircle(68f, 54f, 2.6f, p)
+        canvas.drawCircle(74f, 59.5f, 2.6f, p)
+        canvas.restore()
+        p.color = Color.rgb(255, 176, 32)
+        canvas.drawPath(bolt, p)
+        canvas.restore()
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Activity
 // ---------------------------------------------------------------------------
@@ -365,6 +456,18 @@ class MainActivity : Activity() {
     private val tabIcons = arrayOf("🏠", "🎮", "📡", "🛠", "📊")
     private val tabNames = arrayOf("خانه", "بازی‌ها", "شبکه", "ابزار", "آمار")
 
+    private val dnsProviders = listOf(
+        DnsProvider("Radar Game • رادار گیم", "10.202.10.10", "10.202.10.11"),
+        DnsProvider("Electro • الکترو", "78.157.42.100", "78.157.42.101"),
+        DnsProvider("Shecan • شکن", "178.22.122.100", "185.51.200.2"),
+        DnsProvider("Begzar • بگذر", "185.55.226.26", "185.55.225.25"),
+        DnsProvider("Shelter • شلتر", "94.156.65.130", "91.92.249.227"),
+        DnsProvider("Cloudflare", "1.1.1.1", "1.0.0.1"),
+        DnsProvider("Google", "8.8.8.8", "8.8.4.4"),
+        DnsProvider("Quad9", "9.9.9.9", "149.112.112.112"),
+        DnsProvider("AdGuard", "94.140.14.14", "94.140.15.15")
+    )
+
     private val pingTargets = arrayOf(
         Triple("Cloudflare", "1.1.1.1", 443),
         Triple("Google", "8.8.8.8", 443),
@@ -378,11 +481,14 @@ class MainActivity : Activity() {
     private lateinit var scroll: ScrollView
     private lateinit var tabBar: LinearLayout
     private var homeRefresh: (() -> Unit)? = null
+    private var netRefresh: (() -> Unit)? = null
+    private var pendingDns: DnsProvider? = null
+    private val dnsPing = HashMap<String, Int>()
+    private var dnsBenchRunning = false
 
     @Volatile
     private var pingToken = 0
     private var netTarget = 0
-    private var benchRunning = false
 
     private var appsCache: List<AppItem>? = null
     private var appsLoading = false
@@ -392,6 +498,7 @@ class MainActivity : Activity() {
     private val ticker = object : Runnable {
         override fun run() {
             homeRefresh?.invoke()
+            netRefresh?.invoke()
             handler.postDelayed(this, 2000)
         }
     }
@@ -455,6 +562,10 @@ class MainActivity : Activity() {
             setTextColor(white)
             letterSpacing = 0.04f
         }
+        val logo = LogoView(this, accent, panel)
+        val logoLp = LinearLayout.LayoutParams(dp(40), dp(40))
+        logoLp.marginEnd = dp(10)
+        header.addView(logo, logoLp)
         header.addView(titleView, LinearLayout.LayoutParams(0, WRAP, 1f))
         val ver = TextView(this).apply {
             text = "v2.0"
@@ -527,6 +638,7 @@ class MainActivity : Activity() {
     private fun showTab(i: Int) {
         tab = i
         homeRefresh = null
+        netRefresh = null
         pingToken++
         content.removeAllViews()
         refreshTabBar()
@@ -877,6 +989,7 @@ class MainActivity : Activity() {
         val vCpu = infoRow(info, "هسته‌های CPU")
         val vRefresh = infoRow(info, "نرخ نوسازی صفحه")
         val vNet = infoRow(info, "شبکه")
+        val vDns = infoRow(info, "DNS")
         val vThermal = infoRow(info, "وضعیت دمایی")
         val vTemp = infoRow(info, "دمای باتری")
         vDevice.text = "${Build.MANUFACTURER} ${Build.MODEL}"
@@ -909,6 +1022,7 @@ class MainActivity : Activity() {
             val hz = refreshRateText()
             vRefresh.text = hz
             vNet.text = net
+            vDns.text = if (DnsVpnService.running) DnsVpnService.activeName else "پیش‌فرض سیستم"
             vThermal.text = thermal
             vTemp.text = String.format(Locale.US, "%.1f °C", bat.temp)
             heroSub.text = "$net  •  $hz  •  $thermal"
@@ -1253,6 +1367,7 @@ class MainActivity : Activity() {
     }
 
     private fun buildNetwork() {
+        buildDnsChanger()
         section("PING LAB")
         val pingCard = card()
         pingCard.addView(label("تست تأخیر اتصال TCP", 15f, white, true))
@@ -1341,23 +1456,12 @@ class MainActivity : Activity() {
         pingCard.addView(startBtn, LinearLayout.LayoutParams(MATCH, WRAP))
         content.addView(pingCard, vlp(0, 4))
 
-        section("SERVER BENCHMARK")
-        val bCard = card()
-        bCard.addView(label("مقایسه‌ی سرعت اتصال به چند سرور معروف (DNS/CDN) از شبکه‌ی فعلی تو.", 12f, muted))
-        val bList = LinearLayout(this)
-        bList.orientation = LinearLayout.VERTICAL
-        bCard.addView(bList, vlp(8, 8))
-        val bBtn = button("اجرای بنچمارک") {}
-        bBtn.setOnClickListener { runBenchmark(bList, bBtn) }
-        bCard.addView(bBtn, LinearLayout.LayoutParams(MATCH, WRAP))
-        content.addView(bCard, vlp(0, 4))
-
-        section("PRIVATE DNS")
+        section("PRIVATE DNS (DoT)")
         val dnsCard = card()
         dnsCard.addView(label("DNS خصوصی اندروید (DNS-over-TLS)", 15f, white, true))
         dnsCard.addView(
             label(
-                "اپ بدون اجازه‌ی سیستمی نمی‌تواند DNS کل گوشی را عوض کند. نام میزبان را کپی کن و در تنظیمات Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان.",
+                "روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. نام میزبان را کپی کن و در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان.",
                 12f, muted
             ), vlp(2, 6)
         )
@@ -1394,50 +1498,233 @@ class MainActivity : Activity() {
         content.addView(dnsCard, vlp(0, 4))
     }
 
-    private fun runBenchmark(list: LinearLayout, btn: TextView) {
-        if (benchRunning) return
-        benchRunning = true
-        btn.text = "در حال اجرا…"
-        list.removeAllViews()
-        val status = label("در حال تست سرورها…", 12.5f, muted)
-        list.addView(status)
-        runBg {
-            val results = ArrayList<Pair<String, Int>>()
-            for (t in pingTargets) {
-                val vals = ArrayList<Int>()
-                for (k in 0 until 5) {
-                    val ms = tcpPing(t.second, t.third, 1500)
-                    if (ms >= 0) vals.add(ms)
-                    try {
-                        Thread.sleep(60)
-                    } catch (_: InterruptedException) {
-                    }
-                }
-                val avg = if (vals.isEmpty()) -1 else vals.average().toInt()
-                results.add(Pair(t.first, avg))
-                ui { status.text = "تست شد: ${t.first}" }
+    private fun selectedDns(): DnsProvider =
+        dnsProviders[prefs.getInt("dnsSel", 0).coerceIn(0, dnsProviders.size - 1)]
+
+    private fun buildDnsChanger() {
+        section("DNS CHANGER")
+        val dCard = card()
+        val statusTitle = label("", 15f, white, true)
+        val statusSub = label("", 12f, muted)
+        dCard.addView(statusTitle)
+        dCard.addView(statusSub, vlp(2, 10))
+        val listBox = LinearLayout(this)
+        listBox.orientation = LinearLayout.VERTICAL
+        dCard.addView(listBox)
+        val connectBtn = button("اتصال") {}
+        dCard.addView(connectBtn, vlp(10, 8))
+        val benchBtn = button("تست سرعت همه‌ی DNSها", false) {}
+        dCard.addView(benchBtn, vlp(0, 8))
+        dCard.addView(
+            label(
+                "اتصال با یک VPN محلی انجام می‌شود که فقط درخواست‌های DNS را به سرور انتخابی می‌فرستد؛ بقیه‌ی ترافیک از مسیر عادی می‌رود. اندروید هم‌زمان فقط یک VPN را نگه می‌دارد، پس VPN دیگر قطع می‌شود. اگر Private DNS روی حالت hostname است، اول آن را Off یا Automatic کن.",
+                11.5f, muted
+            )
+        )
+        content.addView(dCard, vlp(0, 4))
+
+        var lastKey = ""
+        fun render(force: Boolean) {
+            val running = DnsVpnService.running
+            val active = DnsVpnService.activeName
+            val sel = selectedDns()
+            statusTitle.text = if (running) "🟢 متصل: $active" else "⚪ قطع (DNS پیش‌فرض سیستم)"
+            statusTitle.setTextColor(if (running) good else white)
+            statusSub.text = if (running) {
+                "درخواست پاسخ‌داده‌شده: ${DnsVpnService.queryCount.get()} • ناموفق: ${DnsVpnService.failCount.get()}"
+            } else {
+                "یک DNS انتخاب کن و دکمه‌ی اتصال را بزن."
             }
-            ui {
-                benchRunning = false
-                btn.text = "اجرای دوباره"
-                list.removeAllViews()
-                val ok = results.filter { it.second >= 0 }.sortedBy { it.second }
-                val fail = results.filter { it.second < 0 }
-                val best = maxOf(ok.firstOrNull()?.second ?: 1, 1)
-                for ((idx, r) in ok.withIndex()) {
-                    val frac = best.toFloat() / maxOf(r.second, 1).toFloat()
-                    list.addView(barRow(r.first, "${r.second} ms", frac, if (idx == 0) good else accent, idx == 0))
+            connectBtn.text = if (running && active == sel.name) {
+                "قطع اتصال"
+            } else if (running) {
+                "تغییر به ${sel.name}"
+            } else {
+                "اتصال به ${sel.name}"
+            }
+            val key = "$running|$active|${sel.name}|${dnsPing.size}|$dnsBenchRunning"
+            if (!force && key == lastKey) return
+            lastKey = key
+            listBox.removeAllViews()
+            for (i in dnsProviders.indices) {
+                val pr = dnsProviders[i]
+                val isSel = pr.name == sel.name
+                val row = LinearLayout(this)
+                row.orientation = LinearLayout.HORIZONTAL
+                row.gravity = Gravity.CENTER_VERTICAL
+                row.setPadding(dp(12), dp(10), dp(12), dp(10))
+                row.background = rounded(if (isSel) accentAlpha(35) else panel2, 12, if (isSel) accent else stroke)
+                val radio = label(if (isSel) "◉" else "○", 18f, if (isSel) accent else muted)
+                radio.setPadding(0, 0, dp(10), 0)
+                row.addView(radio)
+                val col = LinearLayout(this)
+                col.orientation = LinearLayout.VERTICAL
+                val title = if (running && pr.name == active) "${pr.name}  ✓" else pr.name
+                col.addView(label(title, 13.5f, white, true))
+                col.addView(label("${pr.primary}  •  ${pr.secondary}", 11.5f, muted))
+                row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
+                val ms = dnsPing[pr.name]
+                val msText = if (ms == null) "" else if (ms < 0) "✕" else "$ms ms"
+                val msColor = if (ms == null) muted else if (ms < 0) bad else if (ms < 60) good else if (ms < 120) warn else bad
+                row.addView(label(msText, 12.5f, msColor, true))
+                row.setOnClickListener {
+                    prefs.edit().putInt("dnsSel", i).apply()
+                    render(true)
                 }
-                for (r in fail) {
-                    list.addView(barRow(r.first, "✕", 0.04f, bad, false))
-                }
-                if (ok.isNotEmpty()) {
-                    list.addView(label("سریع‌ترین مسیر فعلی: ${ok[0].first}", 12.5f, white, true), vlp(8, 0))
-                } else {
-                    list.addView(label("هیچ سروری پاسخ نداد؛ اینترنت یا VPN را بررسی کن.", 12.5f, bad), vlp(8, 0))
-                }
+                listBox.addView(row, vlp(0, 6))
             }
         }
+
+        connectBtn.setOnClickListener {
+            val sel = selectedDns()
+            if (DnsVpnService.running && DnsVpnService.activeName == sel.name) {
+                stopDns()
+            } else {
+                connectDns(sel)
+            }
+            handler.postDelayed({ netRefresh?.invoke() }, 800)
+        }
+        benchBtn.setOnClickListener { runDnsBench(benchBtn) { render(true) } }
+
+        netRefresh = { render(false) }
+        render(true)
+    }
+
+    private fun buildDnsQuery(name: String, id: Int): ByteArray {
+        val out = ByteArrayOutputStream()
+        out.write(id shr 8)
+        out.write(id and 0xFF)
+        out.write(0x01)
+        out.write(0x00)
+        out.write(0)
+        out.write(1)
+        for (i in 0 until 6) out.write(0)
+        for (part in name.split(".")) {
+            val b = part.toByteArray()
+            out.write(b.size)
+            out.write(b, 0, b.size)
+        }
+        out.write(0)
+        out.write(0)
+        out.write(1)
+        out.write(0)
+        out.write(1)
+        return out.toByteArray()
+    }
+
+    private fun dnsPingMs(ip: String, timeoutMs: Int): Int {
+        val sock = try {
+            DatagramSocket()
+        } catch (_: Exception) {
+            return -1
+        }
+        try {
+            val q = buildDnsQuery("example.com", 0x1A2B)
+            sock.soTimeout = timeoutMs
+            val addr = InetAddress.getByName(ip)
+            val t0 = System.nanoTime()
+            sock.send(DatagramPacket(q, q.size, addr, 53))
+            val buf = ByteArray(1500)
+            val rp = DatagramPacket(buf, buf.size)
+            sock.receive(rp)
+            val ms = ((System.nanoTime() - t0) / 1000000L).toInt()
+            val okId = (buf[0].toInt() and 0xFF) == 0x1A && (buf[1].toInt() and 0xFF) == 0x2B
+            return if (rp.length >= 12 && okId) ms else -1
+        } catch (_: Exception) {
+            return -1
+        } finally {
+            sock.close()
+        }
+    }
+
+    private fun runDnsBench(btn: TextView, onUpdate: () -> Unit) {
+        if (dnsBenchRunning) return
+        dnsBenchRunning = true
+        dnsPing.clear()
+        btn.text = "در حال تست…"
+        onUpdate()
+        runBg {
+            for (pr in dnsProviders) {
+                val vals = ArrayList<Int>()
+                for (k in 0 until 3) {
+                    val ms = dnsPingMs(pr.primary, 1500)
+                    if (ms >= 0) vals.add(ms)
+                }
+                val avg = if (vals.isEmpty()) -1 else vals.average().toInt()
+                ui {
+                    dnsPing[pr.name] = avg
+                    onUpdate()
+                }
+            }
+            ui {
+                dnsBenchRunning = false
+                btn.text = "تست سرعت همه‌ی DNSها"
+                onUpdate()
+            }
+        }
+    }
+
+    private fun connectDns(pr: DnsProvider) {
+        pendingDns = pr
+        val intent = VpnService.prepare(this)
+        if (intent != null) {
+            try {
+                startActivityForResult(intent, 4711)
+            } catch (_: Exception) {
+                toast("این دستگاه از VPN محلی پشتیبانی نمی‌کند.")
+            }
+        } else {
+            startDnsService(pr)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 4711) {
+            val pr = pendingDns
+            if (resultCode == Activity.RESULT_OK && pr != null) {
+                startDnsService(pr)
+            } else {
+                toast("اجازه‌ی VPN داده نشد؛ بدون آن DNS تغییر نمی‌کند.")
+            }
+        }
+    }
+
+    private fun startDnsService(pr: DnsProvider) {
+        val i = Intent(this, DnsVpnService::class.java)
+        i.action = DnsVpnService.ACTION_START
+        i.putExtra("primary", pr.primary)
+        i.putExtra("secondary", pr.secondary)
+        i.putExtra("name", pr.name)
+        try {
+            startService(i)
+        } catch (_: Exception) {
+            toast("شروع سرویس DNS ناموفق بود.")
+            return
+        }
+        val idx = dnsProviders.indexOf(pr)
+        if (idx >= 0) prefs.edit().putInt("dnsSel", idx).apply()
+        toast("در حال اتصال به ${pr.name}…")
+        if (Build.VERSION.SDK_INT >= 33 && !prefs.getBoolean("askedNotif", false) &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            prefs.edit().putBoolean("askedNotif", true).apply()
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4712)
+        }
+        handler.postDelayed({
+            netRefresh?.invoke()
+            homeRefresh?.invoke()
+        }, 900)
+    }
+
+    private fun stopDns() {
+        try {
+            stopService(Intent(this, DnsVpnService::class.java))
+        } catch (_: Exception) {
+        }
+        DnsVpnService.running = false
+        DnsVpnService.activeName = ""
+        toast("DNS به حالت پیش‌فرض برگشت.")
     }
 
     // ----- TOOLS ------------------------------------------------------------
@@ -1638,5 +1925,271 @@ class MainActivity : Activity() {
             showTab(4)
         }, LinearLayout.LayoutParams(MATCH, WRAP))
         content.addView(about, vlp(0, 4))
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+// DNS VPN service: local VPN that only captures DNS queries and forwards them
+// to the chosen DNS server (primary, then secondary as fallback).
+// ---------------------------------------------------------------------------
+
+class DnsVpnService : VpnService() {
+
+    companion object {
+        const val ACTION_START = "com.ezzdigi.ezzgameboost.DNS_START"
+        private const val FAKE_DNS = "10.111.222.2"
+        private const val TUN_ADDR = "10.111.222.1"
+
+        @Volatile
+        var running = false
+
+        @Volatile
+        var activeName = ""
+        val queryCount = AtomicLong(0L)
+        val failCount = AtomicLong(0L)
+    }
+
+    private var tun: ParcelFileDescriptor? = null
+    private var pool: java.util.concurrent.ExecutorService? = null
+
+    @Volatile
+    private var stopping = false
+
+    @Volatile
+    private var primaryDownUntil = 0L
+    private var primary = ""
+    private var secondary = ""
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent == null || intent.action != ACTION_START) {
+            stopSelf()
+            return Service.START_NOT_STICKY
+        }
+        val p = intent.getStringExtra("primary") ?: ""
+        val s = intent.getStringExtra("secondary") ?: ""
+        val n = intent.getStringExtra("name") ?: p
+        if (p.isEmpty()) {
+            stopSelf()
+            return Service.START_NOT_STICKY
+        }
+        startTunnel(p, s, n)
+        return Service.START_NOT_STICKY
+    }
+
+    private fun startTunnel(p: String, s: String, name: String) {
+        cleanup()
+        primary = p
+        secondary = s
+        primaryDownUntil = 0L
+        try {
+            val b = Builder()
+            b.setSession("EzzGameBOOST DNS")
+            b.addAddress(TUN_ADDR, 24)
+            b.addRoute("10.111.222.0", 24)
+            b.addDnsServer(FAKE_DNS)
+            b.setMtu(1500)
+            b.setBlocking(true)
+            val pfd = b.establish()
+            if (pfd == null) {
+                running = false
+                stopSelf()
+                return
+            }
+            tun = pfd
+            stopping = false
+            running = true
+            activeName = name
+            queryCount.set(0L)
+            failCount.set(0L)
+            pool = java.util.concurrent.Executors.newFixedThreadPool(12)
+            goForeground(name)
+            Thread { loop(pfd) }.start()
+        } catch (_: Throwable) {
+            cleanup()
+            stopSelf()
+        }
+    }
+
+    private fun goForeground(name: String) {
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(
+                NotificationChannel("ezz_dns", "DNS", NotificationManager.IMPORTANCE_LOW)
+            )
+            val pi = PendingIntent.getActivity(
+                this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
+            )
+            val n = Notification.Builder(this, "ezz_dns")
+                .setContentTitle("EzzGameBOOST DNS")
+                .setContentText("متصل: $name")
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setContentIntent(pi)
+                .setOngoing(true)
+                .build()
+            startForeground(1, n)
+        } catch (_: Throwable) {
+        }
+    }
+
+    private fun loop(pfd: ParcelFileDescriptor) {
+        val input = FileInputStream(pfd.fileDescriptor)
+        val output = FileOutputStream(pfd.fileDescriptor)
+        val buf = ByteArray(32768)
+        try {
+            while (!stopping) {
+                val n = input.read(buf)
+                if (n < 0) break
+                if (n < 28) continue
+                handle(buf, n, output)
+            }
+        } catch (_: Exception) {
+        }
+        if (!stopping) {
+            running = false
+            activeName = ""
+            stopSelf()
+        }
+    }
+
+    private fun u16(b: ByteArray, off: Int): Int =
+        ((b[off].toInt() and 0xFF) shl 8) or (b[off + 1].toInt() and 0xFF)
+
+    private fun handle(buf: ByteArray, n: Int, output: FileOutputStream) {
+        val ver = (buf[0].toInt() shr 4) and 0xF
+        if (ver != 4) return
+        val ihl = (buf[0].toInt() and 0xF) * 4
+        val proto = buf[9].toInt() and 0xFF
+        if (proto != 17 || n < ihl + 8) return
+        val srcPort = u16(buf, ihl)
+        val dstPort = u16(buf, ihl + 2)
+        if (dstPort != 53) return
+        val udpLen = u16(buf, ihl + 4)
+        val plen = minOf(udpLen - 8, n - ihl - 8)
+        if (plen <= 0) return
+        val payload = ByteArray(plen)
+        System.arraycopy(buf, ihl + 8, payload, 0, plen)
+        val srcIp = ByteArray(4)
+        val dstIp = ByteArray(4)
+        System.arraycopy(buf, 12, srcIp, 0, 4)
+        System.arraycopy(buf, 16, dstIp, 0, 4)
+        val pl = pool ?: return
+        try {
+            pl.execute {
+                try {
+                    val resp = forward(payload)
+                    if (resp != null) {
+                        queryCount.incrementAndGet()
+                        val pkt = buildPacket(dstIp, srcIp, 53, srcPort, resp)
+                        synchronized(output) { output.write(pkt) }
+                    } else {
+                        failCount.incrementAndGet()
+                    }
+                } catch (_: Throwable) {
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun forward(payload: ByteArray): ByteArray? {
+        val now = System.currentTimeMillis()
+        val order: List<String> = if (secondary.isEmpty()) {
+            listOf(primary)
+        } else if (now < primaryDownUntil) {
+            listOf(secondary, primary)
+        } else {
+            listOf(primary, secondary)
+        }
+        for ((idx, server) in order.withIndex()) {
+            val r = query(server, payload, if (idx == 0) 1800 else 2500)
+            if (r != null) return r
+            if (server == primary) primaryDownUntil = System.currentTimeMillis() + 30000L
+        }
+        return null
+    }
+
+    private fun query(server: String, payload: ByteArray, timeoutMs: Int): ByteArray? {
+        val sock = try {
+            DatagramSocket()
+        } catch (_: Exception) {
+            return null
+        }
+        try {
+            protect(sock)
+            sock.soTimeout = timeoutMs
+            sock.send(DatagramPacket(payload, payload.size, InetAddress.getByName(server), 53))
+            val buf = ByteArray(4096)
+            val rp = DatagramPacket(buf, buf.size)
+            sock.receive(rp)
+            if (rp.length < 12 || buf[0] != payload[0] || buf[1] != payload[1]) return null
+            return buf.copyOf(rp.length)
+        } catch (_: Exception) {
+            return null
+        } finally {
+            sock.close()
+        }
+    }
+
+    private fun buildPacket(src: ByteArray, dst: ByteArray, sport: Int, dport: Int, data: ByteArray): ByteArray {
+        val total = 28 + data.size
+        val p = ByteArray(total)
+        p[0] = 0x45
+        p[2] = (total shr 8).toByte()
+        p[3] = (total and 0xFF).toByte()
+        p[6] = 0x40
+        p[8] = 64
+        p[9] = 17
+        System.arraycopy(src, 0, p, 12, 4)
+        System.arraycopy(dst, 0, p, 16, 4)
+        var sum = 0
+        var i = 0
+        while (i < 20) {
+            sum += ((p[i].toInt() and 0xFF) shl 8) or (p[i + 1].toInt() and 0xFF)
+            i += 2
+        }
+        while ((sum shr 16) != 0) sum = (sum and 0xFFFF) + (sum shr 16)
+        val ck = sum.inv() and 0xFFFF
+        p[10] = (ck shr 8).toByte()
+        p[11] = (ck and 0xFF).toByte()
+        p[20] = (sport shr 8).toByte()
+        p[21] = (sport and 0xFF).toByte()
+        p[22] = (dport shr 8).toByte()
+        p[23] = (dport and 0xFF).toByte()
+        val ul = 8 + data.size
+        p[24] = (ul shr 8).toByte()
+        p[25] = (ul and 0xFF).toByte()
+        System.arraycopy(data, 0, p, 28, data.size)
+        return p
+    }
+
+    private fun cleanup() {
+        stopping = true
+        running = false
+        activeName = ""
+        try {
+            tun?.close()
+        } catch (_: Exception) {
+        }
+        tun = null
+        try {
+            pool?.shutdownNow()
+        } catch (_: Exception) {
+        }
+        pool = null
+        try {
+            stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        } catch (_: Throwable) {
+        }
+    }
+
+    override fun onRevoke() {
+        cleanup()
+        stopSelf()
+    }
+
+    override fun onDestroy() {
+        cleanup()
+        super.onDestroy()
     }
 }
