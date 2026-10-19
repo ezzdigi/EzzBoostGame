@@ -1,6 +1,13 @@
 package com.ezzdigi.ezzgameboost
 
 import android.Manifest
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.net.Uri
+import android.service.quicksettings.Tile
+import android.service.quicksettings.TileService
+import android.widget.RemoteViews
 import android.animation.ValueAnimator
 import android.app.Notification
 import android.app.NotificationChannel
@@ -77,6 +84,194 @@ private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 
 class AppItem(val label: String, val pkg: String, val isGame: Boolean)
 class DnsProvider(val name: String, val primary: String, val secondary: String)
+class ServerItem(val name: String, val host: String, val port: Int)
+class HistItem(val ts: Long, val key: String, val avg: Int, val loss: Int)
+
+object DnsList {
+    val all = listOf(
+        DnsProvider("Radar Game • رادار گیم", "10.202.10.10", "10.202.10.11"),
+        DnsProvider("Electro • الکترو", "78.157.42.100", "78.157.42.101"),
+        DnsProvider("Shecan • شکن", "178.22.122.100", "185.51.200.2"),
+        DnsProvider("Begzar • بگذر", "185.55.226.26", "185.55.225.25"),
+        DnsProvider("Shelter • شلتر", "94.156.65.130", "91.92.249.227"),
+        DnsProvider("Cloudflare", "1.1.1.1", "1.0.0.1"),
+        DnsProvider("Google", "8.8.8.8", "8.8.4.4"),
+        DnsProvider("Quad9", "9.9.9.9", "149.112.112.112"),
+        DnsProvider("AdGuard", "94.140.14.14", "94.140.15.15")
+    )
+}
+
+object Tr {
+    @Volatile
+    var en = false
+
+    fun load(ctx: Context) {
+        en = ctx.getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
+            .getString("lang", "fa") == "en"
+    }
+
+    fun t(s: String): String {
+        if (!en) return s
+        var out = s
+        for (p in PAIRS) {
+            if (out.indexOf(p.first) >= 0) out = out.replace(p.first, p.second)
+        }
+        return out
+    }
+
+    // Persian fragment -> English; longest fragments first.
+    private val PAIRS: List<Pair<String, String>> = listOf(
+        Pair("این اپ بدون روت کار می\u200cکند. دکمه\u200cی BOOST فقط از API رسمی اندروید برای بستن پردازش\u200cهای پس\u200cزمینه استفاده می\u200cکند و اندروید ممکن است بعضی برنامه\u200cها را دوباره اجرا کند. هیچ اپ معمولی نمی\u200cتواند FPS یا پینگ داخل بازی را تضمین کند؛ تست شبکه فقط زمان اتصال TCP را اندازه می\u200cگیرد", "This app works without root. The BOOST button only uses Android's official API to close background processes, and Android may restart some apps. No regular app can guarantee FPS or in-game ping; the network test only measures TCP connection time"),
+        Pair("اتصال با یک VPN محلی انجام می\u200cشود که فقط درخواست\u200cهای DNS را به سرور انتخابی می\u200cفرستد؛ بقیه\u200cی ترافیک از مسیر عادی می\u200cرود. اندروید هم\u200cزمان فقط یک VPN را نگه می\u200cدارد، پس VPN دیگر قطع می\u200cشود. اگر Private DNS روی حالت hostname است، اول آن را Off یا Automatic کن", "The connection uses a local VPN that only sends DNS requests to the selected server; all other traffic takes its normal path. Android keeps only one VPN at a time, so your other VPN will disconnect. If Private DNS is set to a hostname, switch it to Off or Automatic first"),
+        Pair("روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. نام میزبان را کپی کن و در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان", "Second method: DNS-over-TLS inside Android's own settings. Copy the hostname and enter it in Private DNS. If the connection breaks, set the option back to Automatic"),
+        Pair("حریم خصوصی: برای تغییر DNS یک VPN محلی ساخته می\u200cشود. فقط درخواست\u200cهای DNS به سرور انتخابی تو می\u200cرود و هیچ داده\u200cای برای ما ارسال نمی\u200cشود", "Privacy: a local VPN is created to change DNS. Only DNS requests go to the server you choose, and no data is sent to us"),
+        Pair("اگر قبلاً یک\u200cبار DNS را وصل کرده باشی، با اجرای بازی از همین اپ، DNS انتخابی خودکار وصل می\u200cشود", "If you have connected DNS once before, launching a game from this app auto-connects your selected DNS"),
+        Pair("با یک لمس، پردازش\u200cهای پس\u200cزمینه\u200cی برنامه\u200cها بسته می\u200cشوند تا RAM آزاد بیشتری برای بازی بماند", "With one tap, apps' background processes are closed to leave more free RAM for gaming"),
+        Pair("هنوز داده\u200cای نیست. بازی\u200cها را از تب «بازی\u200cها» اجرا کن تا زمان بازی ثبت شود", "No data yet. Launch games from the “Games” tab to record play time"),
+        Pair("زمان برقراری اتصال TCP تا سرور انتخابی؛ پینگ ICMP یا پینگ داخل بازی نیست", "Time to open a TCP connection to the selected server; this is not ICMP ping or in-game ping"),
+        Pair("زمان\u200cها تقریبی\u200cاند: از لحظه\u200cی اجرا تا بازگشت به این اپ حساب می\u200cشود", "Times are approximate: counted from launch until you return to this app"),
+        Pair("میان\u200cبرهای مهم برای گیمینگ؛ تنظیمات سیستم را مستقیم باز می\u200cکنند", "Handy gaming shortcuts; they open system settings directly"),
+        Pair("؛ ابزار گیمینگ اندروید: بوست RAM، DNS گیمینگ و تست پینگ", "; Android gaming toolkit: RAM boost, gaming DNS and ping test"),
+        Pair("تغییر واقعی DNS با رادار گیم، الکترو، شکن، بگذر و شلتر", "Real DNS switching with Radar Game, Electro, Shecan, Begzar and Shelter"),
+        Pair("تست پینگ، ذخیره\u200cی سرورهای بازی و تاریخچه\u200cی کیفیت شبکه", "Ping test, saved game servers and network quality history"),
+        Pair("بازی\u200cای شناسایی نشد. روی «همه» بزن و بازی\u200cهایت را با", "No games detected. Tap “All” and mark your games with"),
+        Pair("هنوز بازی مورد علاقه\u200cای نداری. در تب «بازی\u200cها» روی", "You have no favorite games yet. In the “Games” tab tap"),
+        Pair("برنامه بررسی شد؛ تغییر محسوسی در RAM آزاد دیده نشد", "apps checked; no noticeable change in free RAM"),
+        Pair("هنوز تستی برای این سرور ثبت نشده؛ یک تست پینگ بگیر", "No test recorded for this server yet; run a ping test"),
+        Pair("فقط داخل همین اپ؛ روشنایی کل سیستم تغییر نمی\u200cکند", "Only inside this app; the system brightness is not changed"),
+        Pair("اجازه\u200cی VPN داده نشد؛ بدون آن DNS تغییر نمی\u200cکند", "VPN permission was not granted; DNS cannot change without it"),
+        Pair("کتابخانه\u200cی بازی\u200cها با زمان بازی و اتصال خودکار", "Game library with play time and auto-connect"),
+        Pair("اندروید معمولاً خودش RAM را خوب مدیریت می\u200cکند", "Android usually manages RAM well on its own"),
+        Pair("برای اتصال خودکار، یک\u200cبار DNS را دستی وصل کن", "For auto-connect, connect DNS manually once first"),
+        Pair("هیچ DNS ای پاسخ نداد؛ اینترنت را بررسی کن", "No DNS responded; check your internet"),
+        Pair("فقط سرورهای ذخیره\u200cشده\u200cی خودت حذف می\u200cشوند", "Only your own saved servers can be deleted"),
+        Pair("این دستگاه از VPN محلی پشتیبانی نمی\u200cکند", "This device does not support a local VPN"),
+        Pair("تا وقتی این اپ بازه، صفحه خاموش نمی\u200cشود", "The screen will not turn off while this app is open"),
+        Pair("کاور ضخیم را بردار تا گوشی خنک\u200cتر بماند", "Remove thick cases so the phone stays cooler"),
+        Pair("یک DNS انتخاب کن و دکمه\u200cی اتصال را بزن", "Pick a DNS and tap Connect"),
+        Pair("پایدار؛ دانلودهای پس\u200cزمینه را متوقف کن", "stable; pause background downloads"),
+        Pair("آدرس سرور را به شکل host:port وارد کن", "Enter the server address as host:port"),
+        Pair("در حال پاک\u200cسازی پردازش\u200cهای پس\u200cزمینه", "Cleaning background processes"),
+        Pair("مرورگری برای باز کردن لینک پیدا نشد", "No browser found to open the link"),
+        Pair("مورد دیگر… برای پیداکردن، جستجو کن", "more… search to find them"),
+        Pair("برنامه\u200cهای سنگین را از Recent ببند", "Close heavy apps from Recent"),
+        Pair("باتری بالای ۳۰٪ یا گوشی روی شارژر", "Battery above 30% or phone on charger"),
+        Pair("در حال بارگذاری فهرست برنامه\u200cها", "Loading the app list"),
+        Pair("همه\u200cی تست\u200cها بدون پاسخ بوده\u200cاند", "All tests got no response"),
+        Pair("حداکثر ۱۵ سرور قابل ذخیره است", "You can save up to 15 servers"),
+        Pair("سریع\u200cترین را پیدا کن و وصل شو", "Find the fastest and connect"),
+        Pair("حالت «مزاحم نشوید» را روشن کن", "Turn on “Do Not Disturb” mode"),
+        Pair("فهرست علاقه\u200cمندی\u200cها خالی است", "Your favorites list is empty"),
+        Pair("آدرس سرور  host:port  (مثلاً", "Server address  host:port  (e.g."),
+        Pair("بوست RAM و پایش زنده\u200cی گوشی", "RAM boost and live phone monitoring"),
+        Pair("بزن تا اینجا میان\u200cبر بسازی", "to create a shortcut here"),
+        Pair("اجرای این برنامه ممکن نیست", "This app cannot be launched"),
+        Pair("به علاقه\u200cمندی\u200cها اضافه کن", "to add them to favorites"),
+        Pair("شروع سرویس DNS ناموفق بود", "Failed to start the DNS service"),
+        Pair("مسدودسازی دامنه\u200cهای مخرب", "Blocks malicious domains"),
+        Pair("ساخته\u200cشده توسط ایزی دیجی", "Built by EzzDigi"),
+        Pair("قطع (DNS پیش\u200cفرض سیستم", "Off (default system DNS"),
+        Pair("جستجوی بازی یا برنامه", "Search games or apps"),
+        Pair("درخواست پاسخ\u200cداده\u200cشده", "Answered queries"),
+        Pair("به حالت پیش\u200cفرض برگشت", "reverted to default"),
+        Pair("گزینه\u200cهای توسعه\u200cدهنده", "Developer options"),
+        Pair("نام سرور (برای ذخیره", "Server name (to save"),
+        Pair("تست سرعت همه\u200cی DNSها", "Speed-test all DNS servers"),
+        Pair("روشن نگه\u200cداشتن صفحه", "Keep screen on"),
+        Pair("پاک کردن آمار بازی", "Clear game stats"),
+        Pair("زمان بازی ثبت\u200cشده", "Recorded play time"),
+        Pair("هسته\u200cهای پردازنده", "CPU cores"),
+        Pair("اتصال برقرار نشد", "Could not connect"),
+        Pair("حذف سرور انتخابی", "Delete selected server"),
+        Pair("پاک کردن تاریخچه", "Clear history"),
+        Pair("مدیریت برنامه\u200cها", "Manage apps"),
+        Pair("بار اجرا از طریق", "launches via"),
+        Pair("نرخ نوسازی صفحه", "Refresh rate"),
+        Pair("برنامه بررسی شد", "apps checked"),
+        Pair("تست تأخیر اتصال", "TCP connection latency test"),
+        Pair("کیفیت شبکه برای", "Network quality for"),
+        Pair("در حال اتصال به", "Connecting to"),
+        Pair("اشتراک\u200cگذاری اپ", "Share app"),
+        Pair("موردی پیدا نشد", "Nothing found"),
+        Pair("هنوز اجرا نشده", "Not launched yet"),
+        Pair("حداکثر روشنایی", "Max brightness"),
+        Pair("پیش\u200cفرض سیستم", "System default"),
+        Pair("علاقه\u200cمندی\u200cها", "Favorites"),
+        Pair("سرور ذخیره شد", "Server saved"),
+        Pair("شروع تست پینگ", "Start ping test"),
+        Pair("فیلتر تبلیغات", "Ad filtering"),
+        Pair("ذخیره\u200cی سرور", "Save server"),
+        Pair("سریع و عمومی", "Fast & public"),
+        Pair("اتصال خودکار", "Auto-connect"),
+        Pair("آماده نبرد؟", "Ready for battle?"),
+        Pair("وضعیت دمایی", "Thermal status"),
+        Pair("کیفیت اتصال", "Connection quality"),
+        Pair("بهترین ساعت", "Best hour"),
+        Pair("بدترین ساعت", "Worst hour"),
+        Pair("آماده\u200cی تست", "Ready to test"),
+        Pair("مزاحم نشوید", "Do Not Disturb"),
+        Pair("در اندروید", "in Android"),
+        Pair("بدون اتصال", "No connection"),
+        Pair("دمای باتری", "Battery temp"),
+        Pair("در حال تست", "Testing"),
+        Pair("ایزی دیجی", "EzzDigi"),
+        Pair("قطع اتصال", "Disconnect"),
+        Pair("سریع\u200cترین", "Fastest"),
+        Pair("فیروزه\u200cای", "Cyan"),
+        Pair("باز کردن", "Open"),
+        Pair("خیلی گرم", "Hot"),
+        Pair("بار اجرا", "launches"),
+        Pair("تغییر به", "Switch to"),
+        Pair("اتصال به", "Connect to"),
+        Pair("رنگ فعلی", "Current color"),
+        Pair("بازی\u200cها", "Games"),
+        Pair("کمی گرم", "Slightly warm"),
+        Pair("اضطراری", "Emergency"),
+        Pair("اندروید", "Android"),
+        Pair("آزاد شد", "freed"),
+        Pair("نمایشگر", "Display"),
+        Pair("نارنجی", "Orange"),
+        Pair("ساعت و", "h"),
+        Pair("کپی شد", "Copied"),
+        Pair("نامشخص", "Unknown"),
+        Pair("بحرانی", "Critical"),
+        Pair("موبایل", "Mobile"),
+        Pair("دستگاه", "Device"),
+        Pair("ناموفق", "Failed"),
+        Pair("رنگ تم", "Theme color"),
+        Pair("ابزار", "Tools"),
+        Pair("دقیقه", "min"),
+        Pair("متوسط", "Average"),
+        Pair("عمومی", "Public"),
+        Pair("اتصال", "Connect"),
+        Pair("خاموش", "Off"),
+        Pair("باتری", "Battery"),
+        Pair("حافظه", "Storage"),
+        Pair("قرمز", "Red"),
+        Pair("بنفش", "Purple"),
+        Pair("خانه", "Home"),
+        Pair("شبکه", "Network"),
+        Pair("آمار", "Stats"),
+        Pair("عادی", "Normal"),
+        Pair("شارژ", "Charging"),
+        Pair("آزاد", "free"),
+        Pair("اجرا", "Launch"),
+        Pair("عالی", "Excellent"),
+        Pair("ضعیف", "Weak"),
+        Pair("توقف", "Stop"),
+        Pair("متصل", "Connected"),
+        Pair("شروع", "Start"),
+        Pair("روشن", "On"),
+        Pair("سبز", "Green"),
+        Pair("گرم", "Warm"),
+        Pair("همه", "All"),
+        Pair("خوب", "Good"),
+        Pair("تست", "tests"),
+        Pair("کپی", "Copy"),
+        Pair("صدا", "Sound")
+    )
+}
+
 class BatteryState(val pct: Int, val temp: Float, val charging: Boolean)
 
 // ---------------------------------------------------------------------------
@@ -456,17 +651,7 @@ class MainActivity : Activity() {
     private val tabIcons = arrayOf("🏠", "🎮", "📡", "🛠", "📊")
     private val tabNames = arrayOf("خانه", "بازی‌ها", "شبکه", "ابزار", "آمار")
 
-    private val dnsProviders = listOf(
-        DnsProvider("Radar Game • رادار گیم", "10.202.10.10", "10.202.10.11"),
-        DnsProvider("Electro • الکترو", "78.157.42.100", "78.157.42.101"),
-        DnsProvider("Shecan • شکن", "178.22.122.100", "185.51.200.2"),
-        DnsProvider("Begzar • بگذر", "185.55.226.26", "185.55.225.25"),
-        DnsProvider("Shelter • شلتر", "94.156.65.130", "91.92.249.227"),
-        DnsProvider("Cloudflare", "1.1.1.1", "1.0.0.1"),
-        DnsProvider("Google", "8.8.8.8", "8.8.4.4"),
-        DnsProvider("Quad9", "9.9.9.9", "149.112.112.112"),
-        DnsProvider("AdGuard", "94.140.14.14", "94.140.15.15")
-    )
+    private val dnsProviders = DnsList.all
 
     private val pingTargets = arrayOf(
         Triple("Cloudflare", "1.1.1.1", 443),
@@ -508,8 +693,17 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
+        Tr.load(this)
         val idx = prefs.getInt("accent", 0)
         accent = accents[idx.coerceIn(0, accents.size - 1)]
+        if (!prefs.getBoolean("onboarded", false)) {
+            showOnboarding()
+        } else {
+            startMain()
+        }
+    }
+
+    private fun startMain() {
         buildShell()
         applyWindowToggles()
         showTab(0)
@@ -518,13 +712,15 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         val recorded = finalizeSession()
-        if (recorded && (tab == 0 || tab == 1 || tab == 4)) showTab(tab)
+        if (recorded && (tab == 0 || tab == 1 || tab == 4) && ::content.isInitialized) showTab(tab)
         handler.removeCallbacks(ticker)
         handler.post(ticker)
+        refreshWidget()
     }
 
     override fun onPause() {
         handler.removeCallbacks(ticker)
+        refreshWidget()
         super.onPause()
     }
 
@@ -541,7 +737,7 @@ class MainActivity : Activity() {
         val rootView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bg0)
-            layoutDirection = View.LAYOUT_DIRECTION_RTL
+            layoutDirection = if (Tr.en) View.LAYOUT_DIRECTION_LTR else View.LAYOUT_DIRECTION_RTL
         }
         rootView.setOnApplyWindowInsetsListener { v, insets ->
             v.setPadding(0, insets.systemWindowInsetTop, 0, insets.systemWindowInsetBottom)
@@ -566,9 +762,14 @@ class MainActivity : Activity() {
         val logoLp = LinearLayout.LayoutParams(dp(40), dp(40))
         logoLp.marginEnd = dp(10)
         header.addView(logo, logoLp)
-        header.addView(titleView, LinearLayout.LayoutParams(0, WRAP, 1f))
+        val titleCol = LinearLayout(this)
+        titleCol.orientation = LinearLayout.VERTICAL
+        titleCol.addView(titleView)
+        titleCol.addView(label("ایزی دیجی • ezzdigio.com", 10.5f, muted))
+        titleCol.setOnClickListener { openUrl("https://ezzdigio.com") }
+        header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
         val ver = TextView(this).apply {
-            text = "v2.0"
+            text = "v2.1"
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(accent)
@@ -622,7 +823,7 @@ class MainActivity : Activity() {
                 alpha = if (selected) 1f else 0.45f
             }
             val tx = TextView(this).apply {
-                text = tabNames[i]
+                text = Tr.t(tabNames[i])
                 textSize = 10.5f
                 gravity = Gravity.CENTER
                 setTextColor(if (selected) accent else muted)
@@ -668,7 +869,7 @@ class MainActivity : Activity() {
     }
 
     private fun toast(msg: String) {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, Tr.t(msg), Toast.LENGTH_SHORT).show()
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density + 0.5f).toInt()
@@ -706,9 +907,9 @@ class MainActivity : Activity() {
         return p
     }
 
-    private fun label(text: CharSequence, sizeSp: Float, color: Int, bold: Boolean = false): TextView {
+    private fun label(text: CharSequence, sizeSp: Float, color: Int, bold: Boolean = false, tr: Boolean = true): TextView {
         val t = TextView(this)
-        t.text = text
+        t.text = if (tr) Tr.t(text.toString()) else text
         t.textSize = sizeSp
         t.setTextColor(color)
         if (bold) t.typeface = Typeface.DEFAULT_BOLD
@@ -733,7 +934,7 @@ class MainActivity : Activity() {
 
     private fun button(text: String, filled: Boolean = true, action: () -> Unit): TextView {
         val b = TextView(this)
-        b.text = text
+        b.text = Tr.t(text)
         b.gravity = Gravity.CENTER
         b.textSize = 14f
         b.typeface = Typeface.DEFAULT_BOLD
@@ -747,9 +948,9 @@ class MainActivity : Activity() {
         return b
     }
 
-    private fun chip(text: String, selected: Boolean, action: () -> Unit): TextView {
+    private fun chip(text: String, selected: Boolean, tr: Boolean = true, action: () -> Unit): TextView {
         val c = TextView(this)
-        c.text = text
+        c.text = if (tr) Tr.t(text) else text
         c.textSize = 12.5f
         c.gravity = Gravity.CENTER
         c.setPadding(dp(14), dp(8), dp(14), dp(8))
@@ -762,7 +963,7 @@ class MainActivity : Activity() {
 
     private fun input(hintText: String): EditText {
         val e = EditText(this)
-        e.hint = hintText
+        e.hint = Tr.t(hintText)
         e.setHintTextColor(muted)
         e.setTextColor(white)
         e.textSize = 14f
@@ -790,7 +991,7 @@ class MainActivity : Activity() {
         row.orientation = LinearLayout.HORIZONTAL
         row.gravity = Gravity.CENTER_VERTICAL
         row.setPadding(0, dp(5), 0, dp(5))
-        val n = label(name, 13f, if (strong) white else muted, strong)
+        val n = label(name, 13f, if (strong) white else muted, strong, false)
         n.maxLines = 1
         n.ellipsize = TextUtils.TruncateAt.END
         row.addView(n, LinearLayout.LayoutParams(dp(92), WRAP))
@@ -986,7 +1187,7 @@ class MainActivity : Activity() {
         val info = card()
         val vDevice = infoRow(info, "دستگاه")
         val vAndroid = infoRow(info, "اندروید")
-        val vCpu = infoRow(info, "هسته‌های CPU")
+        val vCpu = infoRow(info, "هسته‌های پردازنده")
         val vRefresh = infoRow(info, "نرخ نوسازی صفحه")
         val vNet = infoRow(info, "شبکه")
         val vDns = infoRow(info, "DNS")
@@ -1008,24 +1209,24 @@ class MainActivity : Activity() {
             val bc = if (bat.charging) good else if (bat.pct <= 20) bad else if (bat.pct <= 40) warn else accent
             batG.setTarget(
                 bat.pct / 100f, "${bat.pct}%",
-                if (bat.charging) "⚡ شارژ" else "${bat.temp.toInt()}°C", bc
+                if (bat.charging) Tr.t("⚡ شارژ") else "${bat.temp.toInt()}°C", bc
             )
 
             val st = storageInfo()
             val su = st.second - st.first
             val sf = su.toFloat() / st.second.toFloat()
             val sc = if (sf > 0.92f) bad else if (sf > 0.8f) warn else accent
-            stoG.setTarget(sf, "${(sf * 100).toInt()}%", "${gb(st.first)}G آزاد", sc)
+            stoG.setTarget(sf, "${(sf * 100).toInt()}%", "${gb(st.first)}G " + Tr.t("آزاد"), sc)
 
             val net = networkText()
             val thermal = thermalText()
             val hz = refreshRateText()
             vRefresh.text = hz
-            vNet.text = net
-            vDns.text = if (DnsVpnService.running) DnsVpnService.activeName else "پیش‌فرض سیستم"
-            vThermal.text = thermal
+            vNet.text = Tr.t(net)
+            vDns.text = if (DnsVpnService.running) DnsVpnService.activeName else Tr.t("پیش‌فرض سیستم")
+            vThermal.text = Tr.t(thermal)
             vTemp.text = String.format(Locale.US, "%.1f °C", bat.temp)
-            heroSub.text = "$net  •  $hz  •  $thermal"
+            heroSub.text = Tr.t("$net  •  $hz  •  $thermal")
         }
         refresh()
         homeRefresh = refresh
@@ -1046,7 +1247,7 @@ class MainActivity : Activity() {
             } catch (_: Exception) {
             }
         }
-        val name = label(appLabel(pkg), 11f, white)
+        val name = label(appLabel(pkg), 11f, white, false, false)
         name.maxLines = 1
         name.ellipsize = TextUtils.TruncateAt.END
         name.gravity = Gravity.CENTER
@@ -1063,7 +1264,7 @@ class MainActivity : Activity() {
         val before = ramInfo().first
         view.start()
         msg.setTextColor(muted)
-        msg.text = "در حال پاک‌سازی پردازش‌های پس‌زمینه…"
+        msg.text = Tr.t("در حال پاک‌سازی پردازش‌های پس‌زمینه…")
         runBg {
             var count = 0
             try {
@@ -1095,6 +1296,7 @@ class MainActivity : Activity() {
                 } else {
                     "✅ ${count} برنامه بررسی شد؛ تغییر محسوسی در RAM آزاد دیده نشد.\nRAM آزاد: ${mb(after)} MB\n(اندروید معمولاً خودش RAM را خوب مدیریت می‌کند.)"
                 }
+                msg.text = Tr.t(msg.text.toString())
                 homeRefresh?.invoke()
             }
         }
@@ -1229,7 +1431,7 @@ class MainActivity : Activity() {
         val col = LinearLayout(this)
         col.orientation = LinearLayout.VERTICAL
         col.setPadding(dp(12), 0, dp(8), 0)
-        val nm = label(item.label, 14.5f, white, true)
+        val nm = label(item.label, 14.5f, white, true, false)
         nm.maxLines = 1
         nm.ellipsize = TextUtils.TruncateAt.END
         col.addView(nm)
@@ -1270,6 +1472,27 @@ class MainActivity : Activity() {
     }
 
     private fun launchGame(pkg: String) {
+        if (packageManager.getLaunchIntentForPackage(pkg) == null) {
+            toast("اجرای این برنامه ممکن نیست.")
+            return
+        }
+        if (prefs.getBoolean("autoDns", false) && !DnsVpnService.running) {
+            val needConsent = try {
+                VpnService.prepare(this) != null
+            } catch (_: Exception) {
+                true
+            }
+            if (!needConsent) {
+                startDnsService(selectedDns())
+                handler.postDelayed({ doLaunch(pkg) }, 900)
+                return
+            }
+            toast("برای اتصال خودکار، یک‌بار DNS را دستی وصل کن.")
+        }
+        doLaunch(pkg)
+    }
+
+    private fun doLaunch(pkg: String) {
         val i = packageManager.getLaunchIntentForPackage(pkg)
         if (i == null) {
             toast("اجرای این برنامه ممکن نیست.")
@@ -1313,15 +1536,75 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun resolveTarget(custom: String): Pair<String, Int> {
-        val c = custom.trim()
-        val preset = pingTargets[netTarget]
-        if (c.isEmpty()) return Pair(preset.second, preset.third)
+    private fun parseHostPort(text: String): Pair<String, Int>? {
+        val c = text.trim()
+        if (c.isEmpty()) return null
         val parts = c.split(":")
         val host = parts[0].trim()
-        if (host.isEmpty()) return Pair(preset.second, preset.third)
+        if (host.isEmpty()) return null
         val port = if (parts.size > 1) (parts[1].trim().toIntOrNull() ?: 443) else 443
         return Pair(host, port.coerceIn(1, 65535))
+    }
+
+    private fun customServers(): List<ServerItem> {
+        val raw = prefs.getString("servers", "") ?: ""
+        val out = ArrayList<ServerItem>()
+        for (line in raw.split("\n")) {
+            val parts = line.split("\t")
+            if (parts.size != 3) continue
+            val port = parts[2].toIntOrNull() ?: continue
+            out.add(ServerItem(parts[0], parts[1], port))
+        }
+        return out
+    }
+
+    private fun saveCustomServers(list: List<ServerItem>) {
+        val text = list.joinToString("\n") {
+            it.name.replace("\t", " ").replace("\n", " ") + "\t" + it.host + "\t" + it.port
+        }
+        prefs.edit().putString("servers", text).apply()
+    }
+
+    private fun allServers(): List<ServerItem> {
+        val out = ArrayList<ServerItem>()
+        for (t in pingTargets) out.add(ServerItem(t.first, t.second, t.third))
+        out.addAll(customServers())
+        return out
+    }
+
+    private fun resolveTarget(custom: String): Pair<String, Int> {
+        val parsed = parseHostPort(custom)
+        if (parsed != null) return parsed
+        val servers = allServers()
+        val s0 = servers[netTarget.coerceIn(0, servers.size - 1)]
+        return Pair(s0.host, s0.port)
+    }
+
+    private fun histKey(host: String, port: Int): String = "$host:$port"
+
+    private fun loadHistory(): List<HistItem> {
+        val raw = prefs.getString("hist", "") ?: ""
+        val out = ArrayList<HistItem>()
+        for (line in raw.split("\n")) {
+            val p = line.split(",")
+            if (p.size < 4) continue
+            val ts = p[0].toLongOrNull() ?: continue
+            val avg = p[2].toIntOrNull() ?: continue
+            val loss = p[3].toIntOrNull() ?: continue
+            out.add(HistItem(ts, p[1], avg, loss))
+        }
+        return out
+    }
+
+    private fun addHistory(key: String, avg: Int, loss: Int) {
+        val list = ArrayList<HistItem>(loadHistory())
+        list.add(HistItem(System.currentTimeMillis(), key.replace(",", ""), avg, loss))
+        val trimmed = if (list.size > 300) list.subList(list.size - 300, list.size) else list
+        prefs.edit().putString("hist", trimmed.joinToString("\n") { "${it.ts},${it.key},${it.avg},${it.loss}" }).apply()
+    }
+
+    private fun clearHistory() {
+        prefs.edit().remove("hist").apply()
     }
 
     private fun pingColor(ms: Int): Int = when {
@@ -1345,7 +1628,7 @@ class MainActivity : Activity() {
         }
         chart.setPoints(samples.takeLast(30))
         if (ok.isEmpty()) {
-            verdict.text = "اتصال برقرار نشد"
+            verdict.text = Tr.t("اتصال برقرار نشد")
             verdict.setTextColor(bad)
             stats.text = "Loss 100%"
             return
@@ -1361,18 +1644,30 @@ class MainActivity : Activity() {
             avg < 150 -> "متوسط"
             else -> "ضعیف ⚠️"
         }
-        verdict.text = "کیفیت اتصال: $q"
+        verdict.text = Tr.t("کیفیت اتصال: $q")
         verdict.setTextColor(pingColor(avg))
         stats.text = "Min $mn  •  Avg $avg  •  Max $mx  •  Jitter $jit  •  Loss $loss%"
     }
 
     private fun buildNetwork() {
         buildDnsChanger()
+
+        val hCard = card()
+        val hTitle = label("", 13f, white, true, false)
+        val hChart = ChartView(this, accent)
+        val hBest = label("", 12f, muted, false, false)
+        hCard.addView(hTitle)
+        val hcp = LinearLayout.LayoutParams(MATCH, dp(100))
+        hcp.topMargin = dp(8)
+        hCard.addView(hChart, hcp)
+        hCard.addView(hBest, vlp(8, 8))
+
         section("PING LAB")
         val pingCard = card()
-        pingCard.addView(label("تست تأخیر اتصال TCP", 15f, white, true))
+        pingCard.addView(label("تست تأخیر اتصال", 15f, white, true))
         pingCard.addView(label("زمان برقراری اتصال TCP تا سرور انتخابی؛ پینگ ICMP یا پینگ داخل بازی نیست.", 12f, muted))
 
+        var onTargetChanged: () -> Unit = {}
         val hs = HorizontalScrollView(this)
         hs.isHorizontalScrollBarEnabled = false
         val chipRow = LinearLayout(this)
@@ -1380,20 +1675,138 @@ class MainActivity : Activity() {
         hs.addView(chipRow)
         fun fillTargets() {
             chipRow.removeAllViews()
-            for (i in pingTargets.indices) {
+            val servers = allServers()
+            if (netTarget >= servers.size) netTarget = 0
+            for (i in servers.indices) {
                 val lp = LinearLayout.LayoutParams(WRAP, WRAP)
                 lp.marginEnd = dp(8)
-                chipRow.addView(chip(pingTargets[i].first, netTarget == i) {
+                chipRow.addView(chip(servers[i].name, netTarget == i, false) {
                     netTarget = i
                     fillTargets()
+                    onTargetChanged()
                 }, lp)
             }
         }
-        fillTargets()
         pingCard.addView(hs, vlp(10, 8))
 
-        val custom = input("سرور دلخواه (اختیاری)  host:port")
-        pingCard.addView(custom, vlp(0, 10))
+        val nameIn = input("نام سرور (برای ذخیره)")
+        val custom = input("آدرس سرور  host:port  (مثلاً 1.2.3.4:443)")
+        pingCard.addView(nameIn, vlp(0, 8))
+        pingCard.addView(custom, vlp(0, 8))
+        val saveRow = LinearLayout(this)
+        saveRow.orientation = LinearLayout.HORIZONTAL
+        val saveBtn = button("ذخیره‌ی سرور", false) {}
+        val delBtn = button("حذف سرور انتخابی", false) {}
+        val sp1 = LinearLayout.LayoutParams(0, WRAP, 1f)
+        sp1.marginEnd = dp(4)
+        val sp2 = LinearLayout.LayoutParams(0, WRAP, 1f)
+        sp2.marginStart = dp(4)
+        saveBtn.textSize = 12.5f
+        delBtn.textSize = 12.5f
+        saveRow.addView(saveBtn, sp1)
+        saveRow.addView(delBtn, sp2)
+        pingCard.addView(saveRow, vlp(0, 12))
+
+        fun updateDelBtn() {
+            delBtn.alpha = if (netTarget >= pingTargets.size) 1f else 0.4f
+        }
+
+        fun refreshHistory() {
+            val tgt = resolveTarget(custom.text.toString())
+            val key = histKey(tgt.first, tgt.second)
+            val items = loadHistory().filter { it.key == key }
+            hTitle.text = Tr.t("کیفیت شبکه برای") + " " + key
+            if (items.isEmpty()) {
+                hChart.setPoints(emptyList())
+                hBest.text = Tr.t("هنوز تستی برای این سرور ثبت نشده؛ یک تست پینگ بگیر.")
+                return
+            }
+            hChart.setPoints(items.takeLast(30).map { if (it.avg < 0) -1 else it.avg })
+            val sums = HashMap<Int, ArrayList<Int>>()
+            val cal = java.util.Calendar.getInstance()
+            for (hi in items) {
+                if (hi.avg < 0) continue
+                cal.timeInMillis = hi.ts
+                val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+                var l = sums[hour]
+                if (l == null) {
+                    l = ArrayList<Int>()
+                    sums[hour] = l
+                }
+                l.add(hi.avg)
+            }
+            var bestH = -1
+            var bestAvg = Int.MAX_VALUE
+            var worstH = -1
+            var worstAvg = -1
+            for ((hour, l) in sums) {
+                val avg = l.average().toInt()
+                if (avg < bestAvg) {
+                    bestAvg = avg
+                    bestH = hour
+                }
+                if (avg > worstAvg) {
+                    worstAvg = avg
+                    worstH = hour
+                }
+            }
+            if (bestH < 0) {
+                hBest.text = Tr.t("همه‌ی تست‌ها بدون پاسخ بوده‌اند.")
+                return
+            }
+            val hhBest = (if (bestH < 10) "0" else "") + bestH + ":00"
+            val hhWorst = (if (worstH < 10) "0" else "") + worstH + ":00"
+            var txt = Tr.t("بهترین ساعت") + ": " + hhBest + " (" + bestAvg + " ms)"
+            if (worstH != bestH) txt += "   •   " + Tr.t("بدترین ساعت") + ": " + hhWorst + " (" + worstAvg + " ms)"
+            txt += "   •   " + items.size + " " + Tr.t("تست")
+            hBest.text = txt
+        }
+
+        onTargetChanged = {
+            updateDelBtn()
+            refreshHistory()
+        }
+
+        saveBtn.setOnClickListener {
+            val parsed = parseHostPort(custom.text.toString())
+            if (parsed == null) {
+                toast("آدرس سرور را به شکل host:port وارد کن.")
+                return@setOnClickListener
+            }
+            val list = ArrayList<ServerItem>(customServers())
+            if (list.size >= 15) {
+                toast("حداکثر ۱۵ سرور قابل ذخیره است.")
+                return@setOnClickListener
+            }
+            val nm = nameIn.text.toString().trim().ifEmpty { parsed.first }
+            list.add(ServerItem(nm, parsed.first, parsed.second))
+            saveCustomServers(list)
+            netTarget = pingTargets.size + list.size - 1
+            nameIn.setText("")
+            custom.setText("")
+            fillTargets()
+            updateDelBtn()
+            refreshHistory()
+            toast("سرور ذخیره شد.")
+        }
+        delBtn.setOnClickListener {
+            if (netTarget < pingTargets.size) {
+                toast("فقط سرورهای ذخیره‌شده‌ی خودت حذف می‌شوند.")
+                return@setOnClickListener
+            }
+            val list = ArrayList<ServerItem>(customServers())
+            val idx = netTarget - pingTargets.size
+            if (idx >= 0 && idx < list.size) {
+                list.removeAt(idx)
+                saveCustomServers(list)
+            }
+            netTarget = 0
+            fillTargets()
+            updateDelBtn()
+            refreshHistory()
+        }
+        fillTargets()
+        updateDelBtn()
 
         val big = label("— ms", 38f, accent, true)
         big.gravity = Gravity.CENTER
@@ -1416,22 +1829,24 @@ class MainActivity : Activity() {
             if (running) {
                 pingToken++
                 running = false
-                startBtn.text = "شروع تست پینگ"
+                startBtn.text = Tr.t("شروع تست پینگ")
                 return@setOnClickListener
             }
             val target = resolveTarget(custom.text.toString())
             val host = target.first
             val port = target.second
             running = true
-            startBtn.text = "توقف"
+            startBtn.text = Tr.t("توقف")
             pingToken++
             val token = pingToken
             val samples = ArrayList<Int>()
+            val results = java.util.Collections.synchronizedList(ArrayList<Int>())
             chart.setPoints(emptyList())
             runBg {
                 var n = 0
                 while (n < 25 && token == pingToken) {
                     val ms = tcpPing(host, port, 2000)
+                    results.add(ms)
                     n++
                     ui {
                         if (token == pingToken) {
@@ -1445,20 +1860,36 @@ class MainActivity : Activity() {
                         break
                     }
                 }
+                val snap = ArrayList<Int>(results)
+                if (snap.size >= 5) {
+                    val okv = snap.filter { it >= 0 }
+                    val avg = if (okv.isEmpty()) -1 else okv.average().toInt()
+                    val loss = (snap.size - okv.size) * 100 / snap.size
+                    addHistory(histKey(host, port), avg, loss)
+                }
                 ui {
                     if (token == pingToken) {
                         running = false
-                        startBtn.text = "شروع تست پینگ"
+                        startBtn.text = Tr.t("شروع تست پینگ")
                     }
+                    refreshHistory()
                 }
             }
         }
         pingCard.addView(startBtn, LinearLayout.LayoutParams(MATCH, WRAP))
         content.addView(pingCard, vlp(0, 4))
 
+        section("PING HISTORY")
+        hCard.addView(button("پاک کردن تاریخچه", false) {
+            clearHistory()
+            refreshHistory()
+        })
+        content.addView(hCard, vlp(0, 4))
+        refreshHistory()
+
         section("PRIVATE DNS (DoT)")
         val dnsCard = card()
-        dnsCard.addView(label("DNS خصوصی اندروید (DNS-over-TLS)", 15f, white, true))
+        dnsCard.addView(label("Private DNS در اندروید (DNS-over-TLS)", 15f, white, true))
         dnsCard.addView(
             label(
                 "روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. نام میزبان را کپی کن و در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان.",
@@ -1487,7 +1918,7 @@ class MainActivity : Activity() {
             r.addView(cb)
             dnsCard.addView(r, LinearLayout.LayoutParams(MATCH, WRAP))
         }
-        val openDns = button("باز کردن تنظیمات Private DNS") {
+        val openDns = button("باز کردن Private DNS") {
             try {
                 startActivity(Intent("android.settings.PRIVATE_DNS_SETTINGS"))
             } catch (_: Exception) {
@@ -1513,6 +1944,8 @@ class MainActivity : Activity() {
         dCard.addView(listBox)
         val connectBtn = button("اتصال") {}
         dCard.addView(connectBtn, vlp(10, 8))
+        val fastBtn = button("⚡ سریع‌ترین را پیدا کن و وصل شو", false) {}
+        dCard.addView(fastBtn, vlp(0, 8))
         val benchBtn = button("تست سرعت همه‌ی DNSها", false) {}
         dCard.addView(benchBtn, vlp(0, 8))
         dCard.addView(
@@ -1528,7 +1961,7 @@ class MainActivity : Activity() {
             val running = DnsVpnService.running
             val active = DnsVpnService.activeName
             val sel = selectedDns()
-            statusTitle.text = if (running) "🟢 متصل: $active" else "⚪ قطع (DNS پیش‌فرض سیستم)"
+            statusTitle.text = Tr.t(if (running) "🟢 متصل: $active" else "⚪ قطع (DNS پیش‌فرض سیستم)")
             statusTitle.setTextColor(if (running) good else white)
             statusSub.text = if (running) {
                 "درخواست پاسخ‌داده‌شده: ${DnsVpnService.queryCount.get()} • ناموفق: ${DnsVpnService.failCount.get()}"
@@ -1542,6 +1975,8 @@ class MainActivity : Activity() {
             } else {
                 "اتصال به ${sel.name}"
             }
+            statusSub.text = Tr.t(statusSub.text.toString())
+            connectBtn.text = Tr.t(connectBtn.text.toString())
             val key = "$running|$active|${sel.name}|${dnsPing.size}|$dnsBenchRunning"
             if (!force && key == lastKey) return
             lastKey = key
@@ -1560,8 +1995,8 @@ class MainActivity : Activity() {
                 val col = LinearLayout(this)
                 col.orientation = LinearLayout.VERTICAL
                 val title = if (running && pr.name == active) "${pr.name}  ✓" else pr.name
-                col.addView(label(title, 13.5f, white, true))
-                col.addView(label("${pr.primary}  •  ${pr.secondary}", 11.5f, muted))
+                col.addView(label(title, 13.5f, white, true, false))
+                col.addView(label("${pr.primary}  •  ${pr.secondary}", 11.5f, muted, false, false))
                 row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
                 val ms = dnsPing[pr.name]
                 val msText = if (ms == null) "" else if (ms < 0) "✕" else "$ms ms"
@@ -1584,7 +2019,20 @@ class MainActivity : Activity() {
             }
             handler.postDelayed({ netRefresh?.invoke() }, 800)
         }
-        benchBtn.setOnClickListener { runDnsBench(benchBtn) { render(true) } }
+        benchBtn.setOnClickListener { runDnsBench(benchBtn, { render(true) }, null) }
+        fastBtn.setOnClickListener {
+            runDnsBench(benchBtn, { render(true) }, {
+                val b = bestDnsIndex()
+                if (b >= 0) {
+                    prefs.edit().putInt("dnsSel", b).apply()
+                    render(true)
+                    toast(Tr.t("سریع‌ترین:") + " " + dnsProviders[b].name)
+                    connectDns(dnsProviders[b])
+                } else {
+                    toast("هیچ DNS ای پاسخ نداد؛ اینترنت را بررسی کن.")
+                }
+            })
+        }
 
         netRefresh = { render(false) }
         render(true)
@@ -1637,11 +2085,24 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun runDnsBench(btn: TextView, onUpdate: () -> Unit) {
+    private fun bestDnsIndex(): Int {
+        var best = -1
+        var bestMs = Int.MAX_VALUE
+        for (i in dnsProviders.indices) {
+            val ms = dnsPing[dnsProviders[i].name] ?: continue
+            if (ms >= 0 && ms < bestMs) {
+                best = i
+                bestMs = ms
+            }
+        }
+        return best
+    }
+
+    private fun runDnsBench(btn: TextView, onUpdate: () -> Unit, onDone: (() -> Unit)?) {
         if (dnsBenchRunning) return
         dnsBenchRunning = true
         dnsPing.clear()
-        btn.text = "در حال تست…"
+        btn.text = Tr.t("در حال تست…")
         onUpdate()
         runBg {
             for (pr in dnsProviders) {
@@ -1658,8 +2119,9 @@ class MainActivity : Activity() {
             }
             ui {
                 dnsBenchRunning = false
-                btn.text = "تست سرعت همه‌ی DNSها"
+                btn.text = Tr.t("تست سرعت همه‌ی DNSها")
                 onUpdate()
+                if (onDone != null) onDone()
             }
         }
     }
@@ -1727,6 +2189,121 @@ class MainActivity : Activity() {
         toast("DNS به حالت پیش‌فرض برگشت.")
     }
 
+    // ----- BRAND / ONBOARDING / MISC ----------------------------------------
+
+    private fun openUrl(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: Exception) {
+            toast("مرورگری برای باز کردن لینک پیدا نشد.")
+        }
+    }
+
+    private fun shareApp() {
+        val i = Intent(Intent.ACTION_SEND)
+        i.type = "text/plain"
+        i.putExtra(
+            Intent.EXTRA_TEXT,
+            Tr.t("EzzGameBOOST؛ ابزار گیمینگ اندروید: بوست RAM، DNS گیمینگ و تست پینگ.") +
+                "\n" + Tr.t("ایزی دیجی") + " • https://ezzdigio.com"
+        )
+        try {
+            startActivity(Intent.createChooser(i, null))
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun setLang(l: String) {
+        prefs.edit().putString("lang", l).apply()
+        Tr.load(this)
+        buildShell()
+        showTab(tab)
+        refreshWidget()
+    }
+
+    private fun refreshWidget() {
+        try {
+            val m = AppWidgetManager.getInstance(this)
+            val c = ComponentName(this, BoostWidget::class.java)
+            if (m.getAppWidgetIds(c).isNotEmpty()) m.updateAppWidget(c, BoostWidget.build(this))
+        } catch (_: Throwable) {
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun showOnboarding() {
+        val rv = LinearLayout(this)
+        rv.orientation = LinearLayout.VERTICAL
+        rv.setBackgroundColor(bg0)
+        rv.layoutDirection = if (Tr.en) View.LAYOUT_DIRECTION_LTR else View.LAYOUT_DIRECTION_RTL
+        rv.setOnApplyWindowInsetsListener { v, insets ->
+            v.setPadding(0, insets.systemWindowInsetTop, 0, insets.systemWindowInsetBottom)
+            insets
+        }
+        val sv = ScrollView(this)
+        sv.isVerticalScrollBarEnabled = false
+        val col = LinearLayout(this)
+        col.orientation = LinearLayout.VERTICAL
+        col.gravity = Gravity.CENTER_HORIZONTAL
+        col.setPadding(dp(24), dp(28), dp(24), dp(24))
+
+        col.addView(LogoView(this, accent, panel), LinearLayout.LayoutParams(dp(104), dp(104)))
+        val nameView = TextView(this)
+        val sb = SpannableStringBuilder("EzzGameBOOST")
+        sb.setSpan(ForegroundColorSpan(accent), 7, 12, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        nameView.text = sb
+        nameView.textSize = 26f
+        nameView.typeface = Typeface.DEFAULT_BOLD
+        nameView.setTextColor(white)
+        nameView.gravity = Gravity.CENTER
+        col.addView(nameView, vlp(14, 2))
+        val by = label("ساخته‌شده توسط ایزی دیجی", 13f, muted)
+        by.gravity = Gravity.CENTER
+        col.addView(by, vlp(0, 10))
+        col.addView(chip("🌐 ezzdigio.com", true, false) { openUrl("https://ezzdigio.com") })
+
+        val langRow = LinearLayout(this)
+        langRow.orientation = LinearLayout.HORIZONTAL
+        val l1 = LinearLayout.LayoutParams(WRAP, WRAP)
+        l1.marginEnd = dp(8)
+        langRow.addView(chip("فارسی", !Tr.en, false) {
+            prefs.edit().putString("lang", "fa").apply()
+            Tr.load(this)
+            showOnboarding()
+        }, l1)
+        langRow.addView(chip("English", Tr.en, false) {
+            prefs.edit().putString("lang", "en").apply()
+            Tr.load(this)
+            showOnboarding()
+        })
+        val lrp = LinearLayout.LayoutParams(WRAP, WRAP)
+        lrp.topMargin = dp(14)
+        col.addView(langRow, lrp)
+
+        val fc = card()
+        val feats = listOf(
+            "⚡ بوست RAM و پایش زنده‌ی گوشی",
+            "🌐 تغییر واقعی DNS با رادار گیم، الکترو، شکن، بگذر و شلتر",
+            "📡 تست پینگ، ذخیره‌ی سرورهای بازی و تاریخچه‌ی کیفیت شبکه",
+            "🎮 کتابخانه‌ی بازی‌ها با زمان بازی و اتصال خودکار DNS"
+        )
+        for (f in feats) fc.addView(label(f, 13.5f, white), vlp(0, 8))
+        col.addView(fc, vlp(18, 8))
+        val priv = label(
+            "حریم خصوصی: برای تغییر DNS یک VPN محلی ساخته می‌شود. فقط درخواست‌های DNS به سرور انتخابی تو می‌رود و هیچ داده‌ای برای ما ارسال نمی‌شود.",
+            11.5f, muted
+        )
+        priv.gravity = Gravity.CENTER
+        col.addView(priv, vlp(0, 14))
+        col.addView(button("شروع") {
+            prefs.edit().putBoolean("onboarded", true).apply()
+            startMain()
+        }, LinearLayout.LayoutParams(MATCH, WRAP))
+        sv.addView(col, ViewGroup.LayoutParams(MATCH, WRAP))
+        rv.addView(sv, LinearLayout.LayoutParams(MATCH, MATCH))
+        setContentView(rv)
+    }
+
     // ----- TOOLS ------------------------------------------------------------
 
     private fun applyWindowToggles() {
@@ -1760,7 +2337,7 @@ class MainActivity : Activity() {
         pill.setPadding(dp(16), dp(8), dp(16), dp(8))
         fun paint() {
             val on = prefs.getBoolean(key, false)
-            pill.text = if (on) "روشن" else "خاموش"
+            pill.text = Tr.t(if (on) "روشن" else "خاموش")
             pill.setTextColor(if (on) onAccent() else muted)
             pill.background = if (on) rounded(accent, 20) else rounded(panel2, 20, stroke)
         }
@@ -1782,6 +2359,7 @@ class MainActivity : Activity() {
         val modeCard = card()
         toggleRow(modeCard, "روشن نگه‌داشتن صفحه", "تا وقتی این اپ بازه، صفحه خاموش نمی‌شود.", "keepOn")
         toggleRow(modeCard, "حداکثر روشنایی", "فقط داخل همین اپ؛ روشنایی کل سیستم تغییر نمی‌کند.", "maxBright")
+        toggleRow(modeCard, "اتصال خودکار DNS", "اگر قبلاً یک‌بار DNS را وصل کرده باشی، با اجرای بازی از همین اپ، DNS انتخابی خودکار وصل می‌شود.", "autoDns")
         content.addView(modeCard, vlp(0, 4))
 
         section("SYSTEM SHORTCUTS")
@@ -1827,7 +2405,7 @@ class MainActivity : Activity() {
             var done = false
             t.setOnClickListener {
                 done = !done
-                t.text = (if (done) "☑   " else "☐   ") + c
+                t.text = Tr.t((if (done) "☑   " else "☐   ") + c)
                 t.setTextColor(if (done) good else white)
             }
             cCard.addView(t, LinearLayout.LayoutParams(MATCH, WRAP))
@@ -1905,15 +2483,29 @@ class MainActivity : Activity() {
         themeCard.addView(label("رنگ فعلی: ${accentNames[current]}", 11.5f, muted), vlp(8, 0))
         content.addView(themeCard, vlp(0, 4))
 
+        section("LANGUAGE")
+        val langCard = card()
+        val langRow = LinearLayout(this)
+        langRow.orientation = LinearLayout.HORIZONTAL
+        val l1 = LinearLayout.LayoutParams(WRAP, WRAP)
+        l1.marginEnd = dp(8)
+        langRow.addView(chip("فارسی", !Tr.en, false) { setLang("fa") }, l1)
+        langRow.addView(chip("English", Tr.en, false) { setLang("en") })
+        langCard.addView(langRow)
+        content.addView(langCard, vlp(0, 4))
+
         section("ABOUT")
         val about = card()
-        about.addView(label("EzzGameBOOST v2.0", 14f, white, true))
+        about.addView(label("EzzGameBOOST v2.1", 14f, white, true))
+        about.addView(label("ساخته‌شده توسط ایزی دیجی", 12.5f, white), vlp(4, 0))
         about.addView(
             label(
                 "این اپ بدون روت کار می‌کند. دکمه‌ی BOOST فقط از API رسمی اندروید برای بستن پردازش‌های پس‌زمینه استفاده می‌کند و اندروید ممکن است بعضی برنامه‌ها را دوباره اجرا کند. هیچ اپ معمولی نمی‌تواند FPS یا پینگ داخل بازی را تضمین کند؛ تست شبکه فقط زمان اتصال TCP را اندازه می‌گیرد.",
                 12f, muted
             ), vlp(6, 10)
         )
+        about.addView(button("🌐 ezzdigio.com") { openUrl("https://ezzdigio.com") }, vlp(0, 8))
+        about.addView(button("اشتراک‌گذاری اپ", false) { shareApp() }, vlp(0, 8))
         about.addView(button("پاک کردن آمار بازی", false) {
             val keys = ArrayList<String>()
             for (k in prefs.all.keys) {
@@ -1938,6 +2530,7 @@ class DnsVpnService : VpnService() {
 
     companion object {
         const val ACTION_START = "com.ezzdigi.ezzgameboost.DNS_START"
+        const val ACTION_STOP = "com.ezzdigi.ezzgameboost.DNS_STOP"
         private const val FAKE_DNS = "10.111.222.2"
         private const val TUN_ADDR = "10.111.222.1"
 
@@ -1961,7 +2554,17 @@ class DnsVpnService : VpnService() {
     private var primary = ""
     private var secondary = ""
 
+    override fun onCreate() {
+        super.onCreate()
+        Tr.load(this)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent != null && intent.action == ACTION_STOP) {
+            cleanup()
+            stopSelf()
+            return Service.START_NOT_STICKY
+        }
         if (intent == null || intent.action != ACTION_START) {
             stopSelf()
             return Service.START_NOT_STICKY
@@ -2011,6 +2614,7 @@ class DnsVpnService : VpnService() {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun goForeground(name: String) {
         try {
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -2020,11 +2624,15 @@ class DnsVpnService : VpnService() {
             val pi = PendingIntent.getActivity(
                 this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
             )
+            val stopIntent = Intent(this, DnsVpnService::class.java)
+            stopIntent.action = ACTION_STOP
+            val stopPi = PendingIntent.getService(this, 1, stopIntent, PendingIntent.FLAG_IMMUTABLE)
             val n = Notification.Builder(this, "ezz_dns")
-                .setContentTitle("EzzGameBOOST DNS")
-                .setContentText("متصل: $name")
+                .setContentTitle("EzzGameBOOST • DNS")
+                .setContentText(Tr.t("متصل:") + " " + name)
                 .setSmallIcon(android.R.drawable.ic_lock_lock)
                 .setContentIntent(pi)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, Tr.t("قطع اتصال"), stopPi)
                 .setOngoing(true)
                 .build()
             startForeground(1, n)
@@ -2191,5 +2799,118 @@ class DnsVpnService : VpnService() {
     override fun onDestroy() {
         cleanup()
         super.onDestroy()
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+// Home-screen widget
+// ---------------------------------------------------------------------------
+
+class BoostWidget : AppWidgetProvider() {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        Tr.load(context)
+        val v = build(context)
+        for (id in appWidgetIds) appWidgetManager.updateAppWidget(id, v)
+    }
+
+    companion object {
+        fun build(ctx: Context): RemoteViews {
+            val v = RemoteViews(ctx.packageName, R.layout.widget_boost)
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val mi = ActivityManager.MemoryInfo()
+            am.getMemoryInfo(mi)
+            val freeMb = mi.availMem / (1024L * 1024L)
+            val bi = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val level = bi?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+            val scale = bi?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
+            val pct = if (level >= 0 && scale > 0) level * 100 / scale else 0
+            val dns = if (DnsVpnService.running) DnsVpnService.activeName else Tr.t("پیش‌فرض سیستم")
+            v.setTextViewText(R.id.w_title, "EzzGameBOOST")
+            v.setTextViewText(R.id.w_ram, "RAM " + Tr.t("آزاد") + ": " + freeMb + " MB")
+            v.setTextViewText(R.id.w_bat, Tr.t("باتری") + ": " + pct + "%")
+            v.setTextViewText(R.id.w_dns, "DNS: " + dns)
+            v.setTextViewText(R.id.w_site, Tr.t("ایزی دیجی") + " • ezzdigio.com")
+            val pi = PendingIntent.getActivity(
+                ctx, 0, Intent(ctx, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            v.setOnClickPendingIntent(R.id.w_root, pi)
+            return v
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Quick Settings tile: toggle the DNS VPN from the notification shade
+// ---------------------------------------------------------------------------
+
+class DnsTileService : TileService() {
+    private val h = Handler(Looper.getMainLooper())
+
+    override fun onStartListening() {
+        super.onStartListening()
+        update()
+    }
+
+    override fun onClick() {
+        super.onClick()
+        Tr.load(this)
+        if (DnsVpnService.running) {
+            try {
+                stopService(Intent(this, DnsVpnService::class.java))
+            } catch (_: Exception) {
+            }
+            DnsVpnService.running = false
+            DnsVpnService.activeName = ""
+            update()
+            return
+        }
+        val needConsent = try {
+            VpnService.prepare(this) != null
+        } catch (_: Exception) {
+            true
+        }
+        if (needConsent) {
+            openApp()
+            return
+        }
+        val prefs = getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
+        val list = DnsList.all
+        val pr = list[prefs.getInt("dnsSel", 0).coerceIn(0, list.size - 1)]
+        val i = Intent(this, DnsVpnService::class.java)
+        i.action = DnsVpnService.ACTION_START
+        i.putExtra("primary", pr.primary)
+        i.putExtra("secondary", pr.secondary)
+        i.putExtra("name", pr.name)
+        try {
+            startService(i)
+        } catch (_: Exception) {
+            openApp()
+            return
+        }
+        h.postDelayed({ update() }, 900)
+        h.postDelayed({ update() }, 2500)
+    }
+
+    private fun update() {
+        val t = qsTile ?: return
+        t.state = if (DnsVpnService.running) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+        t.label = "EzzDigi DNS"
+        t.updateTile()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun openApp() {
+        val i = Intent(this, MainActivity::class.java)
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE))
+            } else {
+                startActivityAndCollapse(i)
+            }
+        } catch (_: Throwable) {
+        }
     }
 }
