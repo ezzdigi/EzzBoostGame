@@ -4,13 +4,15 @@ on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
+  release:
+    types: [ published ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -27,18 +29,54 @@ jobs:
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Prepare signing key (optional)
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KS_KEYPASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KS_ALIAS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KS_KEYPASS" >> "$GITHUB_ENV"
+            echo "Using custom signing key"
+          else
+            echo "No signing secrets found; release APK will use the debug key"
+          fi
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
 
-      - name: Build APK
-        run: gradle --no-daemon assembleDebug
+      - name: Build APKs
+        run: gradle --no-daemon assembleDebug assembleRelease
 
-      - name: Upload APK artifact
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: EzzGameBOOST-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: EzzGameBOOST-release-APK
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach APK to the GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "EzzGameBOOST-${TAG}.apk"
+          gh release upload "$TAG" "EzzGameBOOST-${TAG}.apk" --clobber
