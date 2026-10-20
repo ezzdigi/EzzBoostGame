@@ -6,13 +6,10 @@ import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
 import android.system.StructPollfd
-import android.util.Base64
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import java.io.ByteArrayInputStream
-import java.net.URLDecoder
-import org.json.JSONObject
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -67,6 +64,7 @@ import android.os.PowerManager
 import android.os.StatFs
 import android.provider.Settings
 import android.text.Editable
+import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextUtils
@@ -95,12 +93,18 @@ private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 
 class AppItem(val label: String, val pkg: String, val isGame: Boolean)
-class DnsProvider(val name: String, val primary: String, val secondary: String, val tertiary: String = "")
+class DnsProvider(
+    val name: String,
+    val primary: String,
+    val secondary: String,
+    val tertiary: String = "",
+    val quaternary: String = ""
+)
 class ServerItem(val name: String, val host: String, val port: Int)
 class HistItem(val ts: Long, val key: String, val avg: Int, val loss: Int)
 
 object DnsList {
-    val all = listOf(
+    val builtin = listOf(
         DnsProvider("Radar Game • رادار گیم", "10.202.10.10", "10.202.10.11"),
         DnsProvider("Electro • الکترو", "78.157.42.100", "78.157.42.101"),
         DnsProvider("Shecan • شکن", "178.22.122.100", "185.51.200.2"),
@@ -124,6 +128,34 @@ object DnsList {
         DnsProvider("Quad9", "9.9.9.9", "149.112.112.112"),
         DnsProvider("AdGuard", "94.140.14.14", "94.140.15.15")
     )
+
+    // User-defined DNS (IPv4 / IPv6), stored as tab-separated lines:
+    // name, ipv4-1, ipv4-2, ipv6-1, ipv6-2
+    fun custom(ctx: Context): List<DnsProvider> {
+        val raw = ctx.getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
+            .getString("customDns", "") ?: ""
+        val out = ArrayList<DnsProvider>()
+        for (line in raw.split("\n")) {
+            if (line.isBlank()) continue
+            val p = line.split("\t")
+            if (p.size < 5) continue
+            val servers = ArrayList<String>()
+            for (i in 1..4) if (p[i].isNotBlank()) servers.add(p[i].trim())
+            if (servers.isEmpty()) continue
+            out.add(
+                DnsProvider(
+                    "★ " + p[0],
+                    servers[0],
+                    servers.getOrElse(1) { "" },
+                    servers.getOrElse(2) { "" },
+                    servers.getOrElse(3) { "" }
+                )
+            )
+        }
+        return out
+    }
+
+    fun all(ctx: Context): List<DnsProvider> = builtin + custom(ctx)
 }
 
 class WgTun(private val tunnelName: String) : Tunnel {
@@ -163,15 +195,25 @@ object Tr {
 
     // Persian fragment -> English; longest fragments first.
     private val PAIRS: List<Pair<String, String>> = listOf(
+        Pair("DNS دلخواهت را دستی وارد کن؛ آدرس IPv4 و IPv6 هر دو پشتیبانی می‌شوند. اول تست کن، بعد ذخیره کن و وصل شو", "Enter your own DNS manually; both IPv4 and IPv6 addresses are supported. Test first, then save and connect"),
+        Pair("IPv6 فقط وقتی کار می‌کند که اینترنت شبکه‌ات IPv6 داشته باشد؛ اگر تست آن ✕ شد، از IPv4 استفاده کن. DNS ذخیره‌شده در لیست «DNS CHANGER» (تب شبکه) هم دیده می‌شود", "IPv6 only works when your network has IPv6; if its test shows ✕, use IPv4. Saved DNS also appears in the “DNS CHANGER” list (Network tab)"),
+        Pair("IPv4 اصلی  (مثل 1.1.1.1)", "Primary IPv4  (e.g. 1.1.1.1)"),
+        Pair("IPv4 دوم  (مثل 1.0.0.1)", "Secondary IPv4  (e.g. 1.0.0.1)"),
+        Pair("IPv6 اصلی  (مثل 2606:4700:4700::1111)", "Primary IPv6  (e.g. 2606:4700:4700::1111)"),
+        Pair("IPv6 دوم  (مثل 2606:4700:4700::1001)", "Secondary IPv6  (e.g. 2606:4700:4700::1001)"),
+        Pair("حداکثر ۲۰ DNS دلخواه قابل ذخیره است", "You can save up to 20 custom DNS entries"),
+        Pair("هنوز DNS دلخواهی ذخیره نشده", "No custom DNS saved yet"),
+        Pair("حداقل یک آدرس DNS وارد کن", "Enter at least one DNS address"),
+        Pair("🧪 تست آدرس‌ها", "🧪 Test addresses"),
+        Pair("💾 ذخیره‌ی DNS", "💾 Save DNS"),
+        Pair("آدرس نامعتبر است", "invalid address"),
+        Pair("DNS ذخیره شد", "DNS saved"),
+        Pair("نام (اختیاری)", "Name (optional)"),
         Pair("هنوز کانفیگی اضافه نشده", "No configs added yet"),
         Pair("کانفیگ وایرگارد نامعتبر است:", "Invalid WireGuard config:"),
         Pair("اجازه\u200cی VPN داده نشد؛ بدون آن اتصال ممکن نیست", "VPN permission was not granted; connecting is not possible without it"),
         Pair("فایل خوانده نشد یا خیلی بزرگ است", "The file could not be read or is too large"),
-        Pair("کانفیگ معتبری در فایل پیدا نشد", "No valid config found in the file"),
-        Pair("لینک معتبر در کلیپ\u200cبورد پیدا نشد", "No valid link found on the clipboard"),
         Pair("کانفیگ وایرگارد در کلیپ\u200cبورد پیدا نشد", "No WireGuard config found on the clipboard"),
-        Pair("کانفیگ کپی شد؛ برنامه\u200cی کلاینت V2Ray (مثل v2rayNG) نصب نیست", "Config copied; no V2Ray client app (like v2rayNG) is installed"),
-        Pair("کانفیگ کپی شد؛ در کلاینت از Import from clipboard استفاده کن", "Config copied; use “Import from clipboard” in the client"),
         Pair("نام کانفیگ (اختیاری)", "Config name (optional)"),
         Pair("خطای وایرگارد:", "WireGuard error:"),
         Pair("وایرگارد قطع شد", "WireGuard disconnected"),
@@ -713,7 +755,16 @@ class MainActivity : Activity() {
     private val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "🛠", "📊")
     private val tabNames = arrayOf("خانه", "بازی‌ها", "شبکه", "VPN", "ابزار", "آمار")
 
-    private val dnsProviders = DnsList.all
+    private var dnsCache: List<DnsProvider>? = null
+    private val dnsProviders: List<DnsProvider>
+        get() {
+            var c = dnsCache
+            if (c == null) {
+                c = DnsList.all(this)
+                dnsCache = c
+            }
+            return c
+        }
 
     private val pingTargets = arrayOf(
         Triple("Cloudflare", "1.1.1.1", 443),
@@ -835,8 +886,8 @@ class MainActivity : Activity() {
         val titleCol = LinearLayout(this)
         titleCol.orientation = LinearLayout.VERTICAL
         titleCol.addView(titleView)
-        titleCol.addView(label("ایزی دیجی • ezzdigio.com", 10.5f, muted))
-        titleCol.setOnClickListener { openUrl("https://ezzdigio.com") }
+        titleCol.addView(label("ایزی دیجی • ezzdigi.com", 10.5f, muted))
+        titleCol.setOnClickListener { openUrl("https://ezzdigi.com") }
         header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
         val ver = TextView(this).apply {
             text = "v2.1"
@@ -2232,9 +2283,9 @@ class MainActivity : Activity() {
             } else {
                 toast("اجازه‌ی VPN داده نشد؛ بدون آن اتصال ممکن نیست.")
             }
-        } else if (requestCode == 4730 || requestCode == 4731) {
+        } else if (requestCode == 4730) {
             val uri = data?.data
-            if (resultCode == Activity.RESULT_OK && uri != null) importFromUri(requestCode == 4730, uri)
+            if (resultCode == Activity.RESULT_OK && uri != null) importFromUri(uri)
         }
     }
 
@@ -2244,6 +2295,7 @@ class MainActivity : Activity() {
         i.putExtra("primary", pr.primary)
         i.putExtra("secondary", pr.secondary)
         i.putExtra("tertiary", pr.tertiary)
+        i.putExtra("quaternary", pr.quaternary)
         i.putExtra("name", pr.name)
         try {
             startService(i)
@@ -2291,7 +2343,7 @@ class MainActivity : Activity() {
         i.putExtra(
             Intent.EXTRA_TEXT,
             Tr.t("EzzGameBOOST؛ ابزار گیمینگ اندروید: بوست RAM، DNS گیمینگ و تست پینگ.") +
-                "\n" + Tr.t("ایزی دیجی") + " • https://ezzdigio.com"
+                "\n" + Tr.t("ایزی دیجی") + " • https://ezzdigi.com"
         )
         try {
             startActivity(Intent.createChooser(i, null))
@@ -2346,7 +2398,7 @@ class MainActivity : Activity() {
         val by = label("ساخته‌شده توسط ایزی دیجی", 13f, muted)
         by.gravity = Gravity.CENTER
         col.addView(by, vlp(0, 10))
-        col.addView(chip("🌐 ezzdigio.com", true, false) { openUrl("https://ezzdigio.com") })
+        col.addView(chip("🌐 ezzdigi.com", true, false) { openUrl("https://ezzdigi.com") })
 
         val langRow = LinearLayout(this)
         langRow.orientation = LinearLayout.HORIZONTAL
@@ -2390,7 +2442,7 @@ class MainActivity : Activity() {
         setContentView(rv)
     }
 
-    // ----- VPN: WireGuard + V2Ray configs ----------------------------------
+    // ----- VPN: WireGuard configs + custom DNS -----------------------------
 
     private fun cfgDir(kind: String): java.io.File {
         val d = java.io.File(filesDir, kind)
@@ -2493,1049 +2545,10 @@ class MainActivity : Activity() {
         null
     }
 
-    private fun importFromUri(isWg: Boolean, uri: Uri) {
+    private fun importFromUri(uri: Uri) {
         val nm = displayName(uri)
         runBg {
             val text = readUriText(uri)
             ui {
                 if (text == null || text.isBlank()) {
-                    toast(Tr.t("فایل خوانده نشد یا خیلی بزرگ است."))
-                } else if (isWg) {
-                    if (listCfg("wg").size >= 20) {
-                        toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
-                    } else {
-                        importWg(text, if (importName.isNotBlank()) importName else nm) { vpnRender?.invoke() }
-                    }
-                } else {
-                    val n = importV2(text)
-                    toast(if (n > 0) n.toString() + " " + Tr.t("کانفیگ اضافه شد") else Tr.t("کانفیگ معتبری در فایل پیدا نشد."))
-                    vpnRender?.invoke()
-                }
-            }
-        }
-    }
-
-    private fun importWg(text: String, wantedName: String, onDone: () -> Unit) {
-        runBg {
-            var err = ""
-            try {
-                Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-            } catch (e: Throwable) {
-                err = (e.message ?: e.javaClass.simpleName).take(120)
-            }
-            ui {
-                if (err.isNotEmpty()) {
-                    toast(Tr.t("کانفیگ وایرگارد نامعتبر است:") + " " + err)
-                } else {
-                    val file = uniqueFile("wg", cleanName(wantedName, "wg"), ".conf")
-                    writeCfg("wg", file, text)
-                    toast(Tr.t("کانفیگ ذخیره شد"))
-                    onDone()
-                }
-            }
-        }
-    }
-
-    private fun importV2(text: String): Int {
-        val t = text.trim()
-        val items = ArrayList<String>()
-        if (t.startsWith("{")) {
-            try {
-                JSONObject(t)
-                items.add(t)
-            } catch (_: Exception) {
-            }
-        } else {
-            for (line in t.lines()) {
-                val l = line.trim()
-                if (l.contains("://") && l.length < 8000) items.add(l)
-            }
-        }
-        var n = 0
-        for (item in items) {
-            if (listCfg("v2").size >= 60) break
-            val base = "v" + (System.currentTimeMillis() / 1000L % 100000L).toString()
-            writeCfg("v2", uniqueFile("v2", base, ".txt"), item)
-            n++
-        }
-        return n
-    }
-
-    private fun v2Summary(text: String): String {
-        val t = text.trim()
-        try {
-            if (t.startsWith("{")) {
-                val o = JSONObject(t)
-                val ob = o.optJSONArray("outbounds")
-                val proto = ob?.optJSONObject(0)?.optString("protocol") ?: ""
-                return "JSON" + (if (proto.isNotEmpty()) " • " + proto else "")
-            }
-            val scheme = t.substringBefore("://").lowercase()
-            if (scheme == "vmess") {
-                val raw = t.substringAfter("://").trim()
-                val dec = String(Base64.decode(raw, Base64.DEFAULT), Charsets.UTF_8)
-                val o = JSONObject(dec)
-                val ps = o.optString("ps")
-                return "vmess • " + (if (ps.isNotEmpty()) ps + " • " else "") + o.optString("add") + ":" + o.optString("port")
-            }
-            val frag = if (t.contains("#")) URLDecoder.decode(t.substringAfter("#"), "UTF-8") else ""
-            val u = Uri.parse(t)
-            val host = u.host ?: ""
-            val port = if (u.port > 0) ":" + u.port.toString() else ""
-            return scheme + " • " + (if (frag.isNotEmpty()) frag + " • " else "") + host + port
-        } catch (_: Exception) {
-            return t.substringBefore("://").take(10)
-        }
-    }
-
-    private fun openInV2Client(text: String) {
-        try {
-            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            cm.setPrimaryClip(ClipData.newPlainText("v2ray", text))
-        } catch (_: Exception) {
-        }
-        val pkgs = arrayOf("com.v2ray.ang", "app.hiddify.com", "moe.nb4a", "io.nekohasekai.sagernet")
-        for (p in pkgs) {
-            val li = packageManager.getLaunchIntentForPackage(p)
-            if (li != null) {
-                try {
-                    startActivity(li)
-                    toast(Tr.t("کانفیگ کپی شد؛ در کلاینت از Import from clipboard استفاده کن."))
-                    return
-                } catch (_: Exception) {
-                }
-            }
-        }
-        toast(Tr.t("کانفیگ کپی شد؛ برنامه‌ی کلاینت V2Ray (مثل v2rayNG) نصب نیست."))
-    }
-
-    private fun wgBackendGet(): GoBackend {
-        var b = wgBackend
-        if (b == null) {
-            b = GoBackend(applicationContext)
-            wgBackend = b
-        }
-        return b
-    }
-
-    private fun connectWg(base: String) {
-        if (wgBusy) return
-        pendingWg = base
-        val prep = try {
-            VpnService.prepare(this)
-        } catch (_: Exception) {
-            null
-        }
-        if (prep != null) {
-            try {
-                startActivityForResult(prep, 4720)
-            } catch (_: Exception) {
-                toast("این دستگاه از VPN محلی پشتیبانی نمی‌کند.")
-            }
-        } else {
-            doConnectWg(base)
-        }
-    }
-
-    private fun doConnectWg(base: String) {
-        val text = readCfg("wg", base + ".conf")
-        if (text.isEmpty()) {
-            toast("کانفیگ پیدا نشد.")
-            return
-        }
-        wgBusy = true
-        toast(Tr.t("در حال اتصال به") + " " + base + "…")
-        vpnRefresh?.invoke()
-        runBg {
-            var err = ""
-            try {
-                val cfg = Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-                val be = wgBackendGet()
-                val old = wgTunnel
-                if (old != null) {
-                    try {
-                        be.setState(old, Tunnel.State.DOWN, null)
-                    } catch (_: Throwable) {
-                    }
-                }
-                val tun = WgTun(base)
-                be.setState(tun, Tunnel.State.UP, cfg)
-                wgTunnel = tun
-                WgState.activeName = base
-                WgState.up = true
-            } catch (e: Throwable) {
-                err = (e.message ?: e.javaClass.simpleName).take(160)
-            }
-            ui {
-                wgBusy = false
-                if (err.isEmpty()) {
-                    toast(Tr.t("متصل شد"))
-                } else {
-                    toast(Tr.t("خطای وایرگارد:") + " " + err)
-                }
-                vpnRefresh?.invoke()
-                homeRefresh?.invoke()
-            }
-        }
-    }
-
-    private fun disconnectWg() {
-        if (wgBusy) return
-        wgBusy = true
-        runBg {
-            try {
-                val t = wgTunnel
-                if (t != null) wgBackendGet().setState(t, Tunnel.State.DOWN, null)
-            } catch (_: Throwable) {
-            }
-            WgState.up = false
-            WgState.activeName = ""
-            ui {
-                wgBusy = false
-                toast(Tr.t("وایرگارد قطع شد"))
-                vpnRefresh?.invoke()
-                homeRefresh?.invoke()
-            }
-        }
-    }
-
-    private fun smallBtn(text: String, filled: Boolean, action: () -> Unit): TextView {
-        val b = button(text, filled, action)
-        b.textSize = 12.5f
-        b.setPadding(dp(14), dp(8), dp(14), dp(8))
-        return b
-    }
-
-    private fun buildVpn() {
-        // ---------------- WireGuard
-        section("WIREGUARD")
-        val wCard = card()
-        val wStatus = label("", 15f, white, true, false)
-        wCard.addView(wStatus)
-        val nameIn = input("نام کانفیگ (اختیاری)")
-        wCard.addView(nameIn, vlp(8, 8))
-        val wRow = LinearLayout(this)
-        wRow.orientation = LinearLayout.HORIZONTAL
-        val bFile = button("📁 افزودن فایل .conf", false) {
-            importName = nameIn.text.toString()
-            pickFile(4730)
-        }
-        val bClip = button("📋 از کلیپ‌بورد", false) {
-            val txt = clipText().trim()
-            if (txt.isEmpty() || !txt.contains("[Interface]")) {
-                toast(Tr.t("کانفیگ وایرگارد در کلیپ‌بورد پیدا نشد."))
-            } else if (listCfg("wg").size >= 20) {
-                toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
-            } else {
-                importWg(txt, nameIn.text.toString()) { vpnRender?.invoke() }
-            }
-        }
-        val lp1 = LinearLayout.LayoutParams(0, WRAP, 1f)
-        lp1.marginEnd = dp(4)
-        val lp2 = LinearLayout.LayoutParams(0, WRAP, 1f)
-        lp2.marginStart = dp(4)
-        wRow.addView(bFile, lp1)
-        wRow.addView(bClip, lp2)
-        wCard.addView(wRow, vlp(0, 10))
-        val wList = LinearLayout(this)
-        wList.orientation = LinearLayout.VERTICAL
-        wCard.addView(wList)
-        wCard.addView(
-            label(
-                "فایل‌های .conf فقط در حافظه‌ی خصوصی همین اپ ذخیره می‌شوند. اندروید هم‌زمان فقط یک VPN را نگه می‌دارد؛ با اتصال وایرگارد، DNS محلی قطع می‌شود.",
-                11.5f, muted
-            ), vlp(8, 0)
-        )
-        content.addView(wCard, vlp(0, 4))
-
-        var wKey = ""
-        fun renderW(force: Boolean) {
-            val up = WgState.up
-            val act = WgState.activeName
-            wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
-            wStatus.setTextColor(if (up) good else white)
-            val names = listCfg("wg")
-            val key = "$up|$act|$wgBusy|" + names.joinToString(",")
-            if (!force && key == wKey) return
-            wKey = key
-            wList.removeAllViews()
-            if (names.isEmpty()) {
-                wList.addView(label("هنوز کانفیگی اضافه نشده.", 12.5f, muted))
-                return
-            }
-            for (file in names) {
-                val base = file.removeSuffix(".conf")
-                val isActive = up && act == base
-                val row = LinearLayout(this)
-                row.orientation = LinearLayout.HORIZONTAL
-                row.gravity = Gravity.CENTER_VERTICAL
-                row.setPadding(dp(12), dp(10), dp(12), dp(10))
-                row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
-                val col = LinearLayout(this)
-                col.orientation = LinearLayout.VERTICAL
-                col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
-                val ep = wgEndpoint(readCfg("wg", file))
-                if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
-                row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
-                row.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
-                    if (isActive) disconnectWg() else connectWg(base)
-                })
-                val del = smallBtn("🗑", false) {
-                    if (isActive) disconnectWg()
-                    deleteCfg("wg", file)
-                    renderW(true)
-                }
-                val dlp = LinearLayout.LayoutParams(WRAP, WRAP)
-                dlp.marginStart = dp(6)
-                row.addView(del, dlp)
-                wList.addView(row, vlp(0, 6))
-            }
-        }
-
-        // ---------------- V2Ray
-        section("V2RAY / XRAY")
-        val vCard = card()
-        vCard.addView(
-            label(
-                "کانفیگ vmess:// ، vless:// ، trojan:// ، ss:// یا فایل JSON خودت را اضافه کن. فقط روی همین گوشی ذخیره می‌شوند.",
-                12f, muted
-            )
-        )
-        val vRow = LinearLayout(this)
-        vRow.orientation = LinearLayout.HORIZONTAL
-        val vFile = button("📁 آپلود فایل", false) { pickFile(4731) }
-        val vClip = button("📋 چسباندن لینک", false) {
-            val n = importV2(clipText())
-            toast(if (n > 0) n.toString() + " " + Tr.t("کانفیگ اضافه شد") else Tr.t("لینک معتبر در کلیپ‌بورد پیدا نشد."))
-            vpnRender?.invoke()
-        }
-        val lp3 = LinearLayout.LayoutParams(0, WRAP, 1f)
-        lp3.marginEnd = dp(4)
-        val lp4 = LinearLayout.LayoutParams(0, WRAP, 1f)
-        lp4.marginStart = dp(4)
-        vRow.addView(vFile, lp3)
-        vRow.addView(vClip, lp4)
-        vCard.addView(vRow, vlp(8, 10))
-        val vList = LinearLayout(this)
-        vList.orientation = LinearLayout.VERTICAL
-        vCard.addView(vList)
-        vCard.addView(
-            label(
-                "اتصال مستقیم V2Ray داخل این اپ هنوز فعال نیست (هسته‌ی Xray لازم است). دکمه‌ی «کلاینت» کانفیگ را کپی می‌کند و v2rayNG یا Hiddify نصب‌شده را باز می‌کند.",
-                11.5f, muted
-            ), vlp(8, 0)
-        )
-        content.addView(vCard, vlp(0, 4))
-
-        var vKey = ""
-        fun renderV(force: Boolean) {
-            val names = listCfg("v2")
-            val key = names.joinToString(",")
-            if (!force && key == vKey) return
-            vKey = key
-            vList.removeAllViews()
-            if (names.isEmpty()) {
-                vList.addView(label("هنوز کانفیگی اضافه نشده.", 12.5f, muted))
-                return
-            }
-            for (file in names) {
-                val text = readCfg("v2", file)
-                val box = LinearLayout(this)
-                box.orientation = LinearLayout.VERTICAL
-                box.setPadding(dp(12), dp(10), dp(12), dp(10))
-                box.background = rounded(panel2, 12, stroke)
-                val sm = label(v2Summary(text), 13f, white, true, false)
-                sm.maxLines = 3
-                sm.ellipsize = TextUtils.TruncateAt.END
-                box.addView(sm)
-                val br = LinearLayout(this)
-                br.orientation = LinearLayout.HORIZONTAL
-                val b1 = smallBtn("🚀 کلاینت", true) { openInV2Client(text) }
-                val b2 = smallBtn("کپی", false) {
-                    try {
-                        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        cm.setPrimaryClip(ClipData.newPlainText("v2ray", text))
-                        toast(Tr.t("کپی شد"))
-                    } catch (_: Exception) {
-                    }
-                }
-                val b3 = smallBtn("🗑", false) {
-                    deleteCfg("v2", file)
-                    renderV(true)
-                }
-                val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
-                m1.marginEnd = dp(6)
-                val m2 = LinearLayout.LayoutParams(WRAP, WRAP)
-                m2.marginEnd = dp(6)
-                br.addView(b1, m1)
-                br.addView(b2, m2)
-                br.addView(b3)
-                box.addView(br, vlp(8, 0))
-                vList.addView(box, vlp(0, 6))
-            }
-        }
-
-        vpnRefresh = {
-            renderW(false)
-            renderV(false)
-        }
-        vpnRender = {
-            renderW(true)
-            renderV(true)
-        }
-        renderW(true)
-        renderV(true)
-    }
-
-    // ----- TOOLS ------------------------------------------------------------
-
-    private fun applyWindowToggles() {
-        if (prefs.getBoolean("keepOn", false)) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        val wlp = window.attributes
-        wlp.screenBrightness = if (prefs.getBoolean("maxBright", false)) {
-            1f
-        } else {
-            WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-        }
-        window.attributes = wlp
-    }
-
-    private fun toggleRow(parent: LinearLayout, title: String, desc: String, key: String) {
-        val row = LinearLayout(this)
-        row.orientation = LinearLayout.HORIZONTAL
-        row.gravity = Gravity.CENTER_VERTICAL
-        row.setPadding(0, dp(8), 0, dp(8))
-        val col = LinearLayout(this)
-        col.orientation = LinearLayout.VERTICAL
-        col.addView(label(title, 14f, white, true))
-        col.addView(label(desc, 11.5f, muted))
-        val pill = TextView(this)
-        pill.textSize = 12.5f
-        pill.typeface = Typeface.DEFAULT_BOLD
-        pill.gravity = Gravity.CENTER
-        pill.setPadding(dp(16), dp(8), dp(16), dp(8))
-        fun paint() {
-            val on = prefs.getBoolean(key, false)
-            pill.text = Tr.t(if (on) "روشن" else "خاموش")
-            pill.setTextColor(if (on) onAccent() else muted)
-            pill.background = if (on) rounded(accent, 20) else rounded(panel2, 20, stroke)
-        }
-        paint()
-        pill.setOnClickListener {
-            prefs.edit().putBoolean(key, !prefs.getBoolean(key, false)).apply()
-            applyWindowToggles()
-            paint()
-        }
-        val cp = LinearLayout.LayoutParams(0, WRAP, 1f)
-        cp.marginEnd = dp(10)
-        row.addView(col, cp)
-        row.addView(pill)
-        parent.addView(row, LinearLayout.LayoutParams(MATCH, WRAP))
-    }
-
-    private fun buildTools() {
-        section("GAME MODE")
-        val modeCard = card()
-        toggleRow(modeCard, "روشن نگه‌داشتن صفحه", "تا وقتی این اپ بازه، صفحه خاموش نمی‌شود.", "keepOn")
-        toggleRow(modeCard, "حداکثر روشنایی", "فقط داخل همین اپ؛ روشنایی کل سیستم تغییر نمی‌کند.", "maxBright")
-        toggleRow(modeCard, "اتصال خودکار DNS", "اگر قبلاً یک‌بار DNS را وصل کرده باشی، با اجرای بازی از همین اپ، DNS انتخابی خودکار وصل می‌شود.", "autoDns")
-        content.addView(modeCard, vlp(0, 4))
-
-        section("SYSTEM SHORTCUTS")
-        val sCard = card()
-        sCard.addView(label("میان‌برهای مهم برای گیمینگ؛ تنظیمات سیستم را مستقیم باز می‌کنند.", 12f, muted), vlp(0, 8))
-        val items = listOf(
-            Pair("نمایشگر", Settings.ACTION_DISPLAY_SETTINGS),
-            Pair("باتری", Settings.ACTION_BATTERY_SAVER_SETTINGS),
-            Pair("مزاحم نشوید (DND)", Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS),
-            Pair("Wi-Fi", Settings.ACTION_WIFI_SETTINGS),
-            Pair("صدا", Settings.ACTION_SOUND_SETTINGS),
-            Pair("حافظه", Settings.ACTION_INTERNAL_STORAGE_SETTINGS),
-            Pair("گزینه‌های توسعه‌دهنده", Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-            Pair("مدیریت برنامه‌ها", Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS)
-        )
-        for (rowItems in items.chunked(2)) {
-            val r = LinearLayout(this)
-            r.orientation = LinearLayout.HORIZONTAL
-            for (it2 in rowItems) {
-                val b = button(it2.first, false) { openSettings(it2.second) }
-                b.textSize = 12.5f
-                val bp = LinearLayout.LayoutParams(0, WRAP, 1f)
-                bp.marginStart = dp(4)
-                bp.marginEnd = dp(4)
-                r.addView(b, bp)
-            }
-            sCard.addView(r, vlp(0, 8))
-        }
-        content.addView(sCard, vlp(0, 4))
-
-        section("PRE-GAME CHECKLIST")
-        val cCard = card()
-        val checks = listOf(
-            "حالت «مزاحم نشوید» را روشن کن",
-            "باتری بالای ۳۰٪ یا گوشی روی شارژر",
-            "Wi-Fi پایدار؛ دانلودهای پس‌زمینه را متوقف کن",
-            "کاور ضخیم را بردار تا گوشی خنک‌تر بماند",
-            "برنامه‌های سنگین را از Recent ببند"
-        )
-        for (c in checks) {
-            val t = label("☐   $c", 13.5f, white)
-            t.setPadding(0, dp(8), 0, dp(8))
-            var done = false
-            t.setOnClickListener {
-                done = !done
-                t.text = Tr.t((if (done) "☑   " else "☐   ") + c)
-                t.setTextColor(if (done) good else white)
-            }
-            cCard.addView(t, LinearLayout.LayoutParams(MATCH, WRAP))
-        }
-        content.addView(cCard, vlp(0, 4))
-    }
-
-    // ----- STATS ------------------------------------------------------------
-
-    private fun buildStats() {
-        val times = ArrayList<Pair<String, Long>>()
-        var launches = 0
-        for (e in prefs.all.entries) {
-            val v = e.value
-            if (e.key.startsWith("pt_") && v is Long) times.add(Pair(e.key.removePrefix("pt_"), v))
-            if (e.key.startsWith("lc_") && v is Int) launches += v
-        }
-        times.sortByDescending { it.second }
-        var total = 0L
-        for (t in times) total += t.second
-
-        val hero = LinearLayout(this)
-        hero.orientation = LinearLayout.VERTICAL
-        hero.setPadding(dp(16), dp(16), dp(16), dp(16))
-        hero.background = heroBg()
-        hero.addView(label("زمان بازی ثبت‌شده", 12.5f, muted))
-        hero.addView(label(if (total == 0L) "—" else fmtDur(total), 26f, white, true), vlp(2, 2))
-        hero.addView(label("${launches} بار اجرا از طریق EzzGameBOOST", 12.5f, muted))
-        content.addView(hero, vlp(4, 4))
-
-        section("TOP GAMES")
-        val topCard = card()
-        if (times.isEmpty()) {
-            topCard.addView(label("هنوز داده‌ای نیست. بازی‌ها را از تب «بازی‌ها» اجرا کن تا زمان بازی ثبت شود.", 12.5f, muted))
-        } else {
-            val top = maxOf(times[0].second, 1L)
-            for (idx in 0 until minOf(5, times.size)) {
-                val t = times[idx]
-                topCard.addView(barRow(appLabel(t.first), fmtDur(t.second), t.second.toFloat() / top.toFloat(), accent, idx == 0))
-            }
-            topCard.addView(label("زمان‌ها تقریبی‌اند: از لحظه‌ی اجرا تا بازگشت به این اپ حساب می‌شود.", 11.5f, muted), vlp(8, 0))
-        }
-        content.addView(topCard, vlp(0, 4))
-
-        section("THEME")
-        val themeCard = card()
-        themeCard.addView(label("رنگ تم", 14f, white, true), vlp(0, 10))
-        val current = prefs.getInt("accent", 0).coerceIn(0, accents.size - 1)
-        val dots = LinearLayout(this)
-        dots.orientation = LinearLayout.HORIZONTAL
-        for (i in accents.indices) {
-            val dot = TextView(this)
-            dot.gravity = Gravity.CENTER
-            dot.textSize = 16f
-            val d = GradientDrawable()
-            d.shape = GradientDrawable.OVAL
-            d.setColor(accents[i])
-            if (i == current) {
-                d.setStroke(dp(3), white)
-                dot.text = "✓"
-                dot.setTextColor(Color.rgb(8, 9, 14))
-            }
-            dot.background = d
-            dot.setOnClickListener {
-                prefs.edit().putInt("accent", i).apply()
-                accent = accents[i]
-                buildShell()
-                showTab(tab)
-            }
-            val dp2 = LinearLayout.LayoutParams(dp(44), dp(44))
-            dp2.marginEnd = dp(12)
-            dots.addView(dot, dp2)
-        }
-        themeCard.addView(dots)
-        themeCard.addView(label("رنگ فعلی: ${accentNames[current]}", 11.5f, muted), vlp(8, 0))
-        content.addView(themeCard, vlp(0, 4))
-
-        section("LANGUAGE")
-        val langCard = card()
-        val langRow = LinearLayout(this)
-        langRow.orientation = LinearLayout.HORIZONTAL
-        val l1 = LinearLayout.LayoutParams(WRAP, WRAP)
-        l1.marginEnd = dp(8)
-        langRow.addView(chip("فارسی", !Tr.en, false) { setLang("fa") }, l1)
-        langRow.addView(chip("English", Tr.en, false) { setLang("en") })
-        langCard.addView(langRow)
-        content.addView(langCard, vlp(0, 4))
-
-        section("ABOUT")
-        val about = card()
-        about.addView(label("EzzGameBOOST v2.1", 14f, white, true))
-        about.addView(label("ساخته‌شده توسط ایزی دیجی", 12.5f, white), vlp(4, 0))
-        about.addView(
-            label(
-                "این اپ بدون روت کار می‌کند. دکمه‌ی BOOST فقط از API رسمی اندروید برای بستن پردازش‌های پس‌زمینه استفاده می‌کند و اندروید ممکن است بعضی برنامه‌ها را دوباره اجرا کند. هیچ اپ معمولی نمی‌تواند FPS یا پینگ داخل بازی را تضمین کند؛ تست شبکه فقط زمان اتصال TCP را اندازه می‌گیرد.",
-                12f, muted
-            ), vlp(6, 10)
-        )
-        about.addView(button("🌐 ezzdigio.com") { openUrl("https://ezzdigio.com") }, vlp(0, 8))
-        about.addView(button("اشتراک‌گذاری اپ", false) { shareApp() }, vlp(0, 8))
-        about.addView(button("پاک کردن آمار بازی", false) {
-            val keys = ArrayList<String>()
-            for (k in prefs.all.keys) {
-                if (k.startsWith("pt_") || k.startsWith("lc_")) keys.add(k)
-            }
-            val ed = prefs.edit()
-            for (k in keys) ed.remove(k)
-            ed.apply()
-            showTab(5)
-        }, LinearLayout.LayoutParams(MATCH, WRAP))
-        content.addView(about, vlp(0, 4))
-    }
-}
-
-
-// ---------------------------------------------------------------------------
-// DNS VPN service: local VPN that only captures DNS queries and forwards them
-// to the chosen DNS server (primary, then secondary as fallback).
-// ---------------------------------------------------------------------------
-
-class DnsVpnService : VpnService() {
-
-    companion object {
-        const val ACTION_START = "com.ezzdigi.ezzgameboost.DNS_START"
-        const val ACTION_STOP = "com.ezzdigi.ezzgameboost.DNS_STOP"
-
-        @Volatile
-        var instance: DnsVpnService? = null
-
-        fun requestStop(ctx: Context) {
-            val svc = instance
-            if (svc != null) {
-                svc.shutdown()
-            } else {
-                try {
-                    val i = Intent(ctx, DnsVpnService::class.java)
-                    i.action = ACTION_STOP
-                    ctx.startService(i)
-                } catch (_: Exception) {
-                }
-            }
-            running = false
-            activeName = ""
-        }
-        private const val FAKE_DNS = "10.111.222.2"
-        private const val TUN_ADDR = "10.111.222.1"
-
-        @Volatile
-        var running = false
-
-        @Volatile
-        var activeName = ""
-        val queryCount = AtomicLong(0L)
-        val failCount = AtomicLong(0L)
-    }
-
-    private var tun: ParcelFileDescriptor? = null
-    private var pool: java.util.concurrent.ExecutorService? = null
-
-    @Volatile
-    private var stopping = false
-
-    @Volatile
-    private var gen = 0
-
-    @Volatile
-    private var primaryDownUntil = 0L
-    private var primary = ""
-    private var secondary = ""
-    private var tertiary = ""
-
-    override fun onCreate() {
-        super.onCreate()
-        instance = this
-        Tr.load(this)
-    }
-
-    fun shutdown() {
-        cleanup()
-        stopSelf()
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent != null && intent.action == ACTION_STOP) {
-            cleanup()
-            stopSelf()
-            return Service.START_NOT_STICKY
-        }
-        if (intent == null || intent.action != ACTION_START) {
-            stopSelf()
-            return Service.START_NOT_STICKY
-        }
-        val p = intent.getStringExtra("primary") ?: ""
-        val s = intent.getStringExtra("secondary") ?: ""
-        val t3 = intent.getStringExtra("tertiary") ?: ""
-        val n = intent.getStringExtra("name") ?: p
-        if (p.isEmpty()) {
-            stopSelf()
-            return Service.START_NOT_STICKY
-        }
-        startTunnel(p, s, t3, n)
-        return Service.START_NOT_STICKY
-    }
-
-    private fun startTunnel(p: String, s: String, t3: String, name: String) {
-        cleanup()
-        primary = p
-        secondary = s
-        tertiary = t3
-        primaryDownUntil = 0L
-        try {
-            val b = Builder()
-            b.setSession("EzzGameBOOST DNS")
-            b.addAddress(TUN_ADDR, 24)
-            b.addRoute("10.111.222.0", 24)
-            b.addDnsServer(FAKE_DNS)
-            b.setMtu(1500)
-            b.setBlocking(true)
-            val pfd = b.establish()
-            if (pfd == null) {
-                running = false
-                stopSelf()
-                return
-            }
-            tun = pfd
-            stopping = false
-            running = true
-            activeName = name
-            queryCount.set(0L)
-            failCount.set(0L)
-            pool = java.util.concurrent.Executors.newFixedThreadPool(12)
-            goForeground(name)
-            val myGen = gen
-            Thread { loop(pfd, myGen) }.start()
-        } catch (_: Throwable) {
-            cleanup()
-            stopSelf()
-        }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun goForeground(name: String) {
-        try {
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.createNotificationChannel(
-                NotificationChannel("ezz_dns", "DNS", NotificationManager.IMPORTANCE_LOW)
-            )
-            val pi = PendingIntent.getActivity(
-                this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
-            )
-            val stopIntent = Intent(this, DnsVpnService::class.java)
-            stopIntent.action = ACTION_STOP
-            val stopPi = PendingIntent.getService(this, 1, stopIntent, PendingIntent.FLAG_IMMUTABLE)
-            val n = Notification.Builder(this, "ezz_dns")
-                .setContentTitle("EzzGameBOOST • DNS")
-                .setContentText(Tr.t("متصل:") + " " + name)
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
-                .setContentIntent(pi)
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, Tr.t("قطع اتصال"), stopPi)
-                .setOngoing(true)
-                .build()
-            startForeground(1, n)
-        } catch (_: Throwable) {
-        }
-    }
-
-    private fun loop(pfd: ParcelFileDescriptor, myGen: Int) {
-        val input = FileInputStream(pfd.fileDescriptor)
-        val output = FileOutputStream(pfd.fileDescriptor)
-        val buf = ByteArray(32768)
-        val fds = arrayOf(StructPollfd())
-        fds[0].fd = pfd.fileDescriptor
-        fds[0].events = OsConstants.POLLIN.toShort()
-        try {
-            while (!stopping && gen == myGen) {
-                fds[0].revents = 0
-                try {
-                    val r = Os.poll(fds, 500)
-                    if (r <= 0) continue
-                } catch (e: ErrnoException) {
-                    if (e.errno == OsConstants.EINTR) continue
-                    break
-                }
-                if (stopping || gen != myGen) break
-                val n = input.read(buf)
-                if (n < 0) break
-                if (n < 28) continue
-                handle(buf, n, output)
-            }
-        } catch (_: Exception) {
-        }
-        if (!stopping && gen == myGen) {
-            running = false
-            activeName = ""
-            stopSelf()
-        }
-    }
-
-    private fun u16(b: ByteArray, off: Int): Int =
-        ((b[off].toInt() and 0xFF) shl 8) or (b[off + 1].toInt() and 0xFF)
-
-    private fun handle(buf: ByteArray, n: Int, output: FileOutputStream) {
-        val ver = (buf[0].toInt() shr 4) and 0xF
-        if (ver != 4) return
-        val ihl = (buf[0].toInt() and 0xF) * 4
-        val proto = buf[9].toInt() and 0xFF
-        if (proto != 17 || n < ihl + 8) return
-        val srcPort = u16(buf, ihl)
-        val dstPort = u16(buf, ihl + 2)
-        if (dstPort != 53) return
-        val udpLen = u16(buf, ihl + 4)
-        val plen = minOf(udpLen - 8, n - ihl - 8)
-        if (plen <= 0) return
-        val payload = ByteArray(plen)
-        System.arraycopy(buf, ihl + 8, payload, 0, plen)
-        val srcIp = ByteArray(4)
-        val dstIp = ByteArray(4)
-        System.arraycopy(buf, 12, srcIp, 0, 4)
-        System.arraycopy(buf, 16, dstIp, 0, 4)
-        val pl = pool ?: return
-        try {
-            pl.execute {
-                try {
-                    val resp = forward(payload)
-                    if (resp != null) {
-                        queryCount.incrementAndGet()
-                        val pkt = buildPacket(dstIp, srcIp, 53, srcPort, resp)
-                        synchronized(output) { output.write(pkt) }
-                    } else {
-                        failCount.incrementAndGet()
-                    }
-                } catch (_: Throwable) {
-                }
-            }
-        } catch (_: Exception) {
-        }
-    }
-
-    private fun forward(payload: ByteArray): ByteArray? {
-        val now = System.currentTimeMillis()
-        val base = ArrayList<String>()
-        base.add(primary)
-        if (secondary.isNotEmpty()) base.add(secondary)
-        if (tertiary.isNotEmpty()) base.add(tertiary)
-        val uniq = base.distinct()
-        val order: List<String> = if (uniq.size > 1 && now < primaryDownUntil) uniq.drop(1) + uniq[0] else uniq
-        for ((idx, server) in order.withIndex()) {
-            val r = query(server, payload, if (idx == 0) 1800 else 2500)
-            if (r != null) return r
-            if (server == primary) primaryDownUntil = System.currentTimeMillis() + 30000L
-        }
-        return null
-    }
-
-    private fun query(server: String, payload: ByteArray, timeoutMs: Int): ByteArray? {
-        val sock = try {
-            DatagramSocket()
-        } catch (_: Exception) {
-            return null
-        }
-        try {
-            protect(sock)
-            sock.soTimeout = timeoutMs
-            sock.send(DatagramPacket(payload, payload.size, InetAddress.getByName(server), 53))
-            val buf = ByteArray(4096)
-            val rp = DatagramPacket(buf, buf.size)
-            sock.receive(rp)
-            if (rp.length < 12 || buf[0] != payload[0] || buf[1] != payload[1]) return null
-            return buf.copyOf(rp.length)
-        } catch (_: Exception) {
-            return null
-        } finally {
-            sock.close()
-        }
-    }
-
-    private fun buildPacket(src: ByteArray, dst: ByteArray, sport: Int, dport: Int, data: ByteArray): ByteArray {
-        val total = 28 + data.size
-        val p = ByteArray(total)
-        p[0] = 0x45
-        p[2] = (total shr 8).toByte()
-        p[3] = (total and 0xFF).toByte()
-        p[6] = 0x40
-        p[8] = 64
-        p[9] = 17
-        System.arraycopy(src, 0, p, 12, 4)
-        System.arraycopy(dst, 0, p, 16, 4)
-        var sum = 0
-        var i = 0
-        while (i < 20) {
-            sum += ((p[i].toInt() and 0xFF) shl 8) or (p[i + 1].toInt() and 0xFF)
-            i += 2
-        }
-        while ((sum shr 16) != 0) sum = (sum and 0xFFFF) + (sum shr 16)
-        val ck = sum.inv() and 0xFFFF
-        p[10] = (ck shr 8).toByte()
-        p[11] = (ck and 0xFF).toByte()
-        p[20] = (sport shr 8).toByte()
-        p[21] = (sport and 0xFF).toByte()
-        p[22] = (dport shr 8).toByte()
-        p[23] = (dport and 0xFF).toByte()
-        val ul = 8 + data.size
-        p[24] = (ul shr 8).toByte()
-        p[25] = (ul and 0xFF).toByte()
-        System.arraycopy(data, 0, p, 28, data.size)
-        return p
-    }
-
-    private fun cleanup() {
-        stopping = true
-        gen++
-        running = false
-        activeName = ""
-        try {
-            tun?.close()
-        } catch (_: Exception) {
-        }
-        tun = null
-        try {
-            pool?.shutdownNow()
-        } catch (_: Exception) {
-        }
-        pool = null
-        try {
-            stopForeground(Service.STOP_FOREGROUND_REMOVE)
-        } catch (_: Throwable) {
-        }
-    }
-
-    override fun onRevoke() {
-        cleanup()
-        stopSelf()
-    }
-
-    override fun onDestroy() {
-        cleanup()
-        instance = null
-        super.onDestroy()
-    }
-}
-
-
-// ---------------------------------------------------------------------------
-// Home-screen widget
-// ---------------------------------------------------------------------------
-
-class BoostWidget : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        Tr.load(context)
-        val v = build(context)
-        for (id in appWidgetIds) appWidgetManager.updateAppWidget(id, v)
-    }
-
-    companion object {
-        fun build(ctx: Context): RemoteViews {
-            val v = RemoteViews(ctx.packageName, R.layout.widget_boost)
-            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val mi = ActivityManager.MemoryInfo()
-            am.getMemoryInfo(mi)
-            val freeMb = mi.availMem / (1024L * 1024L)
-            val bi = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val level = bi?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = bi?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
-            val pct = if (level >= 0 && scale > 0) level * 100 / scale else 0
-            val dns = if (DnsVpnService.running) DnsVpnService.activeName else Tr.t("پیش‌فرض سیستم")
-            v.setTextViewText(R.id.w_title, "EzzGameBOOST")
-            v.setTextViewText(R.id.w_ram, "RAM " + Tr.t("آزاد") + ": " + freeMb + " MB")
-            v.setTextViewText(R.id.w_bat, Tr.t("باتری") + ": " + pct + "%")
-            v.setTextViewText(R.id.w_dns, "DNS: " + dns)
-            v.setTextViewText(R.id.w_site, Tr.t("ایزی دیجی") + " • ezzdigio.com")
-            val pi = PendingIntent.getActivity(
-                ctx, 0, Intent(ctx, MainActivity::class.java),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
-            v.setOnClickPendingIntent(R.id.w_root, pi)
-            return v
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Quick Settings tile: toggle the DNS VPN from the notification shade
-// ---------------------------------------------------------------------------
-
-class DnsTileService : TileService() {
-    private val h = Handler(Looper.getMainLooper())
-
-    override fun onStartListening() {
-        super.onStartListening()
-        update()
-    }
-
-    override fun onClick() {
-        super.onClick()
-        Tr.load(this)
-        if (DnsVpnService.running) {
-            DnsVpnService.requestStop(this)
-            update()
-            h.postDelayed({ update() }, 600)
-            return
-        }
-        val needConsent = try {
-            VpnService.prepare(this) != null
-        } catch (_: Exception) {
-            true
-        }
-        if (needConsent) {
-            openApp()
-            return
-        }
-        val prefs = getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
-        val list = DnsList.all
-        val pr = list[prefs.getInt("dnsSel", 0).coerceIn(0, list.size - 1)]
-        val i = Intent(this, DnsVpnService::class.java)
-        i.action = DnsVpnService.ACTION_START
-        i.putExtra("primary", pr.primary)
-        i.putExtra("secondary", pr.secondary)
-        i.putExtra("tertiary", pr.tertiary)
-        i.putExtra("name", pr.name)
-        try {
-            startService(i)
-        } catch (_: Exception) {
-            openApp()
-            return
-        }
-        h.postDelayed({ update() }, 900)
-        h.postDelayed({ update() }, 2500)
-    }
-
-    private fun update() {
-        val t = qsTile ?: return
-        t.state = if (DnsVpnService.running) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        t.label = "EzzDigi DNS"
-        t.updateTile()
-    }
-
-    @Suppress("DEPRECATION")
-    private fun openApp() {
-        val i = Intent(this, MainActivity::class.java)
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            if (Build.VERSION.SDK_INT >= 34) {
-                startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE))
-            } else {
-                startActivityAndCollapse(i)
-            }
-        } catch (_: Throwable) {
-        }
-    }
-}
+ 
