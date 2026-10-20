@@ -1,6 +1,18 @@
 package com.ezzdigi.ezzgameboost
 
 import android.Manifest
+import android.provider.OpenableColumns
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
+import android.system.StructPollfd
+import android.util.Base64
+import com.wireguard.android.backend.GoBackend
+import com.wireguard.android.backend.Tunnel
+import com.wireguard.config.Config
+import java.io.ByteArrayInputStream
+import java.net.URLDecoder
+import org.json.JSONObject
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -83,7 +95,7 @@ private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 
 class AppItem(val label: String, val pkg: String, val isGame: Boolean)
-class DnsProvider(val name: String, val primary: String, val secondary: String)
+class DnsProvider(val name: String, val primary: String, val secondary: String, val tertiary: String = "")
 class ServerItem(val name: String, val host: String, val port: Int)
 class HistItem(val ts: Long, val key: String, val avg: Int, val loss: Int)
 
@@ -92,13 +104,43 @@ object DnsList {
         DnsProvider("Radar Game • رادار گیم", "10.202.10.10", "10.202.10.11"),
         DnsProvider("Electro • الکترو", "78.157.42.100", "78.157.42.101"),
         DnsProvider("Shecan • شکن", "178.22.122.100", "185.51.200.2"),
-        DnsProvider("Begzar • بگذر", "185.55.226.26", "185.55.225.25"),
+        DnsProvider("Begzar • بگذر", "185.55.226.26", "185.55.225.25", "185.55.224.24"),
         DnsProvider("Shelter • شلتر", "94.156.65.130", "91.92.249.227"),
+        DnsProvider("Vanilla", "194.146.68.68", "194.146.68.40"),
+        DnsProvider("Premium Turbo", "78.157.58.162", "78.157.58.163"),
+        DnsProvider("Bertina", "193.186.32.32", "193.186.32.32"),
+        DnsProvider("Hostiran", "172.29.0.100", "172.29.2.100"),
+        DnsProvider("Server.ir", "65.109.209.224", "65.109.177.244"),
+        DnsProvider("Beshkan App", "181.41.194.177", "181.41.194.186"),
+        DnsProvider("Yandex DNS", "77.88.8.8", "77.88.8.1"),
+        DnsProvider("Ezz01", "87.248.145.40", "87.107.170.69"),
+        DnsProvider("Ezz02", "185.97.18.126", "87.248.145.40"),
+        DnsProvider("Ezz03", "176.10.118.132", "176.10.118.133"),
+        DnsProvider("Ezz04", "94.187.170.2", "94.187.170.3"),
+        DnsProvider("Ezz05", "195.235.194.7", "195.235.194.8"),
+        DnsProvider("Ezz06", "45.81.37.0", "45.81.37.1"),
         DnsProvider("Cloudflare", "1.1.1.1", "1.0.0.1"),
         DnsProvider("Google", "8.8.8.8", "8.8.4.4"),
         DnsProvider("Quad9", "9.9.9.9", "149.112.112.112"),
         DnsProvider("AdGuard", "94.140.14.14", "94.140.15.15")
     )
+}
+
+class WgTun(private val tunnelName: String) : Tunnel {
+    override fun getName(): String = tunnelName
+
+    override fun onStateChange(newState: Tunnel.State) {
+        WgState.up = newState == Tunnel.State.UP
+        if (!WgState.up) WgState.activeName = ""
+    }
+}
+
+object WgState {
+    @Volatile
+    var up = false
+
+    @Volatile
+    var activeName = ""
 }
 
 object Tr {
@@ -121,6 +163,26 @@ object Tr {
 
     // Persian fragment -> English; longest fragments first.
     private val PAIRS: List<Pair<String, String>> = listOf(
+        Pair("هنوز کانفیگی اضافه نشده", "No configs added yet"),
+        Pair("کانفیگ وایرگارد نامعتبر است:", "Invalid WireGuard config:"),
+        Pair("اجازه\u200cی VPN داده نشد؛ بدون آن اتصال ممکن نیست", "VPN permission was not granted; connecting is not possible without it"),
+        Pair("فایل خوانده نشد یا خیلی بزرگ است", "The file could not be read or is too large"),
+        Pair("کانفیگ معتبری در فایل پیدا نشد", "No valid config found in the file"),
+        Pair("لینک معتبر در کلیپ\u200cبورد پیدا نشد", "No valid link found on the clipboard"),
+        Pair("کانفیگ وایرگارد در کلیپ\u200cبورد پیدا نشد", "No WireGuard config found on the clipboard"),
+        Pair("کانفیگ کپی شد؛ برنامه\u200cی کلاینت V2Ray (مثل v2rayNG) نصب نیست", "Config copied; no V2Ray client app (like v2rayNG) is installed"),
+        Pair("کانفیگ کپی شد؛ در کلاینت از Import from clipboard استفاده کن", "Config copied; use “Import from clipboard” in the client"),
+        Pair("نام کانفیگ (اختیاری)", "Config name (optional)"),
+        Pair("خطای وایرگارد:", "WireGuard error:"),
+        Pair("وایرگارد قطع شد", "WireGuard disconnected"),
+        Pair("کانفیگ ذخیره شد", "Config saved"),
+        Pair("کانفیگ اضافه شد", "configs added"),
+        Pair("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است", "You can save up to 20 WireGuard configs"),
+        Pair("افزودن فایل .conf", "Add .conf file"),
+        Pair("از کلیپ\u200cبورد", "From clipboard"),
+        Pair("آپلود فایل", "Upload file"),
+        Pair("چسباندن لینک", "Paste link"),
+        Pair("متصل شد", "Connected"),
         Pair("این اپ بدون روت کار می\u200cکند. دکمه\u200cی BOOST فقط از API رسمی اندروید برای بستن پردازش\u200cهای پس\u200cزمینه استفاده می\u200cکند و اندروید ممکن است بعضی برنامه\u200cها را دوباره اجرا کند. هیچ اپ معمولی نمی\u200cتواند FPS یا پینگ داخل بازی را تضمین کند؛ تست شبکه فقط زمان اتصال TCP را اندازه می\u200cگیرد", "This app works without root. The BOOST button only uses Android's official API to close background processes, and Android may restart some apps. No regular app can guarantee FPS or in-game ping; the network test only measures TCP connection time"),
         Pair("اتصال با یک VPN محلی انجام می\u200cشود که فقط درخواست\u200cهای DNS را به سرور انتخابی می\u200cفرستد؛ بقیه\u200cی ترافیک از مسیر عادی می\u200cرود. اندروید هم\u200cزمان فقط یک VPN را نگه می\u200cدارد، پس VPN دیگر قطع می\u200cشود. اگر Private DNS روی حالت hostname است، اول آن را Off یا Automatic کن", "The connection uses a local VPN that only sends DNS requests to the selected server; all other traffic takes its normal path. Android keeps only one VPN at a time, so your other VPN will disconnect. If Private DNS is set to a hostname, switch it to Off or Automatic first"),
         Pair("روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. نام میزبان را کپی کن و در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان", "Second method: DNS-over-TLS inside Android's own settings. Copy the hostname and enter it in Private DNS. If the connection breaks, set the option back to Automatic"),
@@ -648,8 +710,8 @@ class MainActivity : Activity() {
     private val accentNames = arrayOf("قرمز", "فیروزه‌ای", "بنفش", "سبز", "نارنجی")
     private var accent = accents[0]
 
-    private val tabIcons = arrayOf("🏠", "🎮", "📡", "🛠", "📊")
-    private val tabNames = arrayOf("خانه", "بازی‌ها", "شبکه", "ابزار", "آمار")
+    private val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "🛠", "📊")
+    private val tabNames = arrayOf("خانه", "بازی‌ها", "شبکه", "VPN", "ابزار", "آمار")
 
     private val dnsProviders = DnsList.all
 
@@ -667,6 +729,13 @@ class MainActivity : Activity() {
     private lateinit var tabBar: LinearLayout
     private var homeRefresh: (() -> Unit)? = null
     private var netRefresh: (() -> Unit)? = null
+    private var vpnRefresh: (() -> Unit)? = null
+    private var vpnRender: (() -> Unit)? = null
+    private var wgBackend: GoBackend? = null
+    private var wgTunnel: WgTun? = null
+    private var wgBusy = false
+    private var pendingWg: String? = null
+    private var importName = ""
     private var pendingDns: DnsProvider? = null
     private val dnsPing = HashMap<String, Int>()
     private var dnsBenchRunning = false
@@ -684,6 +753,7 @@ class MainActivity : Activity() {
         override fun run() {
             homeRefresh?.invoke()
             netRefresh?.invoke()
+            vpnRefresh?.invoke()
             handler.postDelayed(this, 2000)
         }
     }
@@ -712,7 +782,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         val recorded = finalizeSession()
-        if (recorded && (tab == 0 || tab == 1 || tab == 4) && ::content.isInitialized) showTab(tab)
+        if (recorded && (tab == 0 || tab == 1 || tab == 5) && ::content.isInitialized) showTab(tab)
         handler.removeCallbacks(ticker)
         handler.post(ticker)
         refreshWidget()
@@ -840,6 +910,8 @@ class MainActivity : Activity() {
         tab = i
         homeRefresh = null
         netRefresh = null
+        vpnRefresh = null
+        vpnRender = null
         pingToken++
         content.removeAllViews()
         refreshTabBar()
@@ -847,7 +919,8 @@ class MainActivity : Activity() {
             0 -> buildHome()
             1 -> buildGames()
             2 -> buildNetwork()
-            3 -> buildTools()
+            3 -> buildVpn()
+            4 -> buildTools()
             else -> buildStats()
         }
         scroll.scrollTo(0, 0)
@@ -2104,24 +2177,27 @@ class MainActivity : Activity() {
         dnsPing.clear()
         btn.text = Tr.t("در حال تست…")
         onUpdate()
-        runBg {
-            for (pr in dnsProviders) {
+        val total = dnsProviders.size
+        val finished = java.util.concurrent.atomic.AtomicInteger(0)
+        for (pr in dnsProviders) {
+            runBg {
                 val vals = ArrayList<Int>()
                 for (k in 0 until 3) {
-                    val ms = dnsPingMs(pr.primary, 1500)
+                    val ms = dnsPingMs(pr.primary, 1200)
                     if (ms >= 0) vals.add(ms)
                 }
                 val avg = if (vals.isEmpty()) -1 else vals.average().toInt()
+                val done = finished.incrementAndGet()
                 ui {
                     dnsPing[pr.name] = avg
                     onUpdate()
+                    if (done >= total) {
+                        dnsBenchRunning = false
+                        btn.text = Tr.t("تست سرعت همه‌ی DNSها")
+                        onUpdate()
+                        if (onDone != null) onDone()
+                    }
                 }
-            }
-            ui {
-                dnsBenchRunning = false
-                btn.text = Tr.t("تست سرعت همه‌ی DNSها")
-                onUpdate()
-                if (onDone != null) onDone()
             }
         }
     }
@@ -2149,6 +2225,16 @@ class MainActivity : Activity() {
             } else {
                 toast("اجازه‌ی VPN داده نشد؛ بدون آن DNS تغییر نمی‌کند.")
             }
+        } else if (requestCode == 4720) {
+            val n = pendingWg
+            if (resultCode == Activity.RESULT_OK && n != null) {
+                doConnectWg(n)
+            } else {
+                toast("اجازه‌ی VPN داده نشد؛ بدون آن اتصال ممکن نیست.")
+            }
+        } else if (requestCode == 4730 || requestCode == 4731) {
+            val uri = data?.data
+            if (resultCode == Activity.RESULT_OK && uri != null) importFromUri(requestCode == 4730, uri)
         }
     }
 
@@ -2157,6 +2243,7 @@ class MainActivity : Activity() {
         i.action = DnsVpnService.ACTION_START
         i.putExtra("primary", pr.primary)
         i.putExtra("secondary", pr.secondary)
+        i.putExtra("tertiary", pr.tertiary)
         i.putExtra("name", pr.name)
         try {
             startService(i)
@@ -2180,13 +2267,12 @@ class MainActivity : Activity() {
     }
 
     private fun stopDns() {
-        try {
-            stopService(Intent(this, DnsVpnService::class.java))
-        } catch (_: Exception) {
-        }
-        DnsVpnService.running = false
-        DnsVpnService.activeName = ""
+        DnsVpnService.requestStop(this)
         toast("DNS به حالت پیش‌فرض برگشت.")
+        handler.postDelayed({
+            netRefresh?.invoke()
+            homeRefresh?.invoke()
+        }, 500)
     }
 
     // ----- BRAND / ONBOARDING / MISC ----------------------------------------
@@ -2302,6 +2388,503 @@ class MainActivity : Activity() {
         sv.addView(col, ViewGroup.LayoutParams(MATCH, WRAP))
         rv.addView(sv, LinearLayout.LayoutParams(MATCH, MATCH))
         setContentView(rv)
+    }
+
+    // ----- VPN: WireGuard + V2Ray configs ----------------------------------
+
+    private fun cfgDir(kind: String): java.io.File {
+        val d = java.io.File(filesDir, kind)
+        if (!d.exists()) d.mkdirs()
+        return d
+    }
+
+    private fun listCfg(kind: String): List<String> {
+        val files = cfgDir(kind).listFiles() ?: return emptyList()
+        val names = ArrayList<String>()
+        for (f in files) if (f.isFile) names.add(f.name)
+        names.sort()
+        return names
+    }
+
+    private fun readCfg(kind: String, file: String): String =
+        try {
+            java.io.File(cfgDir(kind), file).readText()
+        } catch (_: Exception) {
+            ""
+        }
+
+    private fun writeCfg(kind: String, file: String, text: String) {
+        java.io.File(cfgDir(kind), file).writeText(text)
+    }
+
+    private fun deleteCfg(kind: String, file: String) {
+        try {
+            java.io.File(cfgDir(kind), file).delete()
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun cleanName(raw: String, fallback: String): String {
+        var n = raw.trim().substringBeforeLast(".conf").substringBeforeLast(".txt")
+        n = n.replace(Regex("[^A-Za-z0-9_=+-]"), "_").trim('_')
+        if (n.isEmpty()) n = fallback
+        return n.take(15)
+    }
+
+    private fun uniqueFile(kind: String, base: String, ext: String): String {
+        var n = base
+        var i = 1
+        while (java.io.File(cfgDir(kind), n + ext).exists()) {
+            val suffix = i.toString()
+            n = base.take(15 - suffix.length - 1) + "_" + suffix
+            i++
+        }
+        return n + ext
+    }
+
+    private fun wgEndpoint(text: String): String {
+        for (line in text.lines()) {
+            val l = line.trim()
+            if (l.startsWith("Endpoint", ignoreCase = true)) return l.substringAfter("=").trim()
+        }
+        return ""
+    }
+
+    private fun clipText(): String {
+        return try {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val c = cm.primaryClip
+            if (c != null && c.itemCount > 0) c.getItemAt(0).coerceToText(this).toString() else ""
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun pickFile(code: Int) {
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT)
+        i.addCategory(Intent.CATEGORY_OPENABLE)
+        i.type = "*/*"
+        try {
+            startActivityForResult(i, code)
+        } catch (_: Exception) {
+            toast("فایل‌منیجر پیدا نشد.")
+        }
+    }
+
+    private fun displayName(uri: Uri): String {
+        var name = ""
+        try {
+            val c = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            if (c != null) {
+                if (c.moveToFirst()) name = c.getString(0) ?: ""
+                c.close()
+            }
+        } catch (_: Exception) {
+        }
+        return name
+    }
+
+    private fun readUriText(uri: Uri): String? = try {
+        contentResolver.openInputStream(uri)?.use { st ->
+            val bytes = st.readBytes()
+            if (bytes.size > 262144) null else String(bytes, Charsets.UTF_8)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun importFromUri(isWg: Boolean, uri: Uri) {
+        val nm = displayName(uri)
+        runBg {
+            val text = readUriText(uri)
+            ui {
+                if (text == null || text.isBlank()) {
+                    toast(Tr.t("فایل خوانده نشد یا خیلی بزرگ است."))
+                } else if (isWg) {
+                    if (listCfg("wg").size >= 20) {
+                        toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
+                    } else {
+                        importWg(text, if (importName.isNotBlank()) importName else nm) { vpnRender?.invoke() }
+                    }
+                } else {
+                    val n = importV2(text)
+                    toast(if (n > 0) n.toString() + " " + Tr.t("کانفیگ اضافه شد") else Tr.t("کانفیگ معتبری در فایل پیدا نشد."))
+                    vpnRender?.invoke()
+                }
+            }
+        }
+    }
+
+    private fun importWg(text: String, wantedName: String, onDone: () -> Unit) {
+        runBg {
+            var err = ""
+            try {
+                Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+            } catch (e: Throwable) {
+                err = (e.message ?: e.javaClass.simpleName).take(120)
+            }
+            ui {
+                if (err.isNotEmpty()) {
+                    toast(Tr.t("کانفیگ وایرگارد نامعتبر است:") + " " + err)
+                } else {
+                    val file = uniqueFile("wg", cleanName(wantedName, "wg"), ".conf")
+                    writeCfg("wg", file, text)
+                    toast(Tr.t("کانفیگ ذخیره شد"))
+                    onDone()
+                }
+            }
+        }
+    }
+
+    private fun importV2(text: String): Int {
+        val t = text.trim()
+        val items = ArrayList<String>()
+        if (t.startsWith("{")) {
+            try {
+                JSONObject(t)
+                items.add(t)
+            } catch (_: Exception) {
+            }
+        } else {
+            for (line in t.lines()) {
+                val l = line.trim()
+                if (l.contains("://") && l.length < 8000) items.add(l)
+            }
+        }
+        var n = 0
+        for (item in items) {
+            if (listCfg("v2").size >= 60) break
+            val base = "v" + (System.currentTimeMillis() / 1000L % 100000L).toString()
+            writeCfg("v2", uniqueFile("v2", base, ".txt"), item)
+            n++
+        }
+        return n
+    }
+
+    private fun v2Summary(text: String): String {
+        val t = text.trim()
+        try {
+            if (t.startsWith("{")) {
+                val o = JSONObject(t)
+                val ob = o.optJSONArray("outbounds")
+                val proto = ob?.optJSONObject(0)?.optString("protocol") ?: ""
+                return "JSON" + (if (proto.isNotEmpty()) " • " + proto else "")
+            }
+            val scheme = t.substringBefore("://").lowercase()
+            if (scheme == "vmess") {
+                val raw = t.substringAfter("://").trim()
+                val dec = String(Base64.decode(raw, Base64.DEFAULT), Charsets.UTF_8)
+                val o = JSONObject(dec)
+                val ps = o.optString("ps")
+                return "vmess • " + (if (ps.isNotEmpty()) ps + " • " else "") + o.optString("add") + ":" + o.optString("port")
+            }
+            val frag = if (t.contains("#")) URLDecoder.decode(t.substringAfter("#"), "UTF-8") else ""
+            val u = Uri.parse(t)
+            val host = u.host ?: ""
+            val port = if (u.port > 0) ":" + u.port.toString() else ""
+            return scheme + " • " + (if (frag.isNotEmpty()) frag + " • " else "") + host + port
+        } catch (_: Exception) {
+            return t.substringBefore("://").take(10)
+        }
+    }
+
+    private fun openInV2Client(text: String) {
+        try {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("v2ray", text))
+        } catch (_: Exception) {
+        }
+        val pkgs = arrayOf("com.v2ray.ang", "app.hiddify.com", "moe.nb4a", "io.nekohasekai.sagernet")
+        for (p in pkgs) {
+            val li = packageManager.getLaunchIntentForPackage(p)
+            if (li != null) {
+                try {
+                    startActivity(li)
+                    toast(Tr.t("کانفیگ کپی شد؛ در کلاینت از Import from clipboard استفاده کن."))
+                    return
+                } catch (_: Exception) {
+                }
+            }
+        }
+        toast(Tr.t("کانفیگ کپی شد؛ برنامه‌ی کلاینت V2Ray (مثل v2rayNG) نصب نیست."))
+    }
+
+    private fun wgBackendGet(): GoBackend {
+        var b = wgBackend
+        if (b == null) {
+            b = GoBackend(applicationContext)
+            wgBackend = b
+        }
+        return b
+    }
+
+    private fun connectWg(base: String) {
+        if (wgBusy) return
+        pendingWg = base
+        val prep = try {
+            VpnService.prepare(this)
+        } catch (_: Exception) {
+            null
+        }
+        if (prep != null) {
+            try {
+                startActivityForResult(prep, 4720)
+            } catch (_: Exception) {
+                toast("این دستگاه از VPN محلی پشتیبانی نمی‌کند.")
+            }
+        } else {
+            doConnectWg(base)
+        }
+    }
+
+    private fun doConnectWg(base: String) {
+        val text = readCfg("wg", base + ".conf")
+        if (text.isEmpty()) {
+            toast("کانفیگ پیدا نشد.")
+            return
+        }
+        wgBusy = true
+        toast(Tr.t("در حال اتصال به") + " " + base + "…")
+        vpnRefresh?.invoke()
+        runBg {
+            var err = ""
+            try {
+                val cfg = Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                val be = wgBackendGet()
+                val old = wgTunnel
+                if (old != null) {
+                    try {
+                        be.setState(old, Tunnel.State.DOWN, null)
+                    } catch (_: Throwable) {
+                    }
+                }
+                val tun = WgTun(base)
+                be.setState(tun, Tunnel.State.UP, cfg)
+                wgTunnel = tun
+                WgState.activeName = base
+                WgState.up = true
+            } catch (e: Throwable) {
+                err = (e.message ?: e.javaClass.simpleName).take(160)
+            }
+            ui {
+                wgBusy = false
+                if (err.isEmpty()) {
+                    toast(Tr.t("متصل شد"))
+                } else {
+                    toast(Tr.t("خطای وایرگارد:") + " " + err)
+                }
+                vpnRefresh?.invoke()
+                homeRefresh?.invoke()
+            }
+        }
+    }
+
+    private fun disconnectWg() {
+        if (wgBusy) return
+        wgBusy = true
+        runBg {
+            try {
+                val t = wgTunnel
+                if (t != null) wgBackendGet().setState(t, Tunnel.State.DOWN, null)
+            } catch (_: Throwable) {
+            }
+            WgState.up = false
+            WgState.activeName = ""
+            ui {
+                wgBusy = false
+                toast(Tr.t("وایرگارد قطع شد"))
+                vpnRefresh?.invoke()
+                homeRefresh?.invoke()
+            }
+        }
+    }
+
+    private fun smallBtn(text: String, filled: Boolean, action: () -> Unit): TextView {
+        val b = button(text, filled, action)
+        b.textSize = 12.5f
+        b.setPadding(dp(14), dp(8), dp(14), dp(8))
+        return b
+    }
+
+    private fun buildVpn() {
+        // ---------------- WireGuard
+        section("WIREGUARD")
+        val wCard = card()
+        val wStatus = label("", 15f, white, true, false)
+        wCard.addView(wStatus)
+        val nameIn = input("نام کانفیگ (اختیاری)")
+        wCard.addView(nameIn, vlp(8, 8))
+        val wRow = LinearLayout(this)
+        wRow.orientation = LinearLayout.HORIZONTAL
+        val bFile = button("📁 افزودن فایل .conf", false) {
+            importName = nameIn.text.toString()
+            pickFile(4730)
+        }
+        val bClip = button("📋 از کلیپ‌بورد", false) {
+            val txt = clipText().trim()
+            if (txt.isEmpty() || !txt.contains("[Interface]")) {
+                toast(Tr.t("کانفیگ وایرگارد در کلیپ‌بورد پیدا نشد."))
+            } else if (listCfg("wg").size >= 20) {
+                toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
+            } else {
+                importWg(txt, nameIn.text.toString()) { vpnRender?.invoke() }
+            }
+        }
+        val lp1 = LinearLayout.LayoutParams(0, WRAP, 1f)
+        lp1.marginEnd = dp(4)
+        val lp2 = LinearLayout.LayoutParams(0, WRAP, 1f)
+        lp2.marginStart = dp(4)
+        wRow.addView(bFile, lp1)
+        wRow.addView(bClip, lp2)
+        wCard.addView(wRow, vlp(0, 10))
+        val wList = LinearLayout(this)
+        wList.orientation = LinearLayout.VERTICAL
+        wCard.addView(wList)
+        wCard.addView(
+            label(
+                "فایل‌های .conf فقط در حافظه‌ی خصوصی همین اپ ذخیره می‌شوند. اندروید هم‌زمان فقط یک VPN را نگه می‌دارد؛ با اتصال وایرگارد، DNS محلی قطع می‌شود.",
+                11.5f, muted
+            ), vlp(8, 0)
+        )
+        content.addView(wCard, vlp(0, 4))
+
+        var wKey = ""
+        fun renderW(force: Boolean) {
+            val up = WgState.up
+            val act = WgState.activeName
+            wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
+            wStatus.setTextColor(if (up) good else white)
+            val names = listCfg("wg")
+            val key = "$up|$act|$wgBusy|" + names.joinToString(",")
+            if (!force && key == wKey) return
+            wKey = key
+            wList.removeAllViews()
+            if (names.isEmpty()) {
+                wList.addView(label("هنوز کانفیگی اضافه نشده.", 12.5f, muted))
+                return
+            }
+            for (file in names) {
+                val base = file.removeSuffix(".conf")
+                val isActive = up && act == base
+                val row = LinearLayout(this)
+                row.orientation = LinearLayout.HORIZONTAL
+                row.gravity = Gravity.CENTER_VERTICAL
+                row.setPadding(dp(12), dp(10), dp(12), dp(10))
+                row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
+                val col = LinearLayout(this)
+                col.orientation = LinearLayout.VERTICAL
+                col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
+                val ep = wgEndpoint(readCfg("wg", file))
+                if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
+                row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
+                row.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
+                    if (isActive) disconnectWg() else connectWg(base)
+                })
+                val del = smallBtn("🗑", false) {
+                    if (isActive) disconnectWg()
+                    deleteCfg("wg", file)
+                    renderW(true)
+                }
+                val dlp = LinearLayout.LayoutParams(WRAP, WRAP)
+                dlp.marginStart = dp(6)
+                row.addView(del, dlp)
+                wList.addView(row, vlp(0, 6))
+            }
+        }
+
+        // ---------------- V2Ray
+        section("V2RAY / XRAY")
+        val vCard = card()
+        vCard.addView(
+            label(
+                "کانفیگ vmess:// ، vless:// ، trojan:// ، ss:// یا فایل JSON خودت را اضافه کن. فقط روی همین گوشی ذخیره می‌شوند.",
+                12f, muted
+            )
+        )
+        val vRow = LinearLayout(this)
+        vRow.orientation = LinearLayout.HORIZONTAL
+        val vFile = button("📁 آپلود فایل", false) { pickFile(4731) }
+        val vClip = button("📋 چسباندن لینک", false) {
+            val n = importV2(clipText())
+            toast(if (n > 0) n.toString() + " " + Tr.t("کانفیگ اضافه شد") else Tr.t("لینک معتبر در کلیپ‌بورد پیدا نشد."))
+            vpnRender?.invoke()
+        }
+        val lp3 = LinearLayout.LayoutParams(0, WRAP, 1f)
+        lp3.marginEnd = dp(4)
+        val lp4 = LinearLayout.LayoutParams(0, WRAP, 1f)
+        lp4.marginStart = dp(4)
+        vRow.addView(vFile, lp3)
+        vRow.addView(vClip, lp4)
+        vCard.addView(vRow, vlp(8, 10))
+        val vList = LinearLayout(this)
+        vList.orientation = LinearLayout.VERTICAL
+        vCard.addView(vList)
+        vCard.addView(
+            label(
+                "اتصال مستقیم V2Ray داخل این اپ هنوز فعال نیست (هسته‌ی Xray لازم است). دکمه‌ی «کلاینت» کانفیگ را کپی می‌کند و v2rayNG یا Hiddify نصب‌شده را باز می‌کند.",
+                11.5f, muted
+            ), vlp(8, 0)
+        )
+        content.addView(vCard, vlp(0, 4))
+
+        var vKey = ""
+        fun renderV(force: Boolean) {
+            val names = listCfg("v2")
+            val key = names.joinToString(",")
+            if (!force && key == vKey) return
+            vKey = key
+            vList.removeAllViews()
+            if (names.isEmpty()) {
+                vList.addView(label("هنوز کانفیگی اضافه نشده.", 12.5f, muted))
+                return
+            }
+            for (file in names) {
+                val text = readCfg("v2", file)
+                val box = LinearLayout(this)
+                box.orientation = LinearLayout.VERTICAL
+                box.setPadding(dp(12), dp(10), dp(12), dp(10))
+                box.background = rounded(panel2, 12, stroke)
+                val sm = label(v2Summary(text), 13f, white, true, false)
+                sm.maxLines = 3
+                sm.ellipsize = TextUtils.TruncateAt.END
+                box.addView(sm)
+                val br = LinearLayout(this)
+                br.orientation = LinearLayout.HORIZONTAL
+                val b1 = smallBtn("🚀 کلاینت", true) { openInV2Client(text) }
+                val b2 = smallBtn("کپی", false) {
+                    try {
+                        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(ClipData.newPlainText("v2ray", text))
+                        toast(Tr.t("کپی شد"))
+                    } catch (_: Exception) {
+                    }
+                }
+                val b3 = smallBtn("🗑", false) {
+                    deleteCfg("v2", file)
+                    renderV(true)
+                }
+                val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
+                m1.marginEnd = dp(6)
+                val m2 = LinearLayout.LayoutParams(WRAP, WRAP)
+                m2.marginEnd = dp(6)
+                br.addView(b1, m1)
+                br.addView(b2, m2)
+                br.addView(b3)
+                box.addView(br, vlp(8, 0))
+                vList.addView(box, vlp(0, 6))
+            }
+        }
+
+        vpnRefresh = {
+            renderW(false)
+            renderV(false)
+        }
+        vpnRender = {
+            renderW(true)
+            renderV(true)
+        }
+        renderW(true)
+        renderV(true)
     }
 
     // ----- TOOLS ------------------------------------------------------------
@@ -2514,7 +3097,7 @@ class MainActivity : Activity() {
             val ed = prefs.edit()
             for (k in keys) ed.remove(k)
             ed.apply()
-            showTab(4)
+            showTab(5)
         }, LinearLayout.LayoutParams(MATCH, WRAP))
         content.addView(about, vlp(0, 4))
     }
@@ -2531,6 +3114,25 @@ class DnsVpnService : VpnService() {
     companion object {
         const val ACTION_START = "com.ezzdigi.ezzgameboost.DNS_START"
         const val ACTION_STOP = "com.ezzdigi.ezzgameboost.DNS_STOP"
+
+        @Volatile
+        var instance: DnsVpnService? = null
+
+        fun requestStop(ctx: Context) {
+            val svc = instance
+            if (svc != null) {
+                svc.shutdown()
+            } else {
+                try {
+                    val i = Intent(ctx, DnsVpnService::class.java)
+                    i.action = ACTION_STOP
+                    ctx.startService(i)
+                } catch (_: Exception) {
+                }
+            }
+            running = false
+            activeName = ""
+        }
         private const val FAKE_DNS = "10.111.222.2"
         private const val TUN_ADDR = "10.111.222.1"
 
@@ -2550,13 +3152,23 @@ class DnsVpnService : VpnService() {
     private var stopping = false
 
     @Volatile
+    private var gen = 0
+
+    @Volatile
     private var primaryDownUntil = 0L
     private var primary = ""
     private var secondary = ""
+    private var tertiary = ""
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         Tr.load(this)
+    }
+
+    fun shutdown() {
+        cleanup()
+        stopSelf()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -2571,19 +3183,21 @@ class DnsVpnService : VpnService() {
         }
         val p = intent.getStringExtra("primary") ?: ""
         val s = intent.getStringExtra("secondary") ?: ""
+        val t3 = intent.getStringExtra("tertiary") ?: ""
         val n = intent.getStringExtra("name") ?: p
         if (p.isEmpty()) {
             stopSelf()
             return Service.START_NOT_STICKY
         }
-        startTunnel(p, s, n)
+        startTunnel(p, s, t3, n)
         return Service.START_NOT_STICKY
     }
 
-    private fun startTunnel(p: String, s: String, name: String) {
+    private fun startTunnel(p: String, s: String, t3: String, name: String) {
         cleanup()
         primary = p
         secondary = s
+        tertiary = t3
         primaryDownUntil = 0L
         try {
             val b = Builder()
@@ -2607,7 +3221,8 @@ class DnsVpnService : VpnService() {
             failCount.set(0L)
             pool = java.util.concurrent.Executors.newFixedThreadPool(12)
             goForeground(name)
-            Thread { loop(pfd) }.start()
+            val myGen = gen
+            Thread { loop(pfd, myGen) }.start()
         } catch (_: Throwable) {
             cleanup()
             stopSelf()
@@ -2640,12 +3255,24 @@ class DnsVpnService : VpnService() {
         }
     }
 
-    private fun loop(pfd: ParcelFileDescriptor) {
+    private fun loop(pfd: ParcelFileDescriptor, myGen: Int) {
         val input = FileInputStream(pfd.fileDescriptor)
         val output = FileOutputStream(pfd.fileDescriptor)
         val buf = ByteArray(32768)
+        val fds = arrayOf(StructPollfd())
+        fds[0].fd = pfd.fileDescriptor
+        fds[0].events = OsConstants.POLLIN.toShort()
         try {
-            while (!stopping) {
+            while (!stopping && gen == myGen) {
+                fds[0].revents = 0
+                try {
+                    val r = Os.poll(fds, 500)
+                    if (r <= 0) continue
+                } catch (e: ErrnoException) {
+                    if (e.errno == OsConstants.EINTR) continue
+                    break
+                }
+                if (stopping || gen != myGen) break
                 val n = input.read(buf)
                 if (n < 0) break
                 if (n < 28) continue
@@ -2653,7 +3280,7 @@ class DnsVpnService : VpnService() {
             }
         } catch (_: Exception) {
         }
-        if (!stopping) {
+        if (!stopping && gen == myGen) {
             running = false
             activeName = ""
             stopSelf()
@@ -2702,13 +3329,12 @@ class DnsVpnService : VpnService() {
 
     private fun forward(payload: ByteArray): ByteArray? {
         val now = System.currentTimeMillis()
-        val order: List<String> = if (secondary.isEmpty()) {
-            listOf(primary)
-        } else if (now < primaryDownUntil) {
-            listOf(secondary, primary)
-        } else {
-            listOf(primary, secondary)
-        }
+        val base = ArrayList<String>()
+        base.add(primary)
+        if (secondary.isNotEmpty()) base.add(secondary)
+        if (tertiary.isNotEmpty()) base.add(tertiary)
+        val uniq = base.distinct()
+        val order: List<String> = if (uniq.size > 1 && now < primaryDownUntil) uniq.drop(1) + uniq[0] else uniq
         for ((idx, server) in order.withIndex()) {
             val r = query(server, payload, if (idx == 0) 1800 else 2500)
             if (r != null) return r
@@ -2773,6 +3399,7 @@ class DnsVpnService : VpnService() {
 
     private fun cleanup() {
         stopping = true
+        gen++
         running = false
         activeName = ""
         try {
@@ -2798,6 +3425,7 @@ class DnsVpnService : VpnService() {
 
     override fun onDestroy() {
         cleanup()
+        instance = null
         super.onDestroy()
     }
 }
@@ -2857,13 +3485,9 @@ class DnsTileService : TileService() {
         super.onClick()
         Tr.load(this)
         if (DnsVpnService.running) {
-            try {
-                stopService(Intent(this, DnsVpnService::class.java))
-            } catch (_: Exception) {
-            }
-            DnsVpnService.running = false
-            DnsVpnService.activeName = ""
+            DnsVpnService.requestStop(this)
             update()
+            h.postDelayed({ update() }, 600)
             return
         }
         val needConsent = try {
@@ -2882,6 +3506,7 @@ class DnsTileService : TileService() {
         i.action = DnsVpnService.ACTION_START
         i.putExtra("primary", pr.primary)
         i.putExtra("secondary", pr.secondary)
+        i.putExtra("tertiary", pr.tertiary)
         i.putExtra("name", pr.name)
         try {
             startService(i)
