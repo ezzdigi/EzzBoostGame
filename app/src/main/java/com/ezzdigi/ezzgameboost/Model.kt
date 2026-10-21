@@ -91,7 +91,12 @@ import java.util.concurrent.Executors
 
 const val SITE_URL = "https://ezzdigi.com"
 const val TG_URL = "https://t.me/ezzdigii"
-const val REMOTE_DNS_URL = "https://ezzdigi.com/ezzgameboost/dns.json"
+// The app tries these in order. Edit dns.json on GitHub (repo root) or on your site
+// to update the DNS list without releasing a new APK.
+val REMOTE_DNS_URLS = listOf(
+    "https://raw.githubusercontent.com/ezzdigi/EzzBoostGame/main/dns.json",
+    "https://ezzdigi.com/ezzgameboost/dns.json"
+)
 const val RELEASES_API = "https://api.github.com/repos/ezzdigi/EzzBoostGame/releases/latest"
 const val RELEASES_PAGE = "https://github.com/ezzdigi/EzzBoostGame/releases/latest"
 

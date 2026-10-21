@@ -170,7 +170,15 @@ internal fun MainActivity.refreshRemoteDns(force: Boolean, onDone: ((Int) -> Uni
     if (!force && System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
     prefs.edit().putLong("remoteDnsTry", System.currentTimeMillis()).apply()
     runBg {
-        val body = httpGet(REMOTE_DNS_URL)
+        var got: String? = null
+        for (u in REMOTE_DNS_URLS) {
+            val b = httpGet(u)
+            if (b != null && b.trimStart().startsWith("{")) {
+                got = b
+                break
+            }
+        }
+        val body = got
         ui {
             var n = -1
             if (body != null) {
