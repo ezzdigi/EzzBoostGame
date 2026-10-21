@@ -11,8 +11,10 @@ android {
         applicationId = "com.ezzdigi.ezzgameboost"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.1.0"
+        // CI passes -PappVersion / -PappVersionCode when a GitHub Release is published,
+        // so the app version always matches the release tag.
+        versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 4
+        versionName = (project.findProperty("appVersion") as String?) ?: "2.2.0"
     }
 
     // Optional release signing: set these environment variables (GitHub secrets)
