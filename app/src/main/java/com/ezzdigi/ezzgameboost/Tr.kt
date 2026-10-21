@@ -100,12 +100,61 @@ object Tr {
 
     fun t(s: String): String {
         if (!en) return s
+        val ex = EXACT[s]
+        if (ex != null) return ex
         var out = s
+        for (p in EXTRA) {
+            if (out.indexOf(p.first) >= 0) out = out.replace(p.first, p.second)
+        }
         for (p in PAIRS) {
             if (out.indexOf(p.first) >= 0) out = out.replace(p.first, p.second)
         }
         return out
     }
+
+    // Whole-string translations (short labels, buttons).
+    private val EXACT: Map<String, String> = mapOf(
+        "🌐 به‌روزرسانی لیست DNS آنلاین" to "🌐 Update online DNS list",
+        "در حال دریافت…" to "Fetching…",
+        "لیست به‌روز شد" to "List updated",
+        "دریافت لیست ناموفق بود" to "Fetching the list failed",
+        "⬇️ دانلود آپدیت" to "⬇️ Download update",
+        "🔄 بررسی آپدیت" to "🔄 Check for updates",
+        "در حال بررسی…" to "Checking…",
+        "آخرین نسخه را داری ✅" to "You have the latest version ✅",
+        "بررسی آپدیت ناموفق بود" to "Update check failed",
+        "✈️ کانال تلگرام ایزی دیجی" to "✈️ EzzDigi Telegram channel",
+        "بدون تغییر" to "No change",
+        "بدون وایرگارد" to "No WireGuard",
+        "وایرگارد" to "WireGuard",
+        "پاک‌سازی RAM قبل از اجرا" to "Clean RAM before launch",
+        "روشن ماندن صفحه" to "Keep screen on",
+        "ذخیره پروفایل" to "Save profile",
+        "حذف پروفایل" to "Delete profile",
+        "بستن" to "Close",
+        "پروفایل ذخیره شد" to "Profile saved",
+        "پروفایل حذف شد" to "Profile deleted",
+        "روشن" to "On",
+        "خاموش" to "Off",
+        "🎮 فقط بازی‌ها (بقیه مستقیم)" to "🎮 Games only (others direct)",
+        "📱 کل گوشی" to "📱 Whole phone",
+        "هنوز به‌روز نشده" to "Not updated yet",
+        "🎛 پروفایل برای هر بازی: DNS یا وایرگارد مخصوص، پاک‌سازی RAM و اتصال خودکار" to
+            "🎛 Per-game profiles: dedicated DNS or WireGuard, RAM cleanup and auto-connect",
+        "💡 «فقط بازی‌ها» وایرگارد را فقط برای بازی‌ها و علاقه‌مندی‌های تو فعال می‌کند؛ بقیه‌ی برنامه‌ها مستقیم می‌روند. با زدن روی حالت، تغییر می‌کند." to
+            "💡 “Games only” routes only your games and favorites through WireGuard; other apps go direct. Tap the mode to switch."
+    )
+
+    // Longer fragments used inside composed strings.
+    private val EXTRA: List<Pair<String, String>> = listOf(
+        Pair("🆕 نسخه جدید موجود است:", "🆕 New version available:"),
+        Pair("نسخه جدید موجود است:", "New version available:"),
+        Pair("⬇️ دانلود نسخه", "⬇️ Download version"),
+        Pair("آخرین به‌روزرسانی:", "Last update:"),
+        Pair("لیست آنلاین:", "Online list:"),
+        Pair("پروفایل بازی:", "Game profile:"),
+        Pair("نسخه فعلی:", "Current version:")
+    )
 
     // Persian fragment -> English; longest fragments first.
     private val PAIRS: List<Pair<String, String>> = listOf(

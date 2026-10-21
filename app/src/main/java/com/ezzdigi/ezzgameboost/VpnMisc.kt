@@ -108,7 +108,7 @@ internal fun MainActivity.shareApp() {
     i.putExtra(
         Intent.EXTRA_TEXT,
         Tr.t("EzzGameBOOST؛ ابزار گیمینگ اندروید: بوست RAM، DNS گیمینگ و تست پینگ.") +
-            "\n" + Tr.t("ایزی دیجی") + " • https://ezzdigi.com"
+            "\n" + Tr.t("ایزی دیجی") + " • " + SITE_URL + "\n" + TG_URL
     )
     try {
         startActivity(Intent.createChooser(i, null))
@@ -163,7 +163,10 @@ internal fun MainActivity.showOnboarding() {
     val by = label("ساخته‌شده توسط ایزی دیجی", 13f, muted)
     by.gravity = Gravity.CENTER
     col.addView(by, vlp(0, 10))
-    col.addView(chip("🌐 ezzdigi.com", true, false) { openUrl("https://ezzdigi.com") })
+    col.addView(chip("🌐 ezzdigi.com", true, false) { openUrl(SITE_URL) })
+    val tgp = LinearLayout.LayoutParams(MATCH, WRAP)
+    tgp.topMargin = dp(8)
+    col.addView(chip("✈️ t.me/ezzdigii", true, false) { openUrl(TG_URL) }, tgp)
 
     val langRow = LinearLayout(this)
     langRow.orientation = LinearLayout.HORIZONTAL
@@ -188,7 +191,8 @@ internal fun MainActivity.showOnboarding() {
         "⚡ بوست RAM و پایش زنده‌ی گوشی",
         "🌐 تغییر واقعی DNS با رادار گیم، الکترو، شکن، بگذر و شلتر",
         "📡 تست پینگ، ذخیره‌ی سرورهای بازی و تاریخچه‌ی کیفیت شبکه",
-        "🎮 کتابخانه‌ی بازی‌ها با زمان بازی و اتصال خودکار DNS"
+        "🎮 کتابخانه‌ی بازی‌ها با زمان بازی و اتصال خودکار DNS",
+        "🎛 پروفایل برای هر بازی: DNS یا وایرگارد مخصوص، پاک‌سازی RAM و اتصال خودکار"
     )
     for (f in feats) fc.addView(label(f, 13.5f, white), vlp(0, 8))
     col.addView(fc, vlp(18, 8))
@@ -442,7 +446,12 @@ internal fun MainActivity.doConnectWg(base: String) {
     runBg {
         var err = ""
         try {
-            val cfg = Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+            val scoped = try {
+                wgScopedConfig(base, text)
+            } catch (_: Throwable) {
+                text
+            }
+            val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
             val be = wgBackendGet()
             val old = wgTunnel
             if (old != null) {
@@ -468,6 +477,7 @@ internal fun MainActivity.doConnectWg(base: String) {
             }
             vpnRefresh?.invoke()
             homeRefresh?.invoke()
+            launchPendingSoon(300)
         }
     }
 }
@@ -539,6 +549,12 @@ internal fun MainActivity.buildVpn() {
             11.5f, muted
         ), vlp(8, 0)
     )
+    wCard.addView(
+        label(
+            "💡 «فقط بازی‌ها» وایرگارد را فقط برای بازی‌ها و علاقه‌مندی‌های تو فعال می‌کند؛ بقیه‌ی برنامه‌ها مستقیم می‌روند. با زدن روی حالت، تغییر می‌کند.",
+            11.5f, muted
+        ), vlp(4, 0)
+    )
     content.addView(wCard, vlp(0, 4))
 
     var wKey = ""
@@ -569,6 +585,15 @@ internal fun MainActivity.buildVpn() {
             col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
             val ep = wgEndpoint(readCfg("wg", file))
             if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
+            val gm = prefs.getBoolean("wgmode_$base", false)
+            val scopeLbl = label(if (gm) "🎮 فقط بازی‌ها (بقیه مستقیم)" else "📱 کل گوشی", 11.5f, accent, true)
+            scopeLbl.setPadding(0, dp(4), 0, dp(2))
+            scopeLbl.setOnClickListener {
+                prefs.edit().putBoolean("wgmode_$base", !gm).apply()
+                renderW(true)
+                if (isActive) connectWg(base)
+            }
+            col.addView(scopeLbl)
             row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
             row.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
                 if (isActive) disconnectWg() else connectWg(base)

@@ -89,6 +89,12 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+const val SITE_URL = "https://ezzdigi.com"
+const val TG_URL = "https://t.me/ezzdigii"
+const val REMOTE_DNS_URL = "https://ezzdigi.com/ezzgameboost/dns.json"
+const val RELEASES_API = "https://api.github.com/repos/ezzdigi/EzzBoostGame/releases/latest"
+const val RELEASES_PAGE = "https://github.com/ezzdigi/EzzBoostGame/releases/latest"
+
 class AppItem(val label: String, val pkg: String, val isGame: Boolean)
 class DnsProvider(
     val name: String,
@@ -152,7 +158,42 @@ object DnsList {
         return out
     }
 
-    fun all(ctx: Context): List<DnsProvider> = builtin + custom(ctx)
+    // Providers downloaded from the online list (tab-separated lines:
+    // name, ip1[, ip2, ip3, ip4]).
+    fun remote(ctx: Context): List<DnsProvider> {
+        val raw = ctx.getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
+            .getString("remoteDns", "") ?: ""
+        val out = ArrayList<DnsProvider>()
+        for (line in raw.split("\n")) {
+            if (line.isBlank()) continue
+            val p = line.split("\t")
+            if (p.size < 2) continue
+            val ips = ArrayList<String>()
+            for (i in 1 until p.size) if (p[i].isNotBlank()) ips.add(p[i].trim())
+            if (ips.isEmpty()) continue
+            out.add(
+                DnsProvider(
+                    p[0].trim(),
+                    ips[0],
+                    ips.getOrElse(1) { "" },
+                    ips.getOrElse(2) { "" },
+                    ips.getOrElse(3) { "" }
+                )
+            )
+        }
+        return out
+    }
+
+    fun merged(ctx: Context): List<DnsProvider> {
+        val out = ArrayList<DnsProvider>(builtin)
+        for (r in remote(ctx)) {
+            val idx = out.indexOfFirst { it.name == r.name }
+            if (idx >= 0) out[idx] = r else out.add(r)
+        }
+        return out
+    }
+
+    fun all(ctx: Context): List<DnsProvider> = merged(ctx) + custom(ctx)
 }
 
 class WgTun(private val tunnelName: String) : Tunnel {

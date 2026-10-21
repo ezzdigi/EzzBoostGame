@@ -284,7 +284,7 @@ internal fun MainActivity.buildStats() {
 
     section("ABOUT")
     val about = card()
-    about.addView(label("EzzGameBOOST v2.1", 14f, white, true))
+    about.addView(label("EzzGameBOOST v" + currentVersion(), 14f, white, true, false))
     about.addView(label("ساخته‌شده توسط ایزی دیجی", 12.5f, white), vlp(4, 0))
     about.addView(
         label(
@@ -292,7 +292,32 @@ internal fun MainActivity.buildStats() {
             12f, muted
         ), vlp(6, 10)
     )
-    about.addView(button("🌐 ezzdigi.com") { openUrl("https://ezzdigi.com") }, vlp(0, 8))
+    about.addView(button("🌐 ezzdigi.com") { openUrl(SITE_URL) }, vlp(0, 8))
+    about.addView(button("✈️ کانال تلگرام ایزی دیجی", false) { openUrl(TG_URL) }, vlp(0, 8))
+    about.addView(label(Tr.t("نسخه فعلی:") + " " + currentVersion(), 12f, muted, false, false), vlp(2, 6))
+    val updBtn = button("🔄 بررسی آپدیت", false) {}
+    about.addView(updBtn, vlp(0, 8))
+    updBtn.setOnClickListener {
+        updBtn.text = Tr.t("در حال بررسی…")
+        checkUpdate(true) { r ->
+            updBtn.text = Tr.t("🔄 بررسی آپدیت")
+            if (r == "new") {
+                toast(Tr.t("نسخه جدید موجود است:") + " " + (prefs.getString("updTag", "") ?: ""))
+                showTab(5)
+            } else if (r == "latest") {
+                toast(Tr.t("آخرین نسخه را داری ✅"))
+            } else {
+                toast(Tr.t("بررسی آپدیت ناموفق بود"))
+            }
+        }
+    }
+    val updTag = prefs.getString("updTag", "") ?: ""
+    if (updTag.isNotEmpty() && isNewerVersion(updTag, currentVersion())) {
+        val updUrl = prefs.getString("updUrl", RELEASES_PAGE) ?: RELEASES_PAGE
+        about.addView(button(Tr.t("⬇️ دانلود نسخه") + " " + updTag) { openUrl(updUrl) }, vlp(0, 8))
+        val notes = prefs.getString("updNotes", "") ?: ""
+        if (notes.isNotEmpty()) about.addView(label(notes, 11.5f, muted, false, false), vlp(0, 8))
+    }
     about.addView(button("اشتراک‌گذاری اپ", false) { shareApp() }, vlp(0, 8))
     about.addView(button("پاک کردن آمار بازی", false) {
         val keys = ArrayList<String>()

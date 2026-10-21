@@ -103,6 +103,7 @@ internal fun MainActivity.buildHome() {
     val heroSub = label("", 12.5f, muted)
     hero.addView(heroSub, vlp(4, 0))
     content.addView(hero, vlp(4, 4))
+    addUpdateBanner()
 
     section("LIVE STATS")
     val gCard = card(8)
@@ -413,7 +414,24 @@ internal fun MainActivity.appRow(item: AppItem, fav: Boolean, box: LinearLayout)
     val pt = prefs.getLong("pt_" + item.pkg, 0L)
     val lc = prefs.getInt("lc_" + item.pkg, 0)
     col.addView(label(if (lc == 0) "هنوز اجرا نشده" else "${fmtDur(pt)} • ${lc} بار اجرا", 11.5f, muted))
+    val pf = getProfile(item.pkg)
+    if (pf != null) {
+        val parts = ArrayList<String>()
+        if (pf.dns.isNotEmpty()) parts.add("DNS: " + pf.dns)
+        if (pf.wg.isNotEmpty()) parts.add("WG: " + pf.wg)
+        if (pf.boost) parts.add("⚡")
+        if (pf.keepOn) parts.add("📱")
+        col.addView(label("🎛 " + parts.joinToString(" • "), 11f, accent, false, false))
+    }
     row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
+
+    val prof = TextView(this)
+    prof.text = "⚙"
+    prof.textSize = 22f
+    prof.setTextColor(if (pf != null) accent else muted)
+    prof.setPadding(dp(6), 0, dp(6), 0)
+    prof.setOnClickListener { editProfile(item) { renderGames(box) } }
+    row.addView(prof)
 
     val star = TextView(this)
     star.text = if (fav) "★" else "☆"
@@ -449,6 +467,11 @@ internal fun MainActivity.toggleFavorite(pkg: String) {
 internal fun MainActivity.launchGame(pkg: String) {
     if (packageManager.getLaunchIntentForPackage(pkg) == null) {
         toast("اجرای این برنامه ممکن نیست.")
+        return
+    }
+    val prof = getProfile(pkg)
+    if (prof != null) {
+        launchWithProfile(pkg, prof)
         return
     }
     if (prefs.getBoolean("autoDns", false) && !DnsVpnService.running) {

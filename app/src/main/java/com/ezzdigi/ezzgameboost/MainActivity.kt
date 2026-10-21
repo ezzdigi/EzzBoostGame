@@ -154,6 +154,7 @@ class MainActivity : Activity() {
     internal var pendingWg: String? = null
     internal var importName = ""
     internal var pendingDns: DnsProvider? = null
+    internal var pendingLaunch: String? = null
     internal val dnsPing = HashMap<String, Int>()
     internal var dnsBenchRunning = false
 
@@ -194,6 +195,7 @@ class MainActivity : Activity() {
         buildShell()
         applyWindowToggles()
         showTab(0)
+        autoChecks()
     }
 
     override fun onResume() {
@@ -615,6 +617,7 @@ class MainActivity : Activity() {
                 startDnsService(pr)
             } else {
                 toast("اجازه‌ی VPN داده نشد؛ بدون آن DNS تغییر نمی‌کند.")
+                launchPendingSoon(0)
             }
         } else if (requestCode == 4720) {
             val n = pendingWg
@@ -622,6 +625,7 @@ class MainActivity : Activity() {
                 doConnectWg(n)
             } else {
                 toast("اجازه‌ی VPN داده نشد؛ بدون آن اتصال ممکن نیست.")
+                launchPendingSoon(0)
             }
         } else if (requestCode == 4730) {
             val uri = data?.data
