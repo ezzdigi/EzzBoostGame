@@ -166,6 +166,7 @@ internal fun MainActivity.applyRemoteDns(json: String): Int {
         lines.add(name + "\t" + ips.joinToString("\t"))
     }
     if (lines.isEmpty()) return -1
+    markNewKeys("dns", lines.map { it.substringBefore("\t") })
     val oldSel = selectedDns().name
     prefs.edit()
         .putString("remoteDns", lines.joinToString("\n"))
@@ -297,7 +298,45 @@ internal fun MainActivity.addUpdateBanner() {
 internal fun MainActivity.autoChecks() {
     refreshRemoteDns(false, null)
     refreshRemoteV2(false, null)
+    val lastWg = prefs.getLong("remoteWgTry", 0L)
+    if (System.currentTimeMillis() - lastWg >= 12L * 3600L * 1000L) {
+        prefs.edit().putLong("remoteWgTry", System.currentTimeMillis()).apply()
+        importDefaultWgList(true) { vpnRender?.invoke() }
+    }
     checkUpdate(false, null)
+}
+
+// ----- "New" badge: an item first seen in an online list is marked new for 24 hours.
+// The very first sync of a list is the baseline (nothing is marked new).
+
+internal fun MainActivity.newMap(kind: String): HashMap<String, Long> {
+    val m = HashMap<String, Long>()
+    val raw = prefs.getString("newSeen_" + kind, null) ?: return m
+    for (ln in raw.split("\n")) {
+        val p = ln.split("\t")
+        if (p.size == 2) m[p[0]] = p[1].toLongOrNull() ?: 0L
+    }
+    return m
+}
+
+internal fun MainActivity.markNewKeys(kind: String, keys: List<String>) {
+    val baselined = prefs.contains("newSeen_" + kind)
+    val old = newMap(kind)
+    val now = System.currentTimeMillis()
+    val sb = StringBuilder()
+    for (k0 in keys) {
+        val k = k0.replace("\t", " ").replace("\n", " ").trim()
+        if (k.isEmpty()) continue
+        val ts = old[k] ?: if (baselined) now else 0L
+        if (sb.isNotEmpty()) sb.append("\n")
+        sb.append(k).append("\t").append(ts)
+    }
+    prefs.edit().putString("newSeen_" + kind, sb.toString()).apply()
+}
+
+internal fun MainActivity.isNewKey(kind: String, key: String): Boolean {
+    val ts = newMap(kind)[key.replace("\t", " ").replace("\n", " ").trim()] ?: return false
+    return ts > 0L && System.currentTimeMillis() - ts < 24L * 3600L * 1000L
 }
 
 // ----- 3) WireGuard only for games ------------------------------------------

@@ -333,7 +333,28 @@ internal fun MainActivity.loadApps(): List<AppItem> {
             (ai.flags and ApplicationInfo.FLAG_IS_GAME) != 0
         result.add(AppItem(ri.loadLabel(pm).toString(), pkg, game))
     }
+    autoFavoriteGames(result)
     return result
+}
+
+// Every detected game is a favorite by default. A game is auto-added only once, so a
+// favorite the user removes stays removed.
+internal fun MainActivity.autoFavoriteGames(apps: List<AppItem>) {
+    try {
+        val done = HashSet<String>(prefs.getStringSet("favAuto", null) ?: emptySet<String>())
+        val favs = HashSet<String>(favoriteSet())
+        var changed = false
+        for (a in apps) {
+            if (a.isGame && done.add(a.pkg)) {
+                favs.add(a.pkg)
+                changed = true
+            }
+        }
+        if (changed) {
+            prefs.edit().putStringSet("favAuto", done).putStringSet("fav", favs).apply()
+        }
+    } catch (_: Throwable) {
+    }
 }
 
 internal fun MainActivity.renderGames(box: LinearLayout) {

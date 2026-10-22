@@ -460,7 +460,7 @@ internal fun MainActivity.buildNetwork() {
     dnsCard.addView(label("Private DNS در اندروید (DNS-over-TLS)", 15f, white, true))
     dnsCard.addView(
         label(
-            "روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. نام میزبان را کپی کن و در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان.",
+            "روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. با زدن «کپی» نام میزبان کپی می‌شود؛ آن را در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان.",
             12f, muted
         ), vlp(2, 6)
     )
@@ -478,7 +478,6 @@ internal fun MainActivity.buildNetwork() {
         val col = LinearLayout(this)
         col.orientation = LinearLayout.VERTICAL
         col.addView(label(opt.first, 13f, white, true))
-        col.addView(label(opt.second, 12f, muted))
         r.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
         val cb = button("کپی", false) { copyText("Private DNS hostname", opt.second) }
         cb.textSize = 12.5f
@@ -545,7 +544,7 @@ internal fun MainActivity.buildDnsChanger() {
         }
         statusSub.text = Tr.t(statusSub.text.toString())
         connectBtn.text = Tr.t(connectBtn.text.toString())
-        val key = "$running|$active|${sel.name}|${dnsPing.size}|$dnsBenchRunning"
+        val key = "$running|$active|${sel.name}|${dnsPing.size}|$dnsBenchRunning|${System.currentTimeMillis() / 3600000L}"
         if (!force && key == lastKey) return
         lastKey = key
         listBox.removeAllViews()
@@ -562,9 +561,8 @@ internal fun MainActivity.buildDnsChanger() {
             row.addView(radio)
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
-            val title = if (running && pr.name == active) "${pr.name}  ✓" else pr.name
+            val title = (if (running && pr.name == active) "${pr.name}  ✓" else pr.name) + (if (isNewKey("dns", pr.name)) "  🆕 جدید" else "")
             col.addView(label(title, 13.5f, white, true, false))
-            col.addView(label("${pr.primary}  •  ${pr.secondary}", 11.5f, muted, false, false))
             row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
             val ms = dnsPing[pr.name]
             val msText = if (ms == null) "" else if (ms < 0) "✕" else "$ms ms"

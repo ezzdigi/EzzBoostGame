@@ -470,10 +470,21 @@ internal fun MainActivity.runWgTest(base: String) {
     }
 }
 
+// AmneziaWG configs carry obfuscation keys (Jc, Jmin, S1, H1, I1 ...) that the standard
+// WireGuard library cannot parse.
+internal fun isAwgConfig(text: String): Boolean {
+    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5")
+    for (ln in text.lines()) {
+        val k = ln.substringBefore('=').trim().lowercase()
+        if (ln.contains('=') && keys.contains(k)) return true
+    }
+    return false
+}
+
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
 
-internal fun MainActivity.importDefaultWgList(onDone: () -> Unit) {
-    toast("در حال دریافت سرورهای گیمینگ…")
+internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: () -> Unit) {
+    if (!silent) toast("در حال دریافت سرورهای گیمینگ…")
     runBg {
         var body: String? = null
         for (u in remoteUrls(ghRepo(), "wireguard.json")) {
@@ -485,7 +496,9 @@ internal fun MainActivity.importDefaultWgList(onDone: () -> Unit) {
             if (b != null) lastHttpErr = "فایل JSON نیست"
         }
         var added = 0
+        var awg = 0
         var err = ""
+        val listed = ArrayList<String>()
         if (body == null) {
             err = "لیست سرورها دریافت نشد. (" + lastHttpErr + ")"
         } else {
@@ -498,12 +511,17 @@ internal fun MainActivity.importDefaultWgList(onDone: () -> Unit) {
                     val url = o.optString("url")
                     if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
                     if (!text.contains("[Interface]")) continue
+                    if (isAwgConfig(text)) {
+                        awg++
+                        continue
+                    }
                     try {
                         Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
                     } catch (_: Throwable) {
                         continue
                     }
                     val base = cleanName(nm, "wg")
+                    listed.add(base)
                     val exists = java.io.File(cfgDir("wg"), base + ".conf").exists()
                     if (!exists && listCfg("wg").size >= 20) continue
                     writeCfg("wg", base + ".conf", text)
@@ -512,10 +530,19 @@ internal fun MainActivity.importDefaultWgList(onDone: () -> Unit) {
             } catch (_: Throwable) {
                 err = "لیست سرورها معتبر نیست."
             }
-            if (added == 0 && err.isEmpty()) err = "سرور گیمینگ معتبری پیدا نشد."
+            if (added == 0 && err.isEmpty()) {
+                err = if (awg > 0) {
+                    awg.toString() + " کانفیگ از نوع AmneziaWG است (دارای Jc/S1/H1) و این نسخه فقط WireGuard استاندارد را پشتیبانی می‌کند."
+                } else {
+                    "سرور گیمینگ معتبری پیدا نشد."
+                }
+            }
         }
         ui {
-            if (added > 0) {
+            if (listed.isNotEmpty()) markNewKeys("wg", listed)
+            if (silent) {
+                if (added > 0) onDone()
+            } else if (added > 0) {
                 toast(added.toString() + " " + Tr.t("کانفیگ اضافه شد"))
                 onDone()
             } else {
@@ -586,11 +613,16 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                 files.add(Pair(raw.substringAfterLast('/').substringBefore('?'), raw))
             }
             var failed = 0
+            var awgN = 0
             for (f in files) {
                 if (listCfg("wg").size >= 20) break
                 val text = httpGet(f.second, 10000, 262144)
                 if (text == null || !text.contains("[Interface]")) {
                     failed++
+                    continue
+                }
+                if (isAwgConfig(text)) {
+                    awgN++
                     continue
                 }
                 try {
@@ -604,7 +636,13 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                 added++
             }
             if (added == 0 && err.isEmpty()) {
-                err = if (failed > 0) "کانفیگ معتبر وایرگارد پیدا نشد." else "دریافت از GitHub ناموفق بود."
+                err = if (awgN > 0) {
+                    "کانفیگ از نوع AmneziaWG است و این نسخه فقط WireGuard استاندارد را پشتیبانی می‌کند."
+                } else if (failed > 0) {
+                    "کانفیگ معتبر وایرگارد پیدا نشد."
+                } else {
+                    "دریافت از GitHub ناموفق بود."
+                }
             }
         } catch (e: Throwable) {
             if (err.isEmpty()) err = "دریافت از GitHub ناموفق بود."
@@ -851,7 +889,7 @@ internal fun MainActivity.buildVpn() {
         wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
         wStatus.setTextColor(if (up) good else white)
         val names = listCfg("wg")
-        val key = "$up|$act|$wgBusy|" + names.joinToString(",") + "|" + wgTestRes.toString()
+        val key = "$up|$act|$wgBusy|" + names.joinToString(",") + "|" + wgTestRes.toString() + "|" + (System.currentTimeMillis() / 3600000L)
         if (!force && key == wKey) return
         wKey = key
         wList.removeAllViews()
@@ -869,7 +907,7 @@ internal fun MainActivity.buildVpn() {
             row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
-            col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
+            col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
             val ep = wgEndpoint(readCfg("wg", file))
             if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
             col.addView(label("🎮 فقط بازی‌ها", 11.5f, accent, true), vlp(4, 2))

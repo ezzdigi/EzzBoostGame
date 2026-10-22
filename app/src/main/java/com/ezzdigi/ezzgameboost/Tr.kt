@@ -219,6 +219,8 @@ object Tr {
         Pair("لینک GitHub (فایل .conf، پوشه یا ریپو)", "GitHub link (.conf file, folder or repo)"),
         Pair("دریافت سرور گیمینگ وایرگارد", "Get WireGuard gaming servers"),
         Pair("سرور گیمینگ", "Gaming Server"),
+        Pair("🆕 جدید", "🆕 New"),
+        Pair("با زدن «کپی» نام میزبان کپی می‌شود؛ آن را در Private DNS وارد کن.", "Tap Copy to copy the hostname, then paste it into Private DNS."),
         Pair("آدرس ریپو معتبر نیست؛ مثل user/repo بنویس.", "Invalid repo; use the form user/repo."),
         Pair("ذخیره شد؛ در حال به‌روزرسانی…", "Saved; updating…"),
         Pair("💾 ذخیره و به‌روزرسانی", "💾 Save and update"),

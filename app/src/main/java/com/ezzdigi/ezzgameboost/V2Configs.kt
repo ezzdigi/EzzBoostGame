@@ -346,6 +346,7 @@ internal fun MainActivity.refreshRemoteV2(force: Boolean, onDone: ((Int) -> Unit
                 val lines = res.joinToString("\n") {
                     it.first.replace("\t", " ").replace("\n", " ") + "\t" + it.second
                 }
+                markNewKeys("v2", res.map { it.first })
                 prefs.edit()
                     .putString("remoteV2", lines)
                     .putLong("remoteV2Ts", System.currentTimeMillis())
@@ -498,7 +499,8 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
         val items = v2Items()
         val k = items.joinToString("|") { it.raw.hashCode().toString() } + "|" +
             prefs.getLong("remoteV2Ts", 0L) + "|" + V2VpnService.running + "|" +
-            V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError
+            V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError + "|" +
+            (System.currentTimeMillis() / 3600000L)
         statusLbl.text = Tr.t(v2Status())
         if (!force && k == key) return
         key = k
@@ -512,7 +514,7 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
             box.orientation = LinearLayout.VERTICAL
             box.setPadding(dp(12), dp(10), dp(12), dp(10))
             box.background = rounded(panel2, 12, stroke)
-            box.addView(label((if (item.remote) "🌐 " else "") + item.name, 13.5f, white, true, false))
+            box.addView(label((if (item.remote) "🌐 " else "") + item.name + (if (item.remote && isNewKey("v2", item.name)) "  🆕 جدید" else ""), 13.5f, white, true, false))
             box.addView(label(item.proto.uppercase() + " • " + item.host + ":" + item.port, 11.5f, muted, false, false))
             val resLbl = label("", 12f, white, false, false)
             box.addView(resLbl)
@@ -543,14 +545,12 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
             } else {
                 smallBtn("اتصال", true) { connectV2(item) }
             }
-            val b3 = smallBtn("کپی", false) { copyText("V2Ray", item.raw) }
             val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
             m1.marginEnd = dp(6)
             val m2 = LinearLayout.LayoutParams(WRAP, WRAP)
             m2.marginEnd = dp(6)
             br.addView(b1, m1)
             br.addView(b2, m2)
-            br.addView(b3)
             if (!item.remote) {
                 val b4 = smallBtn("🗑", false) {
                     v2RemoveLocal(item.raw)
