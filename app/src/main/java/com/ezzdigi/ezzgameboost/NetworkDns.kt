@@ -611,7 +611,7 @@ internal fun MainActivity.buildDnsChanger() {
         refreshRemoteDns(true) { n ->
             remoteBtn.text = Tr.t("🌐 به‌روزرسانی لیست DNS آنلاین")
             remoteLbl.text = Tr.t(remoteDnsStatus())
-            toast(if (n > 0) Tr.t("لیست به‌روز شد") + ": $n" else Tr.t("دریافت لیست ناموفق بود"))
+            toast(if (n > 0) Tr.t("لیست به‌روز شد") + ": $n" else Tr.t("دریافت لیست ناموفق بود") + " (" + lastHttpErr + ")")
             render(true)
         }
     }

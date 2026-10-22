@@ -476,17 +476,18 @@ internal fun MainActivity.importDefaultWgList(onDone: () -> Unit) {
     toast("در حال دریافت سرورهای گیمینگ…")
     runBg {
         var body: String? = null
-        for (u in REMOTE_WG_URLS) {
-            val b = httpGet(u, 10000, 1500000)
+        for (u in remoteUrls(ghRepo(), "wireguard.json")) {
+            val b = httpGet(u, 6000, 1500000)
             if (b != null && b.trimStart().startsWith("{")) {
                 body = b
                 break
             }
+            if (b != null) lastHttpErr = "فایل JSON نیست"
         }
         var added = 0
         var err = ""
         if (body == null) {
-            err = "لیست سرورها دریافت نشد."
+            err = "لیست سرورها دریافت نشد. (" + lastHttpErr + ")"
         } else {
             try {
                 val arr = org.json.JSONObject(body).getJSONArray("configs")
@@ -567,7 +568,7 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                 if (m.groupValues[3].isNotEmpty()) api += "?ref=" + m.groupValues[3]
                 val body = httpGet(api, 10000, 1500000)
                 if (body == null) {
-                    err = "لیست فایل‌ها از GitHub دریافت نشد."
+                    err = "لیست فایل‌ها از GitHub دریافت نشد. (" + lastHttpErr + ")"
                 } else {
                     val arr = org.json.JSONArray(body)
                     for (i in 0 until arr.length()) {
@@ -895,6 +896,37 @@ internal fun MainActivity.buildVpn() {
     }
 
     val renderV = buildV2Section()
+
+    // ---------------- Online list source (GitHub repo)
+    section("ONLINE LISTS • GitHub")
+    val oCard = card()
+    oCard.addView(
+        label(
+            "لیست‌های آنلاین (DNS، V2Ray و سرور گیمینگ) از فایل‌های dns.json، v2ray.json و wireguard.json در ریشه‌ی یک ریپوی GitHub گرفته می‌شوند. اگر به‌روز نمی‌شوند، آدرس ریپوی خودت را بنویس (مثل user/repo). ریپو باید Public باشد.",
+            12f, muted
+        )
+    )
+    val repoIn = input("user/repo")
+    repoIn.setText(ghRepo())
+    oCard.addView(repoIn, vlp(8, 8))
+    val bRepo = button("💾 ذخیره و به‌روزرسانی", true) {
+        val r = parseRepo(repoIn.text.toString())
+        if (r == null) {
+            toast("آدرس ریپو معتبر نیست؛ مثل user/repo بنویس.")
+        } else {
+            prefs.edit().putString("ghRepo", r).apply()
+            repoIn.setText(r)
+            toast("ذخیره شد؛ در حال به‌روزرسانی…")
+            refreshRemoteDns(true) { n ->
+                toast(if (n > 0) Tr.t("لیست DNS") + ": $n" else Tr.t("لیست DNS ناموفق بود") + " (" + lastHttpErr + ")")
+            }
+            refreshRemoteV2(true) { n ->
+                if (n >= 0) toast(Tr.t("لیست V2Ray") + ": $n")
+            }
+        }
+    }
+    oCard.addView(bRepo, vlp(0, 4))
+    content.addView(oCard, vlp(0, 4))
 
     // ---------------- Custom DNS (IPv4 / IPv6)
     section("CUSTOM DNS • IPv4 / IPv6")

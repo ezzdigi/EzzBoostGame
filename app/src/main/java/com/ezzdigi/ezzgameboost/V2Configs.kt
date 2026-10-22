@@ -328,8 +328,8 @@ internal fun MainActivity.refreshRemoteV2(force: Boolean, onDone: ((Int) -> Unit
     prefs.edit().putLong("remoteV2Try", System.currentTimeMillis()).apply()
     runBg {
         var got: List<Pair<String, String>>? = null
-        for (u in REMOTE_V2_URLS) {
-            val b = httpGet(u)
+        for (u in remoteUrls(ghRepo(), "v2ray.json")) {
+            val b = httpGet(u, 6000, 600000)
             if (b != null && b.trimStart().startsWith("{")) {
                 val p = parseV2Json(b)
                 if (p != null) {
@@ -337,6 +337,7 @@ internal fun MainActivity.refreshRemoteV2(force: Boolean, onDone: ((Int) -> Unit
                     break
                 }
             }
+            if (b != null) lastHttpErr = "فایل JSON نیست"
         }
         val res = got
         ui {
@@ -583,7 +584,7 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
     val bFile = smallBtn("📁 فایل", false) { pickFile(4740) }
     val bOnline = smallBtn("🌐 لیست آنلاین", false) {
         refreshRemoteV2(true) { n ->
-            toast(if (n >= 0) Tr.t("لیست آنلاین:") + " $n" else Tr.t("دریافت لیست ناموفق بود"))
+            toast(if (n >= 0) Tr.t("لیست آنلاین:") + " $n" else Tr.t("دریافت لیست ناموفق بود") + " (" + lastHttpErr + ")")
         }
     }
     val row = LinearLayout(this)

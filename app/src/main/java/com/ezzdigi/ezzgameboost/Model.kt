@@ -93,17 +93,15 @@ const val SITE_URL = "https://ezzdigi.com"
 const val TG_URL = "https://t.me/ezzdigii"
 // The app tries these in order. Edit dns.json on GitHub (repo root) or on your site
 // to update the DNS list without releasing a new APK.
-val REMOTE_DNS_URLS = listOf(
-    "https://raw.githubusercontent.com/ezzdigi/EzzBoostGame/main/dns.json",
-    "https://ezzdigi.com/ezzgameboost/dns.json"
-)
-val REMOTE_V2_URLS = listOf(
-    "https://raw.githubusercontent.com/ezzdigi/EzzBoostGame/main/v2ray.json",
-    "https://ezzdigi.com/ezzgameboost/v2ray.json"
-)
-val REMOTE_WG_URLS = listOf(
-    "https://raw.githubusercontent.com/ezzdigi/EzzBoostGame/main/wireguard.json",
-    "https://ezzdigi.com/ezzgameboost/wireguard.json"
+// Online lists (dns.json, v2ray.json, wireguard.json) live in the repo root.
+// Several mirrors are tried because raw.githubusercontent.com is blocked on some networks.
+fun remoteUrls(repo: String, file: String): List<String> = listOf(
+    "https://raw.githubusercontent.com/$repo/main/$file",
+    "https://cdn.jsdelivr.net/gh/$repo@main/$file",
+    "https://raw.githubusercontent.com/$repo/master/$file",
+    "https://cdn.jsdelivr.net/gh/$repo@master/$file",
+    "https://gcore.jsdelivr.net/gh/$repo@main/$file",
+    "https://ezzdigi.com/ezzgameboost/$file"
 )
 const val RELEASES_API = "https://api.github.com/repos/ezzdigi/EzzBoostGame/releases/latest"
 const val RELEASES_PAGE = "https://github.com/ezzdigi/EzzBoostGame/releases/latest"

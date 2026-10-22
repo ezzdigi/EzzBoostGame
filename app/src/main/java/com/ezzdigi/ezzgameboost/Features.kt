@@ -100,6 +100,9 @@ private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 
 // ----- Online DNS list, update check, WireGuard scope --------------------
 
+@Volatile
+var lastHttpErr = ""
+
 internal fun httpGet(url: String, timeoutMs: Int = 8000, maxBytes: Int = 300000): String? {
     var holder: HttpURLConnection? = null
     try {
@@ -109,8 +112,12 @@ internal fun httpGet(url: String, timeoutMs: Int = 8000, maxBytes: Int = 300000)
         c.readTimeout = timeoutMs
         c.requestMethod = "GET"
         c.setRequestProperty("User-Agent", "EzzGameBOOST")
-        c.setRequestProperty("Accept", "application/json")
-        if (c.responseCode != 200) return null
+        c.setRequestProperty("Accept", "*/*")
+        c.setRequestProperty("Cache-Control", "no-cache")
+        if (c.responseCode != 200) {
+            lastHttpErr = "HTTP " + c.responseCode
+            return null
+        }
         val input = c.inputStream
         val out = ByteArrayOutputStream()
         val buf = ByteArray(8192)
@@ -123,8 +130,13 @@ internal fun httpGet(url: String, timeoutMs: Int = 8000, maxBytes: Int = 300000)
             out.write(buf, 0, n)
         }
         input.close()
-        return out.toString("UTF-8")
-    } catch (_: Exception) {
+        return out.toString("UTF-8").removePrefix("\uFEFF")
+    } catch (e: Exception) {
+        lastHttpErr = when (e) {
+            is java.net.UnknownHostException -> "آدرس پیدا نشد (اینترنت یا فیلتر)"
+            is java.net.SocketTimeoutException -> "timeout (احتمالاً فیلتر)"
+            else -> e.javaClass.simpleName
+        }
         return null
     } finally {
         try {
@@ -171,12 +183,13 @@ internal fun MainActivity.refreshRemoteDns(force: Boolean, onDone: ((Int) -> Uni
     prefs.edit().putLong("remoteDnsTry", System.currentTimeMillis()).apply()
     runBg {
         var got: String? = null
-        for (u in REMOTE_DNS_URLS) {
-            val b = httpGet(u)
+        for (u in remoteUrls(ghRepo(), "dns.json")) {
+            val b = httpGet(u, 6000, 600000)
             if (b != null && b.trimStart().startsWith("{")) {
                 got = b
                 break
             }
+            if (b != null) lastHttpErr = "فایل JSON نیست"
         }
         val body = got
         ui {
@@ -232,7 +245,7 @@ internal fun MainActivity.checkUpdate(manual: Boolean, onDone: ((String) -> Unit
     if (!manual && System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
     prefs.edit().putLong("updTry", System.currentTimeMillis()).apply()
     runBg {
-        val body = httpGet(RELEASES_API)
+        val body = httpGet("https://api.github.com/repos/" + ghRepo() + "/releases/latest")
         var msg = "fail"
         if (body != null) {
             try {
@@ -334,4 +347,14 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
         }
     }
     return if (inserted) out.joinToString("\n") else null
+}
+
+
+internal fun MainActivity.ghRepo(): String =
+    prefs.getString("ghRepo", "ezzdigi/EzzBoostGame") ?: "ezzdigi/EzzBoostGame"
+
+internal fun parseRepo(raw: String): String? {
+    val s = raw.trim().trimEnd('/')
+    val m = Regex("^(?:https?://)?(?:www\\.)?(?:github\\.com/)?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\\.git)?(?:/.*)?$").find(s) ?: return null
+    return m.groupValues[1] + "/" + m.groupValues[2]
 }

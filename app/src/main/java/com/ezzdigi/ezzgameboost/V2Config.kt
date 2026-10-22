@@ -181,7 +181,7 @@ internal fun parseV2Full(rawIn: String): V2Full? {
         val ui = noQuery.substring(0, at)
         hp = noQuery.substring(at + 1).substringBefore('/')
         user = if (scheme == "ss") {
-            val plain = urlDec(ui)
+            val plain = urlDec(ui.replace("+", "%2B"))
             if (plain.contains(":")) plain else (v2Decode(ui) ?: return null)
         } else {
             urlDec(ui)
@@ -357,8 +357,37 @@ internal fun buildXrayConfig(raw: String): String {
             val sv = JSONObject()
             sv.put("address", f.host)
             sv.put("port", f.port)
-            sv.put("method", f.user.substring(0, c))
-            sv.put("password", f.user.substring(c + 1))
+            val method = f.user.substring(0, c).trim()
+            var pw = f.user.substring(c + 1)
+            if (method.startsWith("2022-")) {
+                // Shadowsocks 2022: keys are base64 ("serverKey" or "serverKey:userKey").
+                // Drop stray invisible / replacement characters and check the key length.
+                pw = pw.replace(" ", "+").filter { it.code in 33..126 }
+                val need = if (method.contains("aes-128")) 16 else 32
+                val keys = pw.split(":")
+                for (i in keys.indices) {
+                    val k = keys[i]
+                    val okFormat = Regex("^[A-Za-z0-9+/]+={0,2}$").matches(k)
+                    val size = if (okFormat) {
+                        try {
+                            Base64.decode(k, Base64.DEFAULT).size
+                        } catch (_: Exception) {
+                            -1
+                        }
+                    } else {
+                        -1
+                    }
+                    if (size != need) {
+                        throw IllegalArgumentException(
+                            "کلید Shadowsocks 2022 شماره " + (i + 1) + " با روش " + method +
+                                " همخوانی ندارد (باید " + need + " بایت باشد، " +
+                                (if (size < 0) "نامعتبر" else size.toString() + " بایت") + " است). لینک را دوباره از پنل کپی کن."
+                        )
+                    }
+                }
+            }
+            sv.put("method", method)
+            sv.put("password", pw)
             ob.put("settings", JSONObject().put("servers", JSONArray().put(sv)))
         }
         else -> throw IllegalArgumentException("این پروتکل داخل اپ پشتیبانی نمی‌شود")
