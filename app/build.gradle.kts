@@ -15,6 +15,10 @@ android {
         // so the app version always matches the release tag.
         versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 4
         versionName = (project.findProperty("appVersion") as String?) ?: "2.2.0"
+        // Keep the APK small: modern phones only.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     // Optional release signing: set these environment variables (GitHub secrets)
@@ -60,6 +64,13 @@ android {
     }
 }
 
+// Xray core (libv2ray.aar) is downloaded by the GitHub workflow into app/libs.
+// Without it the app still builds, and V2Ray direct connect is disabled.
+val xrayAarFile = file("libs/libv2ray.aar")
+
 dependencies {
     implementation("com.wireguard.android:tunnel:1.0.20250531")
+    if (xrayAarFile.exists()) {
+        implementation(files(xrayAarFile))
+    }
 }
