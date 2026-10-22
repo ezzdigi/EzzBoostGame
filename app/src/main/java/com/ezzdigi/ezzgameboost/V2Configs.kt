@@ -110,7 +110,7 @@ class V2Item(
 
 private val V2_SCHEMES = setOf("vmess", "vless", "trojan", "ss", "hysteria2", "hy2", "tuic")
 
-private fun v2Decode(s: String): String? {
+internal fun v2Decode(s: String): String? {
     var t = s.trim().replace("\n", "").replace("\r", "").replace(" ", "")
     if (t.isEmpty()) return null
     t = t.replace('-', '+').replace('_', '/')
@@ -389,7 +389,63 @@ internal fun MainActivity.v2Status(): String {
         val d = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.US).format(Date(ts))
         "لیست آنلاین: $n V2 • آخرین به‌روزرسانی: $d"
     }
-    return s1 + "\n" + s2
+    val core = if (XrayCore.available()) {
+        val v = XrayCore.version()
+        "هسته‌ی Xray: " + (if (v.isBlank()) "OK" else v)
+    } else {
+        "هسته‌ی Xray داخل این نسخه نیست؛ برای اتصال مستقیم، نسخه‌ی Release را نصب کن."
+    }
+    var st = ""
+    if (V2VpnService.busy) {
+        st = "\n⏳ ..."
+    } else if (V2VpnService.running) {
+        st = "\n🟢 V2Ray متصل: " + V2VpnService.activeName
+    } else if (V2VpnService.lastError.isNotBlank()) {
+        st = "\n⚠️ خطای V2Ray: " + V2VpnService.lastError
+    }
+    return core + st + "\n" + s1 + "\n" + s2
+}
+
+internal fun MainActivity.connectV2(item: V2Item) {
+    if (!XrayCore.available()) {
+        toast(Tr.t("هسته‌ی Xray در این نسخه نیست. نسخه‌ی Release را نصب کن."))
+        return
+    }
+    val cfg = try {
+        buildXrayConfig(item.raw)
+    } catch (e: Exception) {
+        toast(Tr.t("ساخت پیکربندی ناموفق:") + " " + (e.message ?: ""))
+        return
+    }
+    pendingV2 = Triple(item.name, item.raw.hashCode().toString(), cfg)
+    val prep = VpnService.prepare(this)
+    if (prep != null) {
+        try {
+            startActivityForResult(prep, 4750)
+        } catch (_: Exception) {
+            toast(Tr.t("این دستگاه از VPN محلی پشتیبانی نمی‌کند."))
+        }
+    } else {
+        startV2Service()
+    }
+}
+
+internal fun MainActivity.startV2Service() {
+    val p = pendingV2 ?: return
+    val i = Intent(this, V2VpnService::class.java)
+    i.action = V2VpnService.ACTION_START
+    i.putExtra("name", p.first)
+    i.putExtra("id", p.second)
+    i.putExtra("config", p.third)
+    i.putExtra("pkgs", scopedPackages(null).toTypedArray())
+    try {
+        startService(i)
+        toast(Tr.t("در حال اتصال V2Ray…"))
+    } catch (_: Exception) {
+        toast(Tr.t("شروع سرویس ناموفق بود."))
+    }
+    handler.postDelayed({ vpnRender?.invoke() }, 1200)
+    handler.postDelayed({ vpnRender?.invoke() }, 3500)
 }
 
 internal fun MainActivity.openInV2Client(item: V2Item) {
@@ -427,7 +483,7 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
     val vCard = card()
     vCard.addView(
         label(
-            "کانفیگ‌های V2Ray/Xray را از کلیپ‌بورد، فایل (لینک‌ها یا لینک اشتراک) یا لیست آنلاین اضافه کن، تست کن و با یک لمس در کلاینت V2Ray خودت (v2rayNG، Hiddify، NekoBox...) باز کن. اتصال داخل کلاینت انجام می‌شود، نه داخل این اپ.",
+            "کانفیگ‌های V2Ray/Xray را از کلیپ‌بورد، فایل (لینک‌ها یا لینک اشتراک) یا لیست آنلاین اضافه کن، تست کن و مستقیم با دکمه‌ی «اتصال» وصل شو (vmess، vless، trojan، ss). پروتکل‌های UDP مثل hysteria2 و tuic از طریق کلاینت V2Ray باز می‌شوند. این اتصال فقط برای بازی‌ها کار می‌کند و بقیه‌ی برنامه‌ها مستقیم می‌روند.",
             12f, muted
         )
     )
@@ -440,7 +496,8 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
     fun render(force: Boolean) {
         val items = v2Items()
         val k = items.joinToString("|") { it.raw.hashCode().toString() } + "|" +
-            prefs.getLong("remoteV2Ts", 0L)
+            prefs.getLong("remoteV2Ts", 0L) + "|" + V2VpnService.running + "|" +
+            V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError
         statusLbl.text = Tr.t(v2Status())
         if (!force && k == key) return
         key = k
@@ -473,7 +530,18 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
                     }
                 }
             }
-            val b2 = smallBtn("اتصال با کلاینت", true) { openInV2Client(item) }
+            val myId = item.raw.hashCode().toString()
+            val isActive = V2VpnService.running && V2VpnService.activeId == myId
+            val b2 = if (!v2Supported(item.proto)) {
+                smallBtn("اتصال با کلاینت", true) { openInV2Client(item) }
+            } else if (isActive) {
+                smallBtn("قطع اتصال", false) {
+                    V2VpnService.requestStop(this)
+                    handler.postDelayed({ vpnRender?.invoke() }, 700)
+                }
+            } else {
+                smallBtn("اتصال", true) { connectV2(item) }
+            }
             val b3 = smallBtn("کپی", false) { copyText("V2Ray", item.raw) }
             val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
             m1.marginEnd = dp(6)

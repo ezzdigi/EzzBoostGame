@@ -289,10 +289,12 @@ internal fun MainActivity.autoChecks() {
 
 // ----- 3) WireGuard only for games ------------------------------------------
 
-internal fun MainActivity.wgScopeGames(base: String): Boolean =
-    prefs.getBoolean("wgmode_$base", false)
+// Tunnels (WireGuard and V2Ray) always apply to games only. There is no user choice.
+internal fun MainActivity.wgScopeGames(@Suppress("UNUSED_PARAMETER") base: String): Boolean = true
 
-internal fun MainActivity.wgIncludePackages(base: String): List<String> {
+internal fun MainActivity.wgIncludePackages(base: String): List<String> = scopedPackages(base)
+
+internal fun MainActivity.scopedPackages(base: String?): List<String> {
     val set = LinkedHashSet<String>()
     for (a in loadApps()) if (a.isGame) set.add(a.pkg)
     set.addAll(favoriteSet())
@@ -300,7 +302,7 @@ internal fun MainActivity.wgIncludePackages(base: String): List<String> {
         if (k.startsWith("prof_")) {
             val pkg = k.removePrefix("prof_")
             val p = getProfile(pkg)
-            if (p != null && p.wg == base) set.add(pkg)
+            if (p != null && base != null && p.wg == base) set.add(pkg)
         }
     }
     val out = ArrayList<String>()
@@ -314,10 +316,11 @@ internal fun MainActivity.wgIncludePackages(base: String): List<String> {
     return out
 }
 
-internal fun MainActivity.wgScopedConfig(base: String, text: String): String {
+internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
     if (!wgScopeGames(base)) return text
     val pkgs = wgIncludePackages(base)
-    if (pkgs.isEmpty()) return text
+    // Games-only mode must never fall back to a whole-phone tunnel.
+    if (pkgs.isEmpty()) return null
     val out = ArrayList<String>()
     var inserted = false
     for (line in text.split("\n")) {
@@ -330,5 +333,5 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String {
             inserted = true
         }
     }
-    return if (inserted) out.joinToString("\n") else text
+    return if (inserted) out.joinToString("\n") else null
 }

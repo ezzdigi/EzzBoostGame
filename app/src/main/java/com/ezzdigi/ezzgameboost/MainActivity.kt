@@ -119,7 +119,7 @@ class MainActivity : Activity() {
     internal var accent = accents[0]
 
     internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "🛠", "📊")
-    internal val tabNames = arrayOf("خانه", "بازی‌ها", "شبکه", "VPN", "ابزار", "آمار")
+    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "ابزار", "آمار")
 
     internal var dnsCache: List<DnsProvider>? = null
     internal val dnsProviders: List<DnsProvider>
@@ -155,6 +155,7 @@ class MainActivity : Activity() {
     internal var importName = ""
     internal var pendingDns: DnsProvider? = null
     internal var pendingLaunch: String? = null
+    internal var pendingV2: Triple<String, String, String>? = null
     internal val dnsPing = HashMap<String, Int>()
     internal var dnsBenchRunning = false
 
@@ -630,6 +631,12 @@ class MainActivity : Activity() {
         } else if (requestCode == 4730) {
             val uri = data?.data
             if (resultCode == Activity.RESULT_OK && uri != null) importFromUri(uri)
+        } else if (requestCode == 4750) {
+            if (resultCode == Activity.RESULT_OK && pendingV2 != null) {
+                startV2Service()
+            } else {
+                toast(Tr.t("اجازه‌ی VPN داده نشد؛ بدون آن اتصال V2Ray ممکن نیست."))
+            }
         } else if (requestCode == 4740) {
             val uri = data?.data
             if (resultCode == Activity.RESULT_OK && uri != null) importV2FromUri(uri)

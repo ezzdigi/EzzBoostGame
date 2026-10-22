@@ -351,6 +351,155 @@ internal fun MainActivity.importWg(text: String, wantedName: String, onDone: () 
     }
 }
 
+// ----- Default online gaming-server list (wireguard.json in the repo) -----
+
+internal fun MainActivity.importDefaultWgList(onDone: () -> Unit) {
+    toast("در حال دریافت سرورهای گیمینگ…")
+    runBg {
+        var body: String? = null
+        for (u in REMOTE_WG_URLS) {
+            val b = httpGet(u, 10000, 1500000)
+            if (b != null && b.trimStart().startsWith("{")) {
+                body = b
+                break
+            }
+        }
+        var added = 0
+        var err = ""
+        if (body == null) {
+            err = "لیست سرورها دریافت نشد."
+        } else {
+            try {
+                val arr = org.json.JSONObject(body).getJSONArray("configs")
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val nm = o.optString("name")
+                    var text = o.optString("conf").replace("\\n", "\n")
+                    val url = o.optString("url")
+                    if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
+                    if (!text.contains("[Interface]")) continue
+                    try {
+                        Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                    } catch (_: Throwable) {
+                        continue
+                    }
+                    val base = cleanName(nm, "wg")
+                    val exists = java.io.File(cfgDir("wg"), base + ".conf").exists()
+                    if (!exists && listCfg("wg").size >= 20) continue
+                    writeCfg("wg", base + ".conf", text)
+                    added++
+                }
+            } catch (_: Throwable) {
+                err = "لیست سرورها معتبر نیست."
+            }
+            if (added == 0 && err.isEmpty()) err = "سرور گیمینگ معتبری پیدا نشد."
+        }
+        ui {
+            if (added > 0) {
+                toast(added.toString() + " " + Tr.t("کانفیگ اضافه شد"))
+                onDone()
+            } else {
+                toast(err)
+            }
+        }
+    }
+}
+
+// ----- Import WireGuard configs from GitHub -------------------------------
+
+internal fun githubRawUrl(u: String): String {
+    var s = u.trim()
+    if (!s.startsWith("http")) s = "https://" + s
+    val isGh = s.contains("://github.com/") || s.contains("://gist.github.com/")
+    if (isGh) s = s.substringBefore("#").substringBefore("?")
+    val m = Regex("^https?://github\\.com/([^/]+)/([^/]+)/(?:blob|raw)/(.+)$").find(s)
+    if (m != null) {
+        return "https://raw.githubusercontent.com/" + m.groupValues[1] + "/" + m.groupValues[2] + "/" + m.groupValues[3]
+    }
+    val g = Regex("^https?://gist\\.github\\.com/([^/]+)/([0-9a-fA-F]+)").find(s)
+    if (g != null) {
+        return "https://gist.githubusercontent.com/" + g.groupValues[1] + "/" + g.groupValues[2] + "/raw"
+    }
+    return s
+}
+
+internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDone: () -> Unit) {
+    val u = url.trim()
+    if (u.isEmpty()) {
+        toast("لینک GitHub را وارد کن.")
+        return
+    }
+    if (listCfg("wg").size >= 20) {
+        toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
+        return
+    }
+    toast("در حال دریافت از GitHub…")
+    runBg {
+        var added = 0
+        var err = ""
+        try {
+            val files = ArrayList<Pair<String, String>>()
+            val clean = u.substringBefore("#").substringBefore("?").trimEnd('/')
+            val m = Regex("^(?:https?://)?github\\.com/([^/]+)/([^/]+?)(?:\\.git)?(?:/tree/([^/]+)(?:/(.*))?)?$").find(clean)
+            if (m != null) {
+                val dir = m.groupValues[4].replace(" ", "%20")
+                var api = "https://api.github.com/repos/" + m.groupValues[1] + "/" + m.groupValues[2] + "/contents"
+                if (dir.isNotEmpty()) api += "/" + dir
+                if (m.groupValues[3].isNotEmpty()) api += "?ref=" + m.groupValues[3]
+                val body = httpGet(api, 10000, 1500000)
+                if (body == null) {
+                    err = "لیست فایل‌ها از GitHub دریافت نشد."
+                } else {
+                    val arr = org.json.JSONArray(body)
+                    for (i in 0 until arr.length()) {
+                        val o = arr.getJSONObject(i)
+                        val nm = o.optString("name")
+                        val dl = o.optString("download_url")
+                        if (o.optString("type") == "file" && nm.endsWith(".conf", ignoreCase = true) && dl.isNotEmpty()) {
+                            files.add(Pair(nm, dl))
+                        }
+                    }
+                    if (files.isEmpty()) err = "هیچ فایل .conf در این مسیر پیدا نشد."
+                }
+            } else {
+                val raw = githubRawUrl(u)
+                files.add(Pair(raw.substringAfterLast('/').substringBefore('?'), raw))
+            }
+            var failed = 0
+            for (f in files) {
+                if (listCfg("wg").size >= 20) break
+                val text = httpGet(f.second, 10000, 262144)
+                if (text == null || !text.contains("[Interface]")) {
+                    failed++
+                    continue
+                }
+                try {
+                    Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                } catch (_: Throwable) {
+                    failed++
+                    continue
+                }
+                val nm = if (files.size == 1 && wantedName.isNotBlank()) wantedName else f.first
+                writeCfg("wg", uniqueFile("wg", cleanName(nm, "wg"), ".conf"), text)
+                added++
+            }
+            if (added == 0 && err.isEmpty()) {
+                err = if (failed > 0) "کانفیگ معتبر وایرگارد پیدا نشد." else "دریافت از GitHub ناموفق بود."
+            }
+        } catch (e: Throwable) {
+            if (err.isEmpty()) err = "دریافت از GitHub ناموفق بود."
+        }
+        ui {
+            if (added > 0) {
+                toast(added.toString() + " " + Tr.t("کانفیگ اضافه شد"))
+                onDone()
+            } else {
+                toast(err)
+            }
+        }
+    }
+}
+
 // ----- Custom DNS (IPv4 / IPv6) -------------------------------------------
 
 internal fun MainActivity.isIpv4(s: String): Boolean {
@@ -445,32 +594,39 @@ internal fun MainActivity.doConnectWg(base: String) {
     vpnRefresh?.invoke()
     runBg {
         var err = ""
+        var noGames = false
         try {
             val scoped = try {
                 wgScopedConfig(base, text)
             } catch (_: Throwable) {
-                text
+                null
             }
-            val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-            val be = wgBackendGet()
-            val old = wgTunnel
-            if (old != null) {
-                try {
-                    be.setState(old, Tunnel.State.DOWN, null)
-                } catch (_: Throwable) {
+            if (scoped == null) {
+                noGames = true
+            } else {
+                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                val be = wgBackendGet()
+                val old = wgTunnel
+                if (old != null) {
+                    try {
+                        be.setState(old, Tunnel.State.DOWN, null)
+                    } catch (_: Throwable) {
+                    }
                 }
+                val tun = WgTun(base)
+                be.setState(tun, Tunnel.State.UP, cfg)
+                wgTunnel = tun
+                WgState.activeName = base
+                WgState.up = true
             }
-            val tun = WgTun(base)
-            be.setState(tun, Tunnel.State.UP, cfg)
-            wgTunnel = tun
-            WgState.activeName = base
-            WgState.up = true
         } catch (e: Throwable) {
             err = (e.message ?: e.javaClass.simpleName).take(160)
         }
         ui {
             wgBusy = false
-            if (err.isEmpty()) {
+            if (noGames) {
+                toast(Tr.t("بازی‌ای پیدا نشد. یک بازی را علاقه‌مند کن یا حالت «کل گوشی» را بزن."))
+            } else if (err.isEmpty()) {
                 toast(Tr.t("متصل شد"))
             } else {
                 toast(Tr.t("خطای وایرگارد:") + " " + err)
@@ -540,6 +696,17 @@ internal fun MainActivity.buildVpn() {
     wRow.addView(bFile, lp1)
     wRow.addView(bClip, lp2)
     wCard.addView(wRow, vlp(0, 10))
+    val ghIn = input("لینک GitHub (اختیاری: فایل .conf، پوشه یا ریپو)")
+    wCard.addView(ghIn, vlp(0, 8))
+    val bGh = button("دریافت سرور گیمینگ وایرگارد", true) {
+        val gl = ghIn.text.toString().trim()
+        if (gl.isEmpty()) importDefaultWgList { vpnRender?.invoke() }
+        else importFromGithub(gl, nameIn.text.toString()) {
+            ghIn.setText("")
+            vpnRender?.invoke()
+        }
+    }
+    wCard.addView(bGh, vlp(0, 10))
     val wList = LinearLayout(this)
     wList.orientation = LinearLayout.VERTICAL
     wCard.addView(wList)
@@ -551,7 +718,7 @@ internal fun MainActivity.buildVpn() {
     )
     wCard.addView(
         label(
-            "💡 «فقط بازی‌ها» وایرگارد را فقط برای بازی‌ها و علاقه‌مندی‌های تو فعال می‌کند؛ بقیه‌ی برنامه‌ها مستقیم می‌روند. با زدن روی حالت، تغییر می‌کند.",
+            "💡 سرور گیمینگ فقط برای بازی‌ها کار می‌کند؛ تلگرام، اینستاگرام، یوتیوب و مرورگر مستقیم می‌روند. اگر بازی‌ات شناخته نشد، در تب بازی‌ها آن را علاقه‌مند کن.",
             11.5f, muted
         ), vlp(4, 0)
     )
@@ -585,15 +752,7 @@ internal fun MainActivity.buildVpn() {
             col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
             val ep = wgEndpoint(readCfg("wg", file))
             if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
-            val gm = prefs.getBoolean("wgmode_$base", false)
-            val scopeLbl = label(if (gm) "🎮 فقط بازی‌ها (بقیه مستقیم)" else "📱 کل گوشی", 11.5f, accent, true)
-            scopeLbl.setPadding(0, dp(4), 0, dp(2))
-            scopeLbl.setOnClickListener {
-                prefs.edit().putBoolean("wgmode_$base", !gm).apply()
-                renderW(true)
-                if (isActive) connectWg(base)
-            }
-            col.addView(scopeLbl)
+            col.addView(label("🎮 فقط بازی‌ها", 11.5f, accent, true), vlp(4, 2))
             row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
             row.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
                 if (isActive) disconnectWg() else connectWg(base)
@@ -772,6 +931,7 @@ internal fun MainActivity.buildVpn() {
     vpnRefresh = {
         renderW(false)
         renderC(false)
+        renderV(false)
     }
     vpnRender = {
         renderW(true)
