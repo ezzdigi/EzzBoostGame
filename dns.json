@@ -197,6 +197,36 @@
       "name": "Ezz13",
       "servers": [
         "188.121.121.108"
+        {
+        "name": "NEW DNS TH",
+        "servers": [
+          "193.151.153.134"
+        ]
+          },
+        
+      {
+      "name": "NEW DNS TH1",
+      "servers": [
+        "193.151.132.61"
+      ]
+      },
+
+        {
+      "name": "NEW DNS TH2",
+      "servers": [
+        "89.42.137.78"
+      ]
+      },
+        {
+        "name":"NEW DNS TH3",
+    
+      "servers": [
+        "212.16.86.51"
+      ]
+      },
+  
+         
+        
       ]
     }
   ]
