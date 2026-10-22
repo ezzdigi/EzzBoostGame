@@ -351,6 +351,125 @@ internal fun MainActivity.importWg(text: String, wantedName: String, onDone: () 
     }
 }
 
+// ----- WireGuard config test ----------------------------------------------
+
+class WgTestTun : Tunnel {
+    override fun getName(): String = "ezztest"
+    override fun onStateChange(newState: Tunnel.State) {
+    }
+}
+
+internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): String? {
+    val out = ArrayList<String>()
+    var inserted = false
+    for (line in text.split("\n")) {
+        val t = line.trim()
+        val low = t.lowercase()
+        if (low.startsWith("includedapplications") || low.startsWith("excludedapplications")) continue
+        out.add(line)
+        if (!inserted && t.equals("[Interface]", ignoreCase = true)) {
+            out.add("IncludedApplications = " + pkgs.joinToString(", "))
+            inserted = true
+        }
+    }
+    return if (inserted) out.joinToString("\n") else null
+}
+
+internal fun MainActivity.testWg(base: String) {
+    if (wgBusy) return
+    if (WgState.up || V2VpnService.running || V2VpnService.busy) {
+        wgTestRes[base] = "⚠️ اول اتصال فعلی (وایرگارد یا V2Ray) را قطع کن، بعد تست کن."
+        vpnRender?.invoke()
+        return
+    }
+    val prep = try {
+        VpnService.prepare(this)
+    } catch (_: Exception) {
+        null
+    }
+    if (prep != null) {
+        pendingWgTest = base
+        try {
+            startActivityForResult(prep, 4760)
+        } catch (_: Exception) {
+            toast("این دستگاه از VPN محلی پشتیبانی نمی‌کند.")
+        }
+    } else {
+        runWgTest(base)
+    }
+}
+
+// Brings the tunnel up for this app only (never the whole phone), sends a small
+// request through it and reports whether the server answered.
+internal fun MainActivity.runWgTest(base: String) {
+    if (wgBusy) return
+    val text = readCfg("wg", base + ".conf")
+    if (text.isEmpty()) {
+        toast("کانفیگ پیدا نشد.")
+        return
+    }
+    wgBusy = true
+    wgTestRes[base] = "⏳ در حال تست…"
+    vpnRefresh?.invoke()
+    runBg {
+        var result = ""
+        val tun = WgTestTun()
+        var up = false
+        try {
+            val scoped = wgScopeToPackages(text, listOf(packageName))
+            if (scoped == null) {
+                result = "✕ کانفیگ ساختار معتبر ندارد."
+            } else {
+                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                val be = wgBackendGet()
+                be.setState(tun, Tunnel.State.UP, cfg)
+                up = true
+                Thread.sleep(600)
+                var body: String? = null
+                var ms = -1L
+                val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
+                for (u in urls) {
+                    val t0 = System.currentTimeMillis()
+                    val b = httpGet(u, 6000, 4000)
+                    if (b != null) {
+                        body = b
+                        ms = System.currentTimeMillis() - t0
+                        break
+                    }
+                }
+                if (body != null) {
+                    var ip = ""
+                    var loc = ""
+                    for (ln in body.lines()) {
+                        if (ln.startsWith("ip=")) ip = ln.substring(3).trim()
+                        if (ln.startsWith("loc=")) loc = ln.substring(4).trim()
+                    }
+                    if (ip.isEmpty() && !body.contains("<") && body.length < 64) ip = body.trim()
+                    result = "✅ کار می‌کند • $ms ms" + (if (ip.isNotEmpty()) " • IP: $ip" else "") + (if (loc.isNotEmpty()) " • $loc" else "")
+                } else {
+                    result = "✕ جواب نیامد. سرور خاموش است، Endpoint/کلید اشتباه است یا پورت UDP بسته است."
+                }
+            }
+        } catch (e: Throwable) {
+            result = "✕ " + (e.message ?: e.javaClass.simpleName).take(120)
+        }
+        if (up) {
+            try {
+                wgBackendGet().setState(tun, Tunnel.State.DOWN, null)
+            } catch (_: Throwable) {
+            }
+        }
+        WgState.up = false
+        WgState.activeName = ""
+        ui {
+            wgBusy = false
+            wgTestRes[base] = result
+            vpnRender?.invoke()
+            homeRefresh?.invoke()
+        }
+    }
+}
+
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
 
 internal fun MainActivity.importDefaultWgList(onDone: () -> Unit) {
@@ -731,7 +850,7 @@ internal fun MainActivity.buildVpn() {
         wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
         wStatus.setTextColor(if (up) good else white)
         val names = listCfg("wg")
-        val key = "$up|$act|$wgBusy|" + names.joinToString(",")
+        val key = "$up|$act|$wgBusy|" + names.joinToString(",") + "|" + wgTestRes.toString()
         if (!force && key == wKey) return
         wKey = key
         wList.removeAllViews()
@@ -753,7 +872,13 @@ internal fun MainActivity.buildVpn() {
             val ep = wgEndpoint(readCfg("wg", file))
             if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
             col.addView(label("🎮 فقط بازی‌ها", 11.5f, accent, true), vlp(4, 2))
+            val tr = wgTestRes[base] ?: ""
+            if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
             row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
+            val tbtn = smallBtn("🧪 تست", false) { testWg(base) }
+            val tlp = LinearLayout.LayoutParams(WRAP, WRAP)
+            tlp.marginEnd = dp(6)
+            row.addView(tbtn, tlp)
             row.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
                 if (isActive) disconnectWg() else connectWg(base)
             })

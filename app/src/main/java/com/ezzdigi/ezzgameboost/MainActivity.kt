@@ -152,6 +152,8 @@ class MainActivity : Activity() {
     internal var wgTunnel: WgTun? = null
     internal var wgBusy = false
     internal var pendingWg: String? = null
+    internal var pendingWgTest: String? = null
+    internal val wgTestRes = HashMap<String, String>()
     internal var importName = ""
     internal var pendingDns: DnsProvider? = null
     internal var pendingLaunch: String? = null
@@ -170,9 +172,18 @@ class MainActivity : Activity() {
 
     internal val ticker = object : Runnable {
         override fun run() {
-            homeRefresh?.invoke()
-            netRefresh?.invoke()
-            vpnRefresh?.invoke()
+            try {
+                homeRefresh?.invoke()
+            } catch (_: Throwable) {
+            }
+            try {
+                netRefresh?.invoke()
+            } catch (_: Throwable) {
+            }
+            try {
+                vpnRefresh?.invoke()
+            } catch (_: Throwable) {
+            }
             handler.postDelayed(this, 2000)
         }
     }
@@ -182,6 +193,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
+        installCrashLog()
         Tr.load(this)
         val idx = prefs.getInt("accent", 0)
         accent = accents[idx.coerceIn(0, accents.size - 1)]
@@ -189,6 +201,65 @@ class MainActivity : Activity() {
             showOnboarding()
         } else {
             startMain()
+        }
+        handler.postDelayed({ showLastCrash() }, 600)
+    }
+
+    internal fun installCrashLog() {
+        try {
+            val prev = Thread.getDefaultUncaughtExceptionHandler()
+            Thread.setDefaultUncaughtExceptionHandler { t, e ->
+                try {
+                    val sw = java.io.StringWriter()
+                    e.printStackTrace(java.io.PrintWriter(sw))
+                    java.io.File(filesDir, "crash.txt").writeText(("[" + t.name + "] " + sw.toString()).take(6000))
+                } catch (_: Throwable) {
+                }
+                if (prev != null) prev.uncaughtException(t, e)
+            }
+        } catch (_: Throwable) {
+        }
+    }
+
+    internal fun showLastCrash() {
+        var txt = ""
+        try {
+            val f = java.io.File(filesDir, "crash.txt")
+            if (f.exists()) {
+                txt = f.readText()
+                f.delete()
+            }
+        } catch (_: Throwable) {
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            try {
+                val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val l = am.getHistoricalProcessExitReasons(packageName, 0, 1)
+                if (l.isNotEmpty()) {
+                    val r = l[0]
+                    val seen = prefs.getLong("exitSeen", 0L)
+                    if (r.timestamp > seen) {
+                        prefs.edit().putLong("exitSeen", r.timestamp).apply()
+                        val bad = r.reason == android.app.ApplicationExitInfo.REASON_CRASH ||
+                            r.reason == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE ||
+                            r.reason == android.app.ApplicationExitInfo.REASON_ANR ||
+                            r.reason == android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE
+                        if (bad && txt.isEmpty()) txt = "exit reason=" + r.reason + "  " + (r.description ?: "")
+                    }
+                }
+            } catch (_: Throwable) {
+            }
+        }
+        if (txt.isEmpty() || isDestroyed || isFinishing) return
+        val shown = txt
+        try {
+            android.app.AlertDialog.Builder(this)
+                .setTitle(Tr.t("آخرین خطای اپ"))
+                .setMessage(shown.take(3500))
+                .setPositiveButton(Tr.t("کپی")) { _, _ -> copyText("crash", shown) }
+                .setNegativeButton(Tr.t("بستن"), null)
+                .show()
+        } catch (_: Throwable) {
         }
     }
 
@@ -358,7 +429,12 @@ class MainActivity : Activity() {
     }
 
     internal fun ui(block: () -> Unit) {
-        if (!isDestroyed && !isFinishing) runOnUiThread { block() }
+        if (!isDestroyed && !isFinishing) runOnUiThread {
+            try {
+                block()
+            } catch (_: Throwable) {
+            }
+        }
     }
 
     internal fun toast(msg: String) {
@@ -628,6 +704,11 @@ class MainActivity : Activity() {
                 toast("اجازه‌ی VPN داده نشد؛ بدون آن اتصال ممکن نیست.")
                 launchPendingSoon(0)
             }
+        } else if (requestCode == 4760) {
+            val n = pendingWgTest
+            pendingWgTest = null
+            if (resultCode == Activity.RESULT_OK && n != null) runWgTest(n)
+            else toast("اجازه‌ی VPN داده نشد؛ بدون آن تست ممکن نیست.")
         } else if (requestCode == 4730) {
             val uri = data?.data
             if (resultCode == Activity.RESULT_OK && uri != null) importFromUri(uri)
