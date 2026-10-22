@@ -2,8 +2,8 @@
   "version": 1,
   "configs": [
     {
-      "name": "نمونه - جایگزینش کن",
-      "link": "vless://00000000-0000-0000-0000-000000000000@example.com:443?security=tls&type=ws&path=%2F#Example"
+      "name": "gaming",
+      "link": "ss://MjAyMi1ibGFrZTMtYWVzLTEyOC1nY206MUp2bG10VDR2OHkxeUdjekR0VDZXdz09OmFTeVFtZ0doNWFwTDJWcWpwWUhYbnc9PQ%3D%3D@n40.rehan-iogsar.ir:4680#%F0%9F%87%AB%F0%9F%87%AE%E3%80%8E%F0%9D%97%99%F0%9D%97%B6%F0%9D%97%BB%F0%9D%97%B9%F0%9D%97%AE%F0%9D%97%BB%F0%9D%97%B1%E3%80%8F%E2%80%A2%20%F0%9D%97%99%F0%9D%97%9C"
     }
   ]
 }
