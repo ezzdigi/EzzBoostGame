@@ -2,8 +2,8 @@
   "version": 1,
   "configs": [
     {
-      "name": "gaming",
-      "link": "vless://761d8e42-780b-4bdb-b495-d0b0d5456e79@146.75.59.186:443?pcs=CD6E838B9BFE31CAB8B3D5C858B0D6223FE84ECE236C1FDB281BE93C302E1E6E&path=%2F&security=tls&alpn=h2&encryption=none&insecure=0&host=u6p2djn4nsxttni102020123.global.ssl.fastly.net&type=ws&allowInsecure=0&sni=firefox.com#%F0%9F%87%A9%F0%9F%87%AA%E3%80%8E%F0%9D%97%9A%F0%9D%97%B2%F0%9D%97%BF%F0%9D%97%BA%F0%9D%97%AE%F0%9D%97%BB%F0%9D%98%86%E3%80%8F%E2%80%A2%20%F0%9D%97%97%F0%9D%97%98%20%E2%9A%A1%EF%B8%8F"
+      "name": "نمونه - جایگزینش کن",
+      "link": "vless://00000000-0000-0000-0000-000000000000@example.com:443?security=tls&type=ws&path=%2F#Example"
     }
   ]
 }

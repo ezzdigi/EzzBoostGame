@@ -28,3 +28,5 @@ Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PA
 - V2Ray/Xray: add share links or a subscription URL (clipboard / file), test the server and connect directly inside the app (vmess, vless, trojan, ss) using the embedded Xray core (libv2ray.aar from 2dust/AndroidLibXrayLite, downloaded by CI). hysteria2/tuic open in an external client. A public list can be published by committing `v2ray.json` to the repo root.
 
 - Online lists (`dns.json`, `v2ray.json`, `wireguard.json`) are read from the repo root. The repo is configurable in the app (Gaming Server tab → ONLINE LISTS) and several mirrors are tried (raw.githubusercontent.com, jsDelivr), because raw GitHub is blocked on some networks. Errors show the reason (HTTP 404, timeout, ...).
+
+- Every detected game is a favorite by default (added once; removing a favorite sticks). DNS addresses are hidden in the DNS tab. Items that first appear in an online list (DNS, V2Ray, gaming servers) show "🆕 جدید" for 24 hours; the first sync of a list is the baseline. `wireguard.json` is also synced automatically every 12 hours.
