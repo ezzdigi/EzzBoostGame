@@ -630,6 +630,9 @@ class MainActivity : Activity() {
         } else if (requestCode == 4730) {
             val uri = data?.data
             if (resultCode == Activity.RESULT_OK && uri != null) importFromUri(uri)
+        } else if (requestCode == 4740) {
+            val uri = data?.data
+            if (resultCode == Activity.RESULT_OK && uri != null) importV2FromUri(uri)
         }
     }
 }

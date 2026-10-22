@@ -115,6 +115,23 @@ object Tr {
     // Whole-string translations (short labels, buttons).
     private val EXACT: Map<String, String> = mapOf(
         "🌐 به‌روزرسانی لیست DNS آنلاین" to "🌐 Update online DNS list",
+        "📋 کلیپ‌بورد" to "📋 Clipboard",
+        "📁 فایل" to "📁 File",
+        "🌐 لیست آنلاین" to "🌐 Online list",
+        "🧪 تست" to "🧪 Test",
+        "اتصال با کلاینت" to "Open in client",
+        "کپی" to "Copy",
+        "کلیپ‌بورد خالی است" to "Clipboard is empty",
+        "هیچ کانفیگ معتبری پیدا نشد" to "No valid config found",
+        "این پروتکل UDP است؛ تست TCP معنی ندارد." to "This protocol uses UDP; a TCP test is not meaningful.",
+        "پاسخ نداد" to "No response",
+        "لینک کپی شد و در کلاینت باز شد" to "Link copied and opened in your client",
+        "لینک کپی شد؛ داخل کلاینت از کلیپ‌بورد وارد کن" to "Link copied; import it from the clipboard inside your client",
+        "کلاینت V2Ray نصب نیست؛ لینک کپی شد." to "No V2Ray client installed; link copied.",
+        "کانفیگ‌های V2Ray/Xray را از کلیپ‌بورد، فایل (لینک‌ها یا لینک اشتراک) یا لیست آنلاین اضافه کن، تست کن و با یک لمس در کلاینت V2Ray خودت (v2rayNG، Hiddify، NekoBox...) باز کن. اتصال داخل کلاینت انجام می‌شود، نه داخل این اپ." to
+            "Add V2Ray/Xray configs from the clipboard, a file (links or a subscription link) or the online list, test them, and open them in your own V2Ray client (v2rayNG, Hiddify, NekoBox...) with one tap. The connection runs inside the client, not inside this app.",
+        "فقط لینک‌های اشتراکی (vmess، vless، trojan، ss، hysteria2، tuic) یا لینک اشتراک پشتیبانی می‌شوند. فایل JSON کامل Xray را مستقیم داخل کلاینت وارد کن." to
+            "Only share links (vmess, vless, trojan, ss, hysteria2, tuic) or subscription links are supported. Import full Xray JSON files directly inside your client.",
         "در حال دریافت…" to "Fetching…",
         "لیست به‌روز شد" to "List updated",
         "دریافت لیست ناموفق بود" to "Fetching the list failed",
@@ -148,6 +165,10 @@ object Tr {
     // Longer fragments used inside composed strings.
     private val EXTRA: List<Pair<String, String>> = listOf(
         Pair("🆕 نسخه جدید موجود است:", "🆕 New version available:"),
+        Pair("کلاینت V2Ray نصب نیست", "No V2Ray client installed"),
+        Pair("کلاینت نصب‌شده:", "Installed client:"),
+        Pair("کانفیگ اضافه شد:", "Configs added:"),
+        Pair("هنوز به‌روز نشده", "Not updated yet"),
         Pair("نسخه جدید موجود است:", "New version available:"),
         Pair("⬇️ دانلود نسخه", "⬇️ Download version"),
         Pair("آخرین به‌روزرسانی:", "Last update:"),

@@ -283,6 +283,7 @@ internal fun MainActivity.addUpdateBanner() {
 
 internal fun MainActivity.autoChecks() {
     refreshRemoteDns(false, null)
+    refreshRemoteV2(false, null)
     checkUpdate(false, null)
 }
 

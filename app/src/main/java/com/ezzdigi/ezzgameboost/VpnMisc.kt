@@ -610,6 +610,8 @@ internal fun MainActivity.buildVpn() {
         }
     }
 
+    val renderV = buildV2Section()
+
     // ---------------- Custom DNS (IPv4 / IPv6)
     section("CUSTOM DNS • IPv4 / IPv6")
     val cCard = card()
@@ -774,6 +776,7 @@ internal fun MainActivity.buildVpn() {
     vpnRender = {
         renderW(true)
         renderC(true)
+        renderV(true)
     }
     renderW(true)
     renderC(true)

@@ -97,6 +97,10 @@ val REMOTE_DNS_URLS = listOf(
     "https://raw.githubusercontent.com/ezzdigi/EzzBoostGame/main/dns.json",
     "https://ezzdigi.com/ezzgameboost/dns.json"
 )
+val REMOTE_V2_URLS = listOf(
+    "https://raw.githubusercontent.com/ezzdigi/EzzBoostGame/main/v2ray.json",
+    "https://ezzdigi.com/ezzgameboost/v2ray.json"
+)
 const val RELEASES_API = "https://api.github.com/repos/ezzdigi/EzzBoostGame/releases/latest"
 const val RELEASES_PAGE = "https://github.com/ezzdigi/EzzBoostGame/releases/latest"
 
