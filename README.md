@@ -26,3 +26,5 @@ Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PA
 - In-app update check uses the latest GitHub Release. Publish releases with tags like `v2.2.0`; CI sets the app version from the tag.
 - Telegram: https://t.me/ezzdigii • Site: https://ezzdigi.com
 - V2Ray/Xray: add share links or a subscription URL (clipboard / file), test the server and connect directly inside the app (vmess, vless, trojan, ss) using the embedded Xray core (libv2ray.aar from 2dust/AndroidLibXrayLite, downloaded by CI). hysteria2/tuic open in an external client. A public list can be published by committing `v2ray.json` to the repo root.
+
+- Online lists (`dns.json`, `v2ray.json`, `wireguard.json`) are read from the repo root. The repo is configurable in the app (Gaming Server tab → ONLINE LISTS) and several mirrors are tried (raw.githubusercontent.com, jsDelivr), because raw GitHub is blocked on some networks. Errors show the reason (HTTP 404, timeout, ...).
