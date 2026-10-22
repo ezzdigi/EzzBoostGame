@@ -242,7 +242,7 @@ object Tr {
         Pair("هیچ فایل .conf در این مسیر پیدا نشد.", "No .conf file found at this path."),
         Pair("کانفیگ معتبر وایرگارد پیدا نشد.", "No valid WireGuard config found."),
         Pair("دریافت از GitHub ناموفق بود.", "GitHub import failed."),
-        Pair("بازی‌ای پیدا نشد. یک بازی را علاقه‌مند کن یا حالت «کل گوشی» را بزن.", "No game found. Favorite a game or switch to “Whole phone” mode."),
+        Pair("بازی‌ای پیدا نشد. یک بازی نصب کن یا آن را در تب بازی‌ها علاقه‌مند کن.", "No game found. Install a game or favorite it in the Games tab."),
         Pair("از کلیپ\u200cبورد", "From clipboard"),
         Pair("آپلود فایل", "Upload file"),
         Pair("چسباندن لینک", "Paste link"),

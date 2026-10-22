@@ -377,35 +377,18 @@ internal fun MainActivity.installedV2Clients(): List<Pair<String, String>> {
 }
 
 internal fun MainActivity.v2Status(): String {
-    val c = installedV2Clients()
-    val s1 = if (c.isEmpty()) {
-        "کلاینت V2Ray نصب نیست"
-    } else {
-        "کلاینت نصب‌شده: " + c.joinToString(", ") { it.first }
+    var out = ""
+    if (!XrayCore.available()) {
+        out = "هسته‌ی Xray داخل این نسخه نیست؛ برای اتصال مستقیم، نسخه‌ی Release را نصب کن."
     }
-    val ts = prefs.getLong("remoteV2Ts", 0L)
-    val s2 = if (ts == 0L) {
-        "لیست آنلاین: هنوز به‌روز نشده"
-    } else {
-        val n = v2Lines(prefs.getString("remoteV2", "") ?: "", true).size
-        val d = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.US).format(Date(ts))
-        "لیست آنلاین: $n V2 • آخرین به‌روزرسانی: $d"
-    }
-    val core = if (XrayCore.available()) {
-        val v = XrayCore.version()
-        "هسته‌ی Xray: " + (if (v.isBlank()) "OK" else v)
-    } else {
-        "هسته‌ی Xray داخل این نسخه نیست؛ برای اتصال مستقیم، نسخه‌ی Release را نصب کن."
-    }
-    var st = ""
     if (V2VpnService.busy) {
-        st = "\n⏳ ..."
+        out += "\n⏳ ..."
     } else if (V2VpnService.running) {
-        st = "\n🟢 V2Ray متصل: " + V2VpnService.activeName
+        out += "\n🟢 V2Gaming متصل: " + V2VpnService.activeName
     } else if (V2VpnService.lastError.isNotBlank()) {
-        st = "\n⚠️ خطای V2Ray: " + V2VpnService.lastError
+        out += "\n⚠️ خطا: " + V2VpnService.lastError
     }
-    return core + st + "\n" + s1 + "\n" + s2
+    return out.trim()
 }
 
 internal fun MainActivity.connectV2(item: V2Item) {
@@ -481,14 +464,8 @@ internal fun MainActivity.openInV2Client(item: V2Item) {
 }
 
 internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
-    section("V2RAY / XRAY")
+    section("V2Gaming")
     val vCard = card()
-    vCard.addView(
-        label(
-            "کانفیگ‌های V2Ray/Xray را از کلیپ‌بورد، فایل (لینک‌ها یا لینک اشتراک) یا لیست آنلاین اضافه کن، تست کن و مستقیم با دکمه‌ی «اتصال» وصل شو (vmess، vless، trojan، ss). پروتکل‌های UDP مثل hysteria2 و tuic از طریق کلاینت V2Ray باز می‌شوند. این اتصال فقط برای بازی‌ها کار می‌کند و بقیه‌ی برنامه‌ها مستقیم می‌روند.",
-            12f, muted
-        )
-    )
     val statusLbl = label("", 11.5f, accent, false, false)
     vCard.addView(statusLbl, vlp(6, 8))
     val list = LinearLayout(this)
@@ -501,7 +478,9 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
             prefs.getLong("remoteV2Ts", 0L) + "|" + V2VpnService.running + "|" +
             V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError + "|" +
             (System.currentTimeMillis() / 3600000L)
-        statusLbl.text = Tr.t(v2Status())
+        val stText = v2Status()
+        statusLbl.text = if (stText.isEmpty()) "" else Tr.t(stText)
+        statusLbl.visibility = if (stText.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
         if (!force && k == key) return
         key = k
         list.removeAllViews()
@@ -601,12 +580,6 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
     row.addView(bOnline, l3)
     vCard.addView(row, vlp(0, 10))
     vCard.addView(list)
-    vCard.addView(
-        label(
-            "فقط لینک‌های اشتراکی (vmess، vless، trojan، ss، hysteria2، tuic) یا لینک اشتراک پشتیبانی می‌شوند. فایل JSON کامل Xray را مستقیم داخل کلاینت وارد کن.",
-            11.5f, muted
-        ), vlp(8, 0)
-    )
     content.addView(vCard, vlp(0, 4))
     render(true)
     return { force -> render(force) }

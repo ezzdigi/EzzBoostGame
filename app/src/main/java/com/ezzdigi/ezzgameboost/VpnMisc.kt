@@ -783,7 +783,7 @@ internal fun MainActivity.doConnectWg(base: String) {
         ui {
             wgBusy = false
             if (noGames) {
-                toast(Tr.t("بازی‌ای پیدا نشد. یک بازی را علاقه‌مند کن یا حالت «کل گوشی» را بزن."))
+                toast(Tr.t("بازی‌ای پیدا نشد. یک بازی نصب کن یا آن را در تب بازی‌ها علاقه‌مند کن."))
             } else if (err.isEmpty()) {
                 toast(Tr.t("متصل شد"))
             } else {
@@ -825,7 +825,7 @@ internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> 
 
 internal fun MainActivity.buildVpn() {
     // ---------------- WireGuard
-    section("WIREGUARD")
+    section("WireGuard Gaming")
     val wCard = card()
     val wStatus = label("", 15f, white, true, false)
     wCard.addView(wStatus)
@@ -868,18 +868,6 @@ internal fun MainActivity.buildVpn() {
     val wList = LinearLayout(this)
     wList.orientation = LinearLayout.VERTICAL
     wCard.addView(wList)
-    wCard.addView(
-        label(
-            "فایل‌های .conf فقط در حافظه‌ی خصوصی همین اپ ذخیره می‌شوند. اندروید هم‌زمان فقط یک VPN را نگه می‌دارد؛ با اتصال وایرگارد، DNS محلی قطع می‌شود.",
-            11.5f, muted
-        ), vlp(8, 0)
-    )
-    wCard.addView(
-        label(
-            "💡 سرور گیمینگ فقط برای بازی‌ها کار می‌کند؛ تلگرام، اینستاگرام، یوتیوب و مرورگر مستقیم می‌روند. اگر بازی‌ات شناخته نشد، در تب بازی‌ها آن را علاقه‌مند کن.",
-            11.5f, muted
-        ), vlp(4, 0)
-    )
     content.addView(wCard, vlp(0, 4))
 
     var wKey = ""
@@ -935,46 +923,9 @@ internal fun MainActivity.buildVpn() {
 
     val renderV = buildV2Section()
 
-    // ---------------- Online list source (GitHub repo)
-    section("ONLINE LISTS • GitHub")
-    val oCard = card()
-    oCard.addView(
-        label(
-            "لیست‌های آنلاین (DNS، V2Ray و سرور گیمینگ) از فایل‌های dns.json، v2ray.json و wireguard.json در ریشه‌ی یک ریپوی GitHub گرفته می‌شوند. اگر به‌روز نمی‌شوند، آدرس ریپوی خودت را بنویس (مثل user/repo). ریپو باید Public باشد.",
-            12f, muted
-        )
-    )
-    val repoIn = input("user/repo")
-    repoIn.setText(ghRepo())
-    oCard.addView(repoIn, vlp(8, 8))
-    val bRepo = button("💾 ذخیره و به‌روزرسانی", true) {
-        val r = parseRepo(repoIn.text.toString())
-        if (r == null) {
-            toast("آدرس ریپو معتبر نیست؛ مثل user/repo بنویس.")
-        } else {
-            prefs.edit().putString("ghRepo", r).apply()
-            repoIn.setText(r)
-            toast("ذخیره شد؛ در حال به‌روزرسانی…")
-            refreshRemoteDns(true) { n ->
-                toast(if (n > 0) Tr.t("لیست DNS") + ": $n" else Tr.t("لیست DNS ناموفق بود") + " (" + lastHttpErr + ")")
-            }
-            refreshRemoteV2(true) { n ->
-                if (n >= 0) toast(Tr.t("لیست V2Ray") + ": $n")
-            }
-        }
-    }
-    oCard.addView(bRepo, vlp(0, 4))
-    content.addView(oCard, vlp(0, 4))
-
     // ---------------- Custom DNS (IPv4 / IPv6)
     section("CUSTOM DNS • IPv4 / IPv6")
     val cCard = card()
-    cCard.addView(
-        label(
-            "DNS دلخواهت را دستی وارد کن؛ آدرس IPv4 و IPv6 هر دو پشتیبانی می‌شوند. اول تست کن، بعد ذخیره کن و وصل شو.",
-            12f, muted
-        )
-    )
     val cName = input("نام (اختیاری)")
     val c4a = input("IPv4 اصلی  (مثل 1.1.1.1)")
     val c4b = input("IPv4 دوم  (مثل 1.0.0.1)")
