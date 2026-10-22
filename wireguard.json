@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "configs": [
+    {
+      "name": "Game-Example",
+      "conf": "[Interface]\nPrivateKey = REPLACE_ME\nAddress = 10.0.0.2/32\nDNS = 1.1.1.1\n\n[Peer]\nPublicKey = REPLACE_ME\nAllowedIPs = 0.0.0.0/0\nEndpoint = example.com:51820\nPersistentKeepalive = 25"
+    },
+    {
+      "name": "Game-From-File",
+      "url": "https://github.com/ezzdigi/EzzBoostGame/blob/main/configs/game1.conf"
+    }
+  ]
+}

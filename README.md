@@ -17,3 +17,12 @@ Push to `main` and download the APK from **Actions → Artifacts**.
 Create a **Release** on GitHub and the signed-or-debug-key release APK is attached automatically.
 
 Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
+
+## Online DNS list, game profiles, updates
+- The app downloads `dns.json` from this repository (raw GitHub URL, with `https://ezzdigi.com/ezzgameboost/dns.json` as fallback) every 12 hours, so DNS servers can be updated by editing that file, without a new APK.
+- Per-game profiles: choose a DNS or WireGuard config, RAM cleanup and keep-screen-on for each game.
+- Gaming Server tab (formerly VPN): WireGuard and V2Ray tunnels work for games only, with no whole-phone mode. Other apps (Telegram, Instagram, YouTube, browsers) connect directly. If no game is found it refuses to connect.
+- "Get WireGuard gaming servers" downloads `wireguard.json` from this repo (same idea as `dns.json` / `v2ray.json`). Format: `{"version":1,"configs":[{"name":"Game1","conf":"[Interface]\n..."},{"name":"Game2","url":"https://github.com/USER/REPO/blob/main/configs/game2.conf"}]}`. You can also paste your own GitHub link (a `.conf` file, a folder or a repo) in the field first.
+- In-app update check uses the latest GitHub Release. Publish releases with tags like `v2.2.0`; CI sets the app version from the tag.
+- Telegram: https://t.me/ezzdigii • Site: https://ezzdigi.com
+- V2Ray/Xray: add share links or a subscription URL (clipboard / file), test the server and connect directly inside the app (vmess, vless, trojan, ss) using the embedded Xray core (libv2ray.aar from 2dust/AndroidLibXrayLite, downloaded by CI). hysteria2/tuic open in an external client. A public list can be published by committing `v2ray.json` to the repo root.
