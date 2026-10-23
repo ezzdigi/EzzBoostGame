@@ -322,24 +322,84 @@ internal fun MainActivity.importV2FromUri(uri: Uri) {
     }
 }
 
+// Extracts usable links from a plain-text list (or a base64 subscription): keeps encrypted
+// links only (tls / reality / vmess / ss), drops duplicates and unusable entries.
+internal fun githubTextLinks(body: String, max: Int, startIndex: Int = 0): List<Pair<String, String>> {
+    val out = ArrayList<Pair<String, String>>()
+    val seenLinks = HashSet<String>()
+    var text = body
+    if (!text.contains("://")) {
+        try {
+            val d = v2Decode(text.trim()) ?: ""
+            if (d.contains("://")) text = d
+        } catch (_: Throwable) {
+        }
+    }
+    for (raw in text.lines()) {
+        val link = raw.trim()
+        val lower = link.lowercase()
+        val known = lower.startsWith("vless://") || lower.startsWith("vmess://") ||
+            lower.startsWith("trojan://") || lower.startsWith("ss://")
+        if (!known) continue
+        if (!seenLinks.add(link)) continue
+        val encrypted = lower.startsWith("vmess://") || lower.startsWith("ss://") ||
+            lower.contains("security=tls") || lower.contains("security=reality")
+        if (!encrypted) continue
+        if (link.contains("@0.0.0.0")) continue
+        if (parseV2Link(link) == null) continue
+        val name = V2_AUTO_NAME + " " + (startIndex + out.size + 1)
+        out.add(Pair(name, link))
+        if (out.size >= max) break
+    }
+    return out
+}
+
 internal fun MainActivity.refreshRemoteV2(force: Boolean, onDone: ((Int) -> Unit)?) {
     val last = prefs.getLong("remoteV2Try", 0L)
-    if (!force && System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
+    if (!force && System.currentTimeMillis() - last < V2_REFRESH_HOURS * 3600L * 1000L) return
     prefs.edit().putLong("remoteV2Try", System.currentTimeMillis()).apply()
     runBg {
         var got: List<Pair<String, String>>? = null
+        val sources = ArrayList<String>(V2_SOURCES)
         for (u in listUrls("v2ray.json")) {
             val b = httpGet(u, 6000, 600000)
             if (b != null && b.trimStart().startsWith("{")) {
                 val p = parseV2Json(b)
                 if (p != null) {
                     got = p
+                    try {
+                        val sa = JSONObject(b).optJSONArray("sources")
+                        if (sa != null) {
+                            for (i in 0 until minOf(sa.length(), 5)) {
+                                val su = sa.optString(i, "").trim()
+                                if (su.isNotEmpty() && !sources.contains(su)) sources.add(su)
+                            }
+                        }
+                    } catch (_: Throwable) {
+                    }
                     break
                 }
             }
             if (b != null) lastHttpErr = "فایل JSON نیست"
         }
-        val res = got
+        // Public text lists: pulled in after the curated list.
+        val extra = ArrayList<Pair<String, String>>()
+        for (su in sources) {
+            val b = httpGet(githubRawUrl(su), 10000, 1500000)
+            if (b != null) extra.addAll(githubTextLinks(b, V2_SOURCE_MAX, extra.size))
+        }
+        var merged: List<Pair<String, String>>? = got
+        if (extra.isNotEmpty()) {
+            val all = ArrayList<Pair<String, String>>(got ?: emptyList())
+            val links = HashSet<String>()
+            for (x in all) links.add(x.second)
+            for (x in extra) {
+                if (all.size >= 100) break
+                if (links.add(x.second)) all.add(x)
+            }
+            merged = all
+        }
+        val res = merged
         ui {
             var n = -1
             if (res != null) {

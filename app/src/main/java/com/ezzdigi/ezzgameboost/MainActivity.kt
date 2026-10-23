@@ -232,6 +232,11 @@ class MainActivity : Activity() {
                 vpnRefresh?.invoke()
             } catch (_: Throwable) {
             }
+            try {
+                // cheap: returns at once unless V2_REFRESH_HOURS have passed
+                refreshRemoteV2(false, null)
+            } catch (_: Throwable) {
+            }
             handler.postDelayed(this, 2000)
         }
     }

@@ -100,6 +100,19 @@ var uiLight = false
 const val SUB_BUY_URL = "https://YOUR-WORKER.workers.dev/buy"
 const val SUB_API = "https://YOUR-WORKER.workers.dev/sub"
 
+// Public text lists (one link per line) that are pulled into V2Gaming automatically.
+// A GitHub "blob" link is converted to the raw file. More can be added in v2ray.json
+// with a "sources": ["https://..."] array.
+val V2_SOURCES = listOf(
+    "https://github.com/iboxz/free-v2ray-collector/blob/main/main/vless.txt",
+    "https://github.com/iboxz/free-v2ray-collector/blob/main/main/vmess.txt"
+)
+// Extracted public servers are all shown as "<V2_AUTO_NAME> <number>".
+const val V2_AUTO_NAME = "Game Gaming Pubg EzzDns"
+// How often the V2Gaming online list (and the public sources) is refreshed.
+const val V2_REFRESH_HOURS = 2L
+const val V2_SOURCE_MAX = 20
+
 // Online lists (dns.json, v2ray.json, wireguard.json) live in the repo root.
 // Several mirrors are tried because raw.githubusercontent.com is blocked on some networks.
 fun remoteUrls(repo: String, file: String): List<String> = listOf(
