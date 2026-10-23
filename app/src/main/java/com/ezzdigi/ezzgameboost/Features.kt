@@ -184,7 +184,7 @@ internal fun MainActivity.refreshRemoteDns(force: Boolean, onDone: ((Int) -> Uni
     prefs.edit().putLong("remoteDnsTry", System.currentTimeMillis()).apply()
     runBg {
         var got: String? = null
-        for (u in remoteUrls(ghRepo(), "dns.json")) {
+        for (u in listUrls("dns.json")) {
             val b = httpGet(u, 6000, 600000)
             if (b != null && b.trimStart().startsWith("{")) {
                 got = b
@@ -303,6 +303,7 @@ internal fun MainActivity.autoChecks() {
         prefs.edit().putLong("remoteWgTry", System.currentTimeMillis()).apply()
         importDefaultWgList(true) { vpnRender?.invoke() }
     }
+    checkSubSilently()
     checkUpdate(false, null)
 }
 
@@ -396,4 +397,14 @@ internal fun parseRepo(raw: String): String? {
     val s = raw.trim().trimEnd('/')
     val m = Regex("^(?:https?://)?(?:www\\.)?(?:github\\.com/)?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\\.git)?(?:/.*)?$").find(s) ?: return null
     return m.groupValues[1] + "/" + m.groupValues[2]
+}
+
+
+// With an active subscription code the server's list (free + premium) is tried first;
+// an expired or invalid code gets an HTTP error there and the free GitHub list is used.
+internal fun MainActivity.listUrls(file: String): List<String> {
+    val code = prefs.getString("subCode", "") ?: ""
+    val base = remoteUrls(ghRepo(), file)
+    if (code.isEmpty()) return base
+    return listOf(SUB_API + "/" + android.net.Uri.encode(code) + "/" + file) + base
 }

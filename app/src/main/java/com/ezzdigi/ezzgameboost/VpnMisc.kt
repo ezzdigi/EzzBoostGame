@@ -107,8 +107,7 @@ internal fun MainActivity.shareApp() {
     i.type = "text/plain"
     i.putExtra(
         Intent.EXTRA_TEXT,
-        Tr.t("EzzGameBOOST؛ ابزار گیمینگ اندروید: بوست RAM، DNS گیمینگ و تست پینگ.") +
-            "\n" + Tr.t("ایزی دیجی") + " • " + SITE_URL + "\n" + TG_URL
+        Tr.t("EzzGameBOOST؛ ابزار گیمینگ اندروید: بوست RAM، DNS گیمینگ و تست پینگ.")
     )
     try {
         startActivity(Intent.createChooser(i, null))
@@ -163,10 +162,6 @@ internal fun MainActivity.showOnboarding() {
     val by = label("ساخته‌شده توسط ایزی دیجی", 13f, muted)
     by.gravity = Gravity.CENTER
     col.addView(by, vlp(0, 10))
-    col.addView(chip("🌐 ezzdigi.com", true, false) { openUrl(SITE_URL) })
-    val tgp = LinearLayout.LayoutParams(MATCH, WRAP)
-    tgp.topMargin = dp(8)
-    col.addView(chip("✈️ t.me/ezzdigii", true, false) { openUrl(TG_URL) }, tgp)
 
     val langRow = LinearLayout(this)
     langRow.orientation = LinearLayout.HORIZONTAL
@@ -481,13 +476,77 @@ internal fun isAwgConfig(text: String): Boolean {
     return false
 }
 
+// ----- Subscription ----------------------------------------------------------
+
+internal fun MainActivity.subStatusText(): String {
+    val code = prefs.getString("subCode", "") ?: ""
+    if (code.isEmpty()) return "اشتراک فعال نیست؛ لیست‌های رایگان استفاده می‌شوند."
+    val exp = prefs.getString("subExp", "") ?: ""
+    return if (prefs.getBoolean("subActive", false)) {
+        "✅ اشتراک فعال" + (if (exp.isNotEmpty()) " تا $exp" else "")
+    } else {
+        "❌ اشتراک منقضی یا نامعتبر است."
+    }
+}
+
+internal fun MainActivity.fetchSubStatus(code: String): Triple<Boolean, String, String> {
+    val body = httpGet(SUB_API + "/" + android.net.Uri.encode(code) + "/status.json", 8000, 20000)
+        ?: return Triple(false, "", if (lastHttpErr.startsWith("HTTP 4")) "کد نامعتبر یا منقضی است." else "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")")
+    return try {
+        val o = org.json.JSONObject(body)
+        val ok = o.optBoolean("active", false)
+        Triple(ok, o.optString("expires", ""), if (ok) "" else "کد نامعتبر یا منقضی است.")
+    } catch (_: Throwable) {
+        Triple(false, "", "پاسخ سرور معتبر نیست.")
+    }
+}
+
+internal fun MainActivity.activateSub(code: String, onDone: () -> Unit) {
+    val c = code.trim()
+    if (c.isEmpty()) {
+        toast("کد اشتراک را وارد کن.")
+        return
+    }
+    toast("در حال بررسی…")
+    runBg {
+        val r = fetchSubStatus(c)
+        ui {
+            if (r.first) {
+                prefs.edit().putString("subCode", c).putBoolean("subActive", true).putString("subExp", r.second).apply()
+                toast("اشتراک فعال شد ✅")
+                onDone()
+                refreshRemoteDns(true, null)
+                refreshRemoteV2(true, null)
+                importDefaultWgList(true) { vpnRender?.invoke() }
+            } else {
+                toast(r.third)
+            }
+        }
+    }
+}
+
+internal fun MainActivity.checkSubSilently() {
+    val code = prefs.getString("subCode", "") ?: ""
+    if (code.isEmpty()) return
+    val last = prefs.getLong("subCheck", 0L)
+    if (System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
+    prefs.edit().putLong("subCheck", System.currentTimeMillis()).apply()
+    runBg {
+        val r = fetchSubStatus(code)
+        // Only a definite answer changes the state; a network error keeps the last one.
+        if (r.first || r.third.startsWith("کد")) {
+            prefs.edit().putBoolean("subActive", r.first).putString("subExp", r.second).apply()
+        }
+    }
+}
+
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
 
 internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: () -> Unit) {
     if (!silent) toast("در حال دریافت سرورهای گیمینگ…")
     runBg {
         var body: String? = null
-        for (u in remoteUrls(ghRepo(), "wireguard.json")) {
+        for (u in listUrls("wireguard.json")) {
             val b = httpGet(u, 6000, 1500000)
             if (b != null && b.trimStart().startsWith("{")) {
                 body = b
@@ -824,6 +883,32 @@ internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> 
 }
 
 internal fun MainActivity.buildVpn() {
+    // ---------------- Subscription
+    section("اشتراک ویژه")
+    val sCard = card()
+    var lockCard: android.view.View? = null
+    val subLbl = label(subStatusText(), 12.5f, accent, true, false)
+    sCard.addView(subLbl, vlp(0, 6))
+    val bBuy = button("🛒 خرید اشتراک از سایت", true) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SUB_BUY_URL)))
+        } catch (_: Exception) {
+            toast("مرورگر پیدا نشد.")
+        }
+    }
+    sCard.addView(bBuy, vlp(0, 8))
+    val subIn = input("کد اشتراک")
+    subIn.setText(prefs.getString("subCode", "") ?: "")
+    sCard.addView(subIn, vlp(0, 8))
+    val bAct = button("فعال‌سازی", false) {
+        activateSub(subIn.text.toString()) {
+            subLbl.text = Tr.t(subStatusText())
+            lockCard?.visibility = if (prefs.getBoolean("subActive", false)) android.view.View.GONE else android.view.View.VISIBLE
+        }
+    }
+    sCard.addView(bAct, vlp(0, 4))
+    content.addView(sCard, vlp(0, 4))
+
     // ---------------- WireGuard
     section("WireGuard Gaming")
     val wCard = card()
@@ -869,6 +954,12 @@ internal fun MainActivity.buildVpn() {
     wList.orientation = LinearLayout.VERTICAL
     wCard.addView(wList)
     content.addView(wCard, vlp(0, 4))
+    val lk = card()
+    lk.alpha = 0.6f
+    lk.addView(label("🔒 سرورهای ویژه — با اشتراک", 13f, muted, true, false))
+    lk.visibility = if (prefs.getBoolean("subActive", false)) android.view.View.GONE else android.view.View.VISIBLE
+    lockCard = lk
+    content.addView(lk, vlp(0, 4))
 
     var wKey = ""
     fun renderW(force: Boolean) {

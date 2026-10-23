@@ -328,7 +328,7 @@ internal fun MainActivity.refreshRemoteV2(force: Boolean, onDone: ((Int) -> Unit
     prefs.edit().putLong("remoteV2Try", System.currentTimeMillis()).apply()
     runBg {
         var got: List<Pair<String, String>>? = null
-        for (u in remoteUrls(ghRepo(), "v2ray.json")) {
+        for (u in listUrls("v2ray.json")) {
             val b = httpGet(u, 6000, 600000)
             if (b != null && b.trimStart().startsWith("{")) {
                 val p = parseV2Json(b)

@@ -447,7 +447,7 @@ class BoostWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.w_ram, "RAM " + Tr.t("آزاد") + ": " + freeMb + " MB")
             v.setTextViewText(R.id.w_bat, Tr.t("باتری") + ": " + pct + "%")
             v.setTextViewText(R.id.w_dns, "DNS: " + dns)
-            v.setTextViewText(R.id.w_site, Tr.t("ایزی دیجی") + " • ezzdigi.com")
+            v.setTextViewText(R.id.w_site, Tr.t("ایزی دیجی"))
             val pi = PendingIntent.getActivity(
                 ctx, 0, Intent(ctx, MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT

@@ -107,7 +107,7 @@ class GaugeView(ctx: Context, private val title: String, private val mainColor: 
     private val trackP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
-        color = Color.rgb(40, 43, 58)
+        color = if (uiLight) Color.rgb(212, 217, 230) else Color.rgb(40, 43, 58)
     }
     private val arcP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -120,12 +120,12 @@ class GaugeView(ctx: Context, private val title: String, private val mainColor: 
     }
     private val subP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        color = Color.rgb(141, 147, 167)
+        color = if (uiLight) Color.rgb(98, 105, 126) else Color.rgb(141, 147, 167)
     }
     private val titleP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT_BOLD
-        color = Color.rgb(141, 147, 167)
+        color = if (uiLight) Color.rgb(98, 105, 126) else Color.rgb(141, 147, 167)
     }
 
     fun setTarget(frac: Float, center: String, sub: String, c: Int) {
@@ -178,7 +178,7 @@ class GaugeView(ctx: Context, private val title: String, private val mainColor: 
 class ChartView(ctx: Context, private val lineColor: Int) : View(ctx) {
     private var pts: List<Int> = emptyList()
     private val gridP = Paint().apply {
-        color = Color.rgb(36, 39, 54)
+        color = if (uiLight) Color.rgb(224, 228, 238) else Color.rgb(36, 39, 54)
         strokeWidth = 2f
     }
     private val lineP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -198,7 +198,7 @@ class ChartView(ctx: Context, private val lineColor: Int) : View(ctx) {
         strokeWidth = 6f
     }
     private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(141, 147, 167)
+        color = if (uiLight) Color.rgb(98, 105, 126) else Color.rgb(141, 147, 167)
         textSize = 26f
     }
 

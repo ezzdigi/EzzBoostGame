@@ -89,10 +89,17 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-const val SITE_URL = "https://ezzdigi.com"
-const val TG_URL = "https://t.me/ezzdigii"
 // The app tries these in order. Edit dns.json on GitHub (repo root) or on your site
 // to update the DNS list without releasing a new APK.
+// Subscription: set these two to your server. The payment page is opened in the browser;
+// SUB_API serves /<code>/status.json and /<code>/<dns|v2ray|wireguard>.json for active codes.
+// True while the light (white) theme is active; custom-drawn views read it.
+@Volatile
+var uiLight = false
+
+const val SUB_BUY_URL = "https://YOUR-WORKER.workers.dev/buy"
+const val SUB_API = "https://YOUR-WORKER.workers.dev/sub"
+
 // Online lists (dns.json, v2ray.json, wireguard.json) live in the repo root.
 // Several mirrors are tried because raw.githubusercontent.com is blocked on some networks.
 fun remoteUrls(repo: String, file: String): List<String> = listOf(
@@ -100,8 +107,7 @@ fun remoteUrls(repo: String, file: String): List<String> = listOf(
     "https://cdn.jsdelivr.net/gh/$repo@main/$file",
     "https://raw.githubusercontent.com/$repo/master/$file",
     "https://cdn.jsdelivr.net/gh/$repo@master/$file",
-    "https://gcore.jsdelivr.net/gh/$repo@main/$file",
-    "https://ezzdigi.com/ezzgameboost/$file"
+    "https://gcore.jsdelivr.net/gh/$repo@main/$file"
 )
 const val RELEASES_API = "https://api.github.com/repos/ezzdigi/EzzBoostGame/releases/latest"
 const val RELEASES_PAGE = "https://github.com/ezzdigi/EzzBoostGame/releases/latest"

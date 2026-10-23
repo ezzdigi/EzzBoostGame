@@ -98,15 +98,63 @@ class MainActivity : Activity() {
     internal val executor: ExecutorService = Executors.newFixedThreadPool(4)
     internal val handler = Handler(Looper.getMainLooper())
 
-    internal val bg0 = Color.rgb(8, 9, 14)
-    internal val panel = Color.rgb(20, 22, 31)
-    internal val panel2 = Color.rgb(29, 32, 45)
-    internal val stroke = Color.rgb(44, 48, 66)
-    internal val white = Color.rgb(242, 243, 247)
-    internal val muted = Color.rgb(141, 147, 167)
-    internal val good = Color.rgb(45, 255, 138)
-    internal val warn = Color.rgb(255, 176, 32)
-    internal val bad = Color.rgb(255, 55, 70)
+    internal var bg0 = Color.rgb(8, 9, 14)
+    internal var panel = Color.rgb(20, 22, 31)
+    internal var panel2 = Color.rgb(29, 32, 45)
+    internal var stroke = Color.rgb(44, 48, 66)
+    internal var white = Color.rgb(242, 243, 247) // main text color (dark text in the light theme)
+    internal var muted = Color.rgb(141, 147, 167)
+    internal var good = Color.rgb(45, 255, 138)
+    internal var warn = Color.rgb(255, 176, 32)
+    internal var bad = Color.rgb(255, 55, 70)
+
+    internal fun applyPalette(light: Boolean) {
+        uiLight = light
+        if (light) {
+            bg0 = Color.rgb(244, 245, 249)
+            panel = Color.rgb(255, 255, 255)
+            panel2 = Color.rgb(235, 238, 246)
+            stroke = Color.rgb(212, 217, 230)
+            white = Color.rgb(22, 24, 34)
+            muted = Color.rgb(98, 105, 126)
+            good = Color.rgb(0, 150, 75)
+            warn = Color.rgb(195, 115, 0)
+            bad = Color.rgb(210, 30, 50)
+        } else {
+            bg0 = Color.rgb(8, 9, 14)
+            panel = Color.rgb(20, 22, 31)
+            panel2 = Color.rgb(29, 32, 45)
+            stroke = Color.rgb(44, 48, 66)
+            white = Color.rgb(242, 243, 247)
+            muted = Color.rgb(141, 147, 167)
+            good = Color.rgb(45, 255, 138)
+            warn = Color.rgb(255, 176, 32)
+            bad = Color.rgb(255, 55, 70)
+        }
+        applySystemBars()
+    }
+
+    @Suppress("DEPRECATION")
+    internal fun applySystemBars() {
+        try {
+            val w = window
+            w.statusBarColor = bg0
+            w.navigationBarColor = bg0
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                val c = w.insetsController
+                val mask = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                    android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                c?.setSystemBarsAppearance(if (uiLight) mask else 0, mask)
+            } else {
+                var f = w.decorView.systemUiVisibility
+                val m = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                    (if (android.os.Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0)
+                f = if (uiLight) f or m else f and m.inv()
+                w.decorView.systemUiVisibility = f
+            }
+        } catch (_: Throwable) {
+        }
+    }
 
     internal val accents = intArrayOf(
         Color.rgb(255, 55, 70),
@@ -197,6 +245,7 @@ class MainActivity : Activity() {
         Tr.load(this)
         val idx = prefs.getInt("accent", 0)
         accent = accents[idx.coerceIn(0, accents.size - 1)]
+        applyPalette(prefs.getBoolean("light", false))
         if (!prefs.getBoolean("onboarded", false)) {
             showOnboarding()
         } else {
@@ -326,8 +375,7 @@ class MainActivity : Activity() {
         val titleCol = LinearLayout(this)
         titleCol.orientation = LinearLayout.VERTICAL
         titleCol.addView(titleView)
-        titleCol.addView(label("ایزی دیجی • ezzdigi.com", 10.5f, muted))
-        titleCol.setOnClickListener { openUrl("https://ezzdigi.com") }
+        titleCol.addView(label("ایزی دیجی", 10.5f, muted))
         header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
         val ver = TextView(this).apply {
             text = "v2.1"

@@ -291,7 +291,8 @@ internal fun MainActivity.buildGames() {
 
     val chipRow = LinearLayout(this)
     chipRow.orientation = LinearLayout.HORIZONTAL
-    val names = arrayOf("بازی‌ها", "علاقه‌مندی‌ها", "همه")
+    val names = arrayOf("بازی‌ها", "علاقه‌مندی‌ها")
+    if (gamesFilter > 1) gamesFilter = 0
     fun fillChips() {
         chipRow.removeAllViews()
         for (i in names.indices) {
@@ -392,7 +393,7 @@ internal fun MainActivity.renderGames(box: LinearLayout) {
     if (list.isEmpty()) {
         val msg = when {
             gamesFilter == 0 && q.isEmpty() ->
-                "بازی‌ای شناسایی نشد. روی «همه» بزن و بازی‌هایت را با ☆ به علاقه‌مندی‌ها اضافه کن."
+                "بازی‌ای شناسایی نشد. اگر بازی‌ات نصب است، دوباره وارد این تب شو."
             gamesFilter == 1 && q.isEmpty() -> "فهرست علاقه‌مندی‌ها خالی است."
             else -> "موردی پیدا نشد."
         }

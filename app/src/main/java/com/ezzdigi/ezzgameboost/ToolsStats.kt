@@ -240,6 +240,24 @@ internal fun MainActivity.buildStats() {
 
     section("THEME")
     val themeCard = card()
+    themeCard.addView(label("حالت نمایش", 14f, white, true), vlp(0, 8))
+    val modeRow = LinearLayout(this)
+    modeRow.orientation = LinearLayout.HORIZONTAL
+    val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
+    m1.marginEnd = dp(8)
+    modeRow.addView(chip("🌙 تیره", !uiLight, false) {
+        prefs.edit().putBoolean("light", false).apply()
+        applyPalette(false)
+        buildShell()
+        showTab(tab)
+    }, m1)
+    modeRow.addView(chip("☀️ سفید", uiLight, false) {
+        prefs.edit().putBoolean("light", true).apply()
+        applyPalette(true)
+        buildShell()
+        showTab(tab)
+    })
+    themeCard.addView(modeRow, vlp(0, 12))
     themeCard.addView(label("رنگ تم", 14f, white, true), vlp(0, 10))
     val current = prefs.getInt("accent", 0).coerceIn(0, accents.size - 1)
     val dots = LinearLayout(this)
@@ -292,8 +310,6 @@ internal fun MainActivity.buildStats() {
             12f, muted
         ), vlp(6, 10)
     )
-    about.addView(button("🌐 ezzdigi.com") { openUrl(SITE_URL) }, vlp(0, 8))
-    about.addView(button("✈️ کانال تلگرام ایزی دیجی", false) { openUrl(TG_URL) }, vlp(0, 8))
     about.addView(label(Tr.t("نسخه فعلی:") + " " + currentVersion(), 12f, muted, false, false), vlp(2, 6))
     val updBtn = button("🔄 بررسی آپدیت", false) {}
     about.addView(updBtn, vlp(0, 8))
