@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>پیش‌نمایش اشتراک EzzGameBOOST</title>
+<style>
+:root{
+  --bg:#08090E; --panel:#14161F; --panel2:#1D202D; --stroke:#2C3042;
+  --text:#F2F3F7; --muted:#8D93A7; --good:#2DFF8A; --warn:#FFB020; --bad:#FF3746; --accent:#FF3746;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg);color:var(--text);font-family:Tahoma,"Segoe UI",system-ui,sans-serif;line-height:1.7}
+body{padding:16px 14px 40px;min-height:100vh}
+.wrap{max-width:420px;margin:0 auto}
+h1{font-size:17px;margin:4px 0 14px;font-weight:700}
+.seg{display:flex;background:var(--panel);border:1px solid var(--stroke);border-radius:12px;padding:3px;margin-bottom:16px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px 6px;border-radius:9px;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--panel2);color:var(--text)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* phone */
+.phone{border:1px solid var(--stroke);border-radius:26px;background:var(--bg);padding:12px;box-shadow:0 0 0 6px #0d0f16}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--stroke);scrollbar-width:none}
+.tabs span{flex:none;font-size:12px;padding:6px 11px;border-radius:999px;color:var(--muted);background:var(--panel)}
+.tabs span.on{background:var(--accent);color:#fff}
+.sec{font-size:12px;color:var(--muted);margin:14px 4px 6px;letter-spacing:.2px}
+.card{background:var(--panel);border:1px solid var(--stroke);border-radius:var(--r);padding:14px}
+.status{font-size:13px;font-weight:700;margin-bottom:10px}
+.status.ok{color:var(--good)} .status.off{color:var(--muted)} .status.bad{color:var(--bad)}
+.btn{display:block;width:100%;border:0;border-radius:11px;padding:12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--stroke)}
+.inp{width:100%;background:var(--bg);border:1px solid var(--stroke);border-radius:11px;color:var(--text);padding:11px 12px;font:inherit;font-size:14px;margin-top:8px;direction:ltr;text-align:center;letter-spacing:1px}
+.inp::placeholder{color:var(--muted);letter-spacing:0;direction:rtl}
+.toast{margin-top:10px;font-size:12px;color:var(--muted);min-height:20px;text-align:center}
+.ghost-row{opacity:.55;margin-top:14px}
+.row{background:var(--panel);border:1px solid var(--stroke);border-radius:var(--r);padding:12px 14px;margin-top:8px;font-size:13px;display:flex;justify-content:space-between}
+.row b{font-weight:700}
+.new{color:var(--good);font-size:11px;margin-inline-start:6px}
+
+.states{display:flex;gap:6px;margin-top:14px}
+.states button{flex:1;background:var(--panel);border:1px solid var(--stroke);color:var(--muted);border-radius:10px;padding:8px 4px;font:inherit;font-size:12px;cursor:pointer}
+.states button[aria-pressed="true"]{color:var(--text);border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+
+/* website */
+.site{background:var(--panel);border:1px solid var(--stroke);border-radius:20px;padding:20px 16px}
+.site h2{font-size:18px;margin-bottom:4px}
+.site p.sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+.plans{display:grid;gap:10px}
+.plan{border:1px solid var(--stroke);background:var(--panel2);border-radius:var(--r);padding:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:start;color:var(--text);font:inherit;width:100%}
+.plan[aria-pressed="true"]{border-color:var(--accent)}
+.plan .p{font-weight:700;font-size:15px}
+.plan small{color:var(--muted);display:block;font-size:12px}
+.codebox{display:none;margin-top:16px;border:1px dashed var(--good);border-radius:var(--r);padding:14px;text-align:center}
+.codebox .c{font-family:ui-monospace,Menlo,monospace;font-size:20px;letter-spacing:2px;color:var(--good);direction:ltr;margin:6px 0 10px}
+.codebox p{font-size:12px;color:var(--muted)}
+.note{margin-top:14px;font-size:11.5px;color:var(--muted);text-align:center}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>پیش‌نمایش بخش اشتراک</h1>
+
+  <div class="seg" role="tablist">
+    <button role="tab" id="t-app" aria-selected="true">داخل اپ</button>
+    <button role="tab" id="t-site" aria-selected="false">صفحه‌ی خرید در سایت</button>
+  </div>
+
+  <!-- INSIDE THE APP -->
+  <section id="v-app">
+    <div class="phone">
+      <div class="tabs" aria-hidden="true">
+        <span>خانه</span><span>بازی‌ها</span><span>DNS</span><span class="on">سرور گیمینگ</span><span>ابزار</span><span>آمار</span>
+      </div>
+
+      <div class="sec">اشتراک ویژه</div>
+      <div class="card">
+        <div class="status off" id="status">اشتراک فعال نیست؛ لیست‌های رایگان استفاده می‌شوند.</div>
+        <button class="btn primary" id="buy">🛒 خرید اشتراک از سایت</button>
+        <input class="inp" id="code" placeholder="کد اشتراک" autocomplete="off" spellcheck="false" aria-label="کد اشتراک">
+        <button class="btn ghost" id="act">فعال‌سازی</button>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+
+      <div class="sec">WireGuard Gaming</div>
+      <div class="row"><b>Game-Free</b><span style="color:var(--muted)">اتصال</span></div>
+      <div id="premium" hidden>
+        <div class="row"><b>PUBG 1<span class="new">🆕 جدید</span></b><span style="color:var(--muted)">اتصال</span></div>
+        <div class="row"><b>PUBG 2<span class="new">🆕 جدید</span></b><span style="color:var(--muted)">اتصال</span></div>
+      </div>
+      <div class="row ghost-row" id="locked"><b>سرورهای ویژه</b><span>🔒 با اشتراک</span></div>
+    </div>
+
+    <div class="states" role="group" aria-label="وضعیت نمونه">
+      <button aria-pressed="true" data-s="off">بدون اشتراک</button>
+      <button aria-pressed="false" data-s="on">فعال</button>
+      <button aria-pressed="false" data-s="exp">منقضی</button>
+    </div>
+    <div class="hint">کد نمونه برای فعال‌سازی: <b dir="ltr">PUBG-1234</b></div>
+  </section>
+
+  <!-- WEBSITE -->
+  <section id="v-site" hidden>
+    <div class="site">
+      <h2>اشتراک EzzGameBOOST</h2>
+      <p class="sub">سرورهای ویژه‌ی DNS، V2Gaming و WireGuard Gaming برای بازی.</p>
+      <div class="plans" id="plans">
+        <button class="plan" aria-pressed="true" data-code="PUBG-1234"><span><span class="p">اشتراک ۱ ماهه</span><small>قیمت نمونه</small></span><span>۳۰ روز</span></button>
+        <button class="plan" aria-pressed="false" data-code="PUBG-5678"><span><span class="p">اشتراک ۳ ماهه</span><small>قیمت نمونه</small></span><span>۹۰ روز</span></button>
+      </div>
+      <button class="btn primary" id="pay">پرداخت</button>
+      <div class="codebox" id="codebox">
+        <p>پرداخت انجام شد. کد اشتراک تو:</p>
+        <div class="c" id="newcode">—</div>
+        <button class="btn ghost" id="copy">کپی کد</button>
+        <p style="margin-top:10px">کد را در اپ، بخش «اشتراک ویژه» وارد کن.</p>
+      </div>
+    </div>
+    <p class="note">قیمت‌ها و درگاه نمونه‌اند؛ پرداخت واقعی باید روی سایت خودت راه‌اندازی شود.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var st=$("status"), toast=$("toast");
+  function setState(s, exp){
+    st.className="status "+(s==="on"?"ok":s==="exp"?"bad":"off");
+    st.textContent = s==="on" ? "✅ اشتراک فعال تا "+(exp||"2026/12/31")
+                   : s==="exp" ? "❌ اشتراک منقضی یا نامعتبر است."
+                   : "اشتراک فعال نیست؛ لیست‌های رایگان استفاده می‌شوند.";
+    $("premium").hidden = s!=="on";
+    $("locked").hidden = s==="on";
+    document.querySelectorAll(".states button").forEach(function(b){b.setAttribute("aria-pressed", b.dataset.s===s)});
+  }
+  document.querySelectorAll(".states button").forEach(function(b){
+    b.addEventListener("click",function(){toast.textContent="";setState(b.dataset.s)});
+  });
+  $("act").addEventListener("click",function(){
+    var c=$("code").value.trim().toUpperCase();
+    if(!c){toast.textContent="کد اشتراک را وارد کن.";return}
+    toast.textContent="در حال بررسی…";
+    setTimeout(function(){
+      if(c==="PUBG-1234"||c==="PUBG-5678"){toast.textContent="اشتراک فعال شد ✅";setState("on")}
+      else{toast.textContent="کد نامعتبر یا منقضی است.";setState("exp")}
+    },500);
+  });
+  function show(app){
+    $("v-app").hidden=!app; $("v-site").hidden=app;
+    $("t-app").setAttribute("aria-selected",app); $("t-site").setAttribute("aria-selected",!app);
+  }
+  $("t-app").onclick=function(){show(true)};
+  $("t-site").onclick=function(){show(false)};
+  $("buy").onclick=function(){show(false)};
+  var plans=document.querySelectorAll(".plan"), sel="PUBG-1234";
+  plans.forEach(function(p){p.addEventListener("click",function(){
+    sel=p.dataset.code; plans.forEach(function(x){x.setAttribute("aria-pressed",x===p)});
+  })});
+  $("pay").onclick=function(){
+    $("newcode").textContent=sel; $("codebox").style.display="block"; $("pay").hidden=true;
+  };
+  $("copy").onclick=function(){
+    var t=$("newcode").textContent;
+    function done(){$("copy").textContent="کپی شد"}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done)}else{done()}
+    $("code").value=t;
+  };
+  setState("off");
+})();
+</script>
+</body>
+</html>
