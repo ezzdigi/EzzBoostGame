@@ -2,56 +2,36 @@
   "version": 1,
   "configs": [
     {
-      "name": "Ezz01",
-      "link": "vless://153900df-5824-4b55-98c4-418c5baea523@wwww.qarvian.ir:443?pcs=CD6E838B9BFE31CAB8B3D5C858B0D6223FE84ECE236C1FDB281BE93C302E1E6E&security=tls&encryption=none&insecure=0&host=copy_az_channel_NUFiLTER_7i.global.ssl.fastly.net.&type=ws&allowInsecure=0&sni=firefox.com#Ezz01"
+      "name": "PUBG 1",
+      "link": "vmess://eyJhZGQiOiJmcmVlLmVydGViYXRnb29zdGFyLmlyIiwiYWlkIjoiMCIsImFscG4iOiIiLCJmcCI6IiIsImhvc3QiOiIiLCJpZCI6ImM5ZWFiNDM5LTUzYmYtNDZlNC1iYTU4LWZjMzY4YWUxZWU4YyIsImluc2VjdXJlIjoiMCIsIm5ldCI6InRjcCIsInBhdGgiOiIiLCJwb3J0IjoiNDQzIiwicHMiOiLwn4e58J+HtyBUUiB8IDE3Ni41My4xNy4xMiIsInNjeSI6ImF1dG8iLCJzbmkiOiIiLCJ0bHMiOiIiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0="
     },
     {
-      "name": "Ezz02",
-      "link": "vless://153900df-5824-4b55-98c4-418c5baea523@146.75.59.186:443?pcs=CD6E838B9BFE31CAB8B3D5C858B0D6223FE84ECE236C1FDB281BE93C302E1E6E&security=tls&encryption=none&insecure=0&host=copy_az_channel_NUFiLTER_6i.global.ssl.fastly.net.&type=ws&allowInsecure=0&sni=firefox.com#Ezz02"
+      "name": "PUBG 2",
+      "link": "vmess://eyJhZGQiOiJmcmVlLmVydGViYXRnb29zdGFyLmlyIiwiYWlkIjoiMCIsImFscG4iOiIiLCJmcCI6IiIsImhvc3QiOiIiLCJpZCI6ImM5ZWFiNDM5LTUzYmYtNDZlNC1iYTU4LWZjMzY4YWUxZWU4YyIsImluc2VjdXJlIjoiMCIsIm5ldCI6InRjcCIsInBhdGgiOiIiLCJwb3J0IjoiNDQzIiwicHMiOiLwn4e58J+HtyBUUiB8IDE3Ni41My4xNy4xMiIsInNjeSI6ImF1dG8iLCJzbmkiOiIiLCJ0bHMiOiIiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0="
     },
     {
-      "name": "Ezz03",
-      "link": "vless://153900df-5824-4b55-98c4-418c5baea523@199.232.78.159:443?pcs=CD6E838B9BFE31CAB8B3D5C858B0D6223FE84ECE236C1FDB281BE93C302E1E6E&security=tls&encryption=none&insecure=0&host=copy_az_channel_NUFiLTER_8i.global.ssl.fastly.net.&type=ws&allowInsecure=0&sni=firefox.com#Ezz03"
+      "name": "PUBG 3",
+      "link": "vmess://eyJhZGQiOiIyMDAxOmJjODozMmQ3OjFhOTo6MiIsImFpZCI6IjAiLCJhbHBuIjoiIiwiZnAiOiIiLCJob3N0IjoiIiwiaWQiOiIzYTk2NmQyMC03YjlkLTQ4Y2MtYmEyYy04ZDM4MTYxYjZkM2EiLCJpbnNlY3VyZSI6IjAiLCJuZXQiOiJ3cyIsInBhdGgiOiIvZ2l0aHViLmNvbS9BbHZpbjk5OTktbmV3cGFjL2ZhbnFpYW5nIiwicG9ydCI6IjE4OTAxIiwicHMiOiLwn4er8J+HtyBGUiB8IDIwMDE6YmM4OjMyZDc6MWE5OjoyIiwic2N5IjoiYXV0byIsInNuaSI6IiIsInRscyI6IiIsInR5cGUiOiItLS0iLCJ2IjoiMiJ9"
     },
     {
-      "name": "Ezz04",
-      "link": "vless://153900df-5824-4b55-98c4-418c5baea523@wwww.qarvian.ir:443?pcs=CD6E838B9BFE31CAB8B3D5C858B0D6223FE84ECE236C1FDB281BE93C302E1E6E&security=tls&encryption=none&insecure=0&host=copy_az_channel_NUFiLTER_7i.global.ssl.fastly.net.&type=ws&allowInsecure=0&sni=firefox.com#Ezz04"
+      "name": "PUBG 4",
+      "link": "ss://YWVzLTI1Ni1nY206THBxNVVQVkh0UVlpdUI5akVVTmMyV2tlSVlDVUg5REU@195.58.49.34:18443#%F0%9F%87%B7%F0%9F%87%BA%20RU%20%7C%20195.58.49.34"
     },
     {
-      "name": "Ezz05",
-      "link": "vless://153900df-5824-4b55-98c4-418c5baea523@146.75.59.186:443?pcs=CD6E838B9BFE31CAB8B3D5C858B0D6223FE84ECE236C1FDB281BE93C302E1E6E&security=tls&encryption=none&insecure=0&host=copy_az_channel_NUFiLTER_6i.global.ssl.fastly.net.&type=ws&allowInsecure=0&sni=firefox.com#Ezz05"
+      "name": "PUBG 5",
+      "link": "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTprMWRCT21PQjRvcWk3VW1wMzdhMWJR@82.38.31.215:8080#%F0%9F%87%B3%F0%9F%87%B1%20NL%20%7C%2082.38.31.215"
     },
     {
-      "name": "Ezz06",
-      "link": "vless://153900df-5824-4b55-98c4-418c5baea523@199.232.78.159:443?pcs=CD6E838B9BFE31CAB8B3D5C858B0D6223FE84ECE236C1FDB281BE93C302E1E6E&security=tls&encryption=none&insecure=0&host=copy_az_channel_NUFiLTER_8i.global.ssl.fastly.net.&type=ws&allowInsecure=0&sni=firefox.com#Ezz06"
+      "name": "PUBG 6",
+      "link": "vmess://eyJhZGQiOiJmcmVlLmVydGViYXRnb29zdGFyLmlyIiwiYWlkIjoiMCIsImFscG4iOiIiLCJmcCI6IiIsImhvc3QiOiIiLCJpZCI6ImM5ZWFiNDM5LTUzYmYtNDZlNC1iYTU4LWZjMzY4YWUxZWU4YyIsImluc2VjdXJlIjoiMCIsIm5ldCI6InRjcCIsInBhdGgiOiIiLCJwb3J0IjoiNDQzIiwicHMiOiLwn4e58J+HtyBUUiB8IDE3Ni41My4xNy4xMiIsInNjeSI6ImF1dG8iLCJzbmkiOiIiLCJ0bHMiOiIiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0="
     },
     {
-      "name": "Ezz07",
-      "link": "vless://57beeeb0-03fc-4fc9-94da-7604488a7134@funagfrdfs.alixxplay.com:35544?security=reality&encryption=none&pbk=HrcXRHtsitc_AVlN-_8fZuRgaP-Mqa_9JJotI9OnkVc&headerType=none&fp=chrome&type=tcp&flow=xtls-rprx-vision&sni=iosapps.itunes.apple.com&sid=25c79e5856c7#Ezz07"
+      "name": "PUBG 7",
+      "link": "vmess://eyJhZGQiOiIyMDAxOmJjODozMmQ3OjFhOTo6MiIsImFpZCI6IjAiLCJhbHBuIjoiIiwiZnAiOiIiLCJob3N0IjoiIiwiaWQiOiIzYTk2NmQyMC03YjlkLTQ4Y2MtYmEyYy04ZDM4MTYxYjZkM2EiLCJpbnNlY3VyZSI6IjAiLCJuZXQiOiJ3cyIsInBhdGgiOiIvZ2l0aHViLmNvbS9BbHZpbjk5OTktbmV3cGFjL2ZhbnFpYW5nIiwicG9ydCI6IjE4OTAxIiwicHMiOiLwn4er8J+HtyBGUiB8IDIwMDE6YmM4OjMyZDc6MWE5OjoyIiwic2N5IjoiYXV0byIsInNuaSI6IiIsInRscyI6IiIsInR5cGUiOiItLS0iLCJ2IjoiMiJ9"
     },
     {
-      "name": "Ezz08",
-      "link": "vless://57beeeb0-03fc-4fc9-94da-7604488a7134@funagfrdfs.alixxplay.com:47691?security=reality&encryption=none&pbk=6PbC7GxOg_YdXya-53llPReUzoU_yknQbkDvI4uorBg&headerType=none&fp=safari&type=tcp&flow=xtls-rprx-vision&sni=m.media-amazon.com&sid=2905326a#Ezz08"
-    },
-    {
-      "name": "Ezz09",
-      "link": "vless://57beeeb0-03fc-4fc9-94da-7604488a7134@funagfrdfs.alixxplay.com:35544?security=reality&encryption=none&pbk=HrcXRHtsitc_AVlN-_8fZuRgaP-Mqa_9JJotI9OnkVc&host=%2F%3FTelegram---pirozi_ArGaP---pirozi_ArGaP---pirozi_ArGaP---pirozi_ArGaP&headerType=none&type=tcp&flow=xtls-rprx-vision&sni=iosapps.itunes.apple.com&sid=25c79e5856c7#Ezz09"
-    },
-    {
-      "name": "Pubg01",
-      "link": "vless://57beeeb0-03fc-4fc9-94da-7604488a7134@funagfrdfs.alixxplay.com:35544?security=reality&encryption=none&pbk=HrcXRHtsitc_AVlN-_8fZuRgaP-Mqa_9JJotI9OnkVc&host=%2F%3FTelegram---PLANB_NET---PLANB_NET---PLANB_NET---PLANB_NET&headerType=none&fp=ios&type=tcp&flow=xtls-rprx-vision&sni=iosapps.itunes.apple.com&sid=25c79e5856c7#Pubg01"
-    },
-    {
-      "name": "Pubg02",
-      "link": "vless://e4514801-0d5a-42ba-869f-39bd605aef9e@18.168.90.187:22222?security=none&encryption=none&headerType=none&type=tcp#Pubg02"
-    },
-    {
-      "name": "Pubg03",
-      "link": "vless://e7e1e726-b30f-477a-a308-3138e62a8d21@vip-tun.korluma.ir:15088?security=none&encryption=mlkem768x25519plus.native.0rtt.cvVZFxCx1D3ly-0N5EXakc6tYVadDChlE35mpu3MvwU&host=netmeli.korluma.ir&headerType=http&type=tcp#Pubg03"
-    },
-    {
-      "name": "Pubg04",
-      "link": "vless://57beeeb0-03fc-4fc9-94da-7604488a7134@funagfrdfs.alixxplay.com:35544?security=reality&encryption=none&pbk=HrcXRHtsitc_AVlN-_8fZuRgaP-Mqa_9JJotI9OnkVc&host=%2F%3FTelegram---PLANB_NET---PLANB_NET---PLANB_NET---PLANB_NET&headerType=none&type=tcp&flow=xtls-rprx-vision&sni=iosapps.itunes.apple.com&sid=25c79e5856c7#Pubg04"
+      "name": "PUBG 8",
+      "link": "vmess://eyJhZGQiOiJmcmVlLmVydGViYXRnb29zdGFyLmlyIiwiYWlkIjoiMCIsImFscG4iOiIiLCJmcCI6IiIsImhvc3QiOiIiLCJpZCI6ImM5ZWFiNDM5LTUzYmYtNDZlNC1iYTU4LWZjMzY4YWUxZWU4YyIsImluc2VjdXJlIjoiMCIsIm5ldCI6InRjcCIsInBhdGgiOiIiLCJwb3J0IjoiNDQzIiwicHMiOiLwn4e58J+HtyBUUiB8IDE3Ni41My4xNy4xMiIsInNjeSI6ImF1dG8iLCJzbmkiOiIiLCJ0bHMiOiIiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0="
     }
   ]
 }
