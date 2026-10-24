@@ -1,6 +1,6 @@
 # EzzGameBOOST
 
-Android gaming toolkit by **EzzDigi** (ایزی دیجی)
+Android gaming toolkit
 
 - RAM boost, live phone stats (RAM, battery, storage, thermal)
 - Real DNS switching (Radar Game, Electro, Shecan, Begzar, Shelter, Cloudflare, Google, Quad9, AdGuard) through a local DNS-only VPN
@@ -33,3 +33,12 @@ Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PA
 - Subscription card (Gaming Server tab): "Buy" opens `SUB_BUY_URL` in the browser, the user pastes the code from your site and taps Activate. Set `SUB_BUY_URL` and `SUB_API` in `Model.kt`. With an active code the app tries `SUB_API/<code>/dns.json | v2ray.json | wireguard.json` first (server returns free + premium lists); an expired or invalid code gets an HTTP error and the app falls back to the free GitHub lists. `SUB_API/<code>/status.json` must return `{"active":true,"expires":"2026-12-31"}`. `server/worker.js` is an untested Cloudflare Worker example of that API.
 
 - `server/` has the full subscription server (Cloudflare Worker): purchase page, codes, premium lists. See `server/SUBSCRIPTION_SETUP_FA.md`. `subscription-preview.html` is a UI preview.
+
+- V2Gaming also pulls public text lists automatically: `V2_SOURCES` in `Model.kt` (default: iboxz/free-v2ray-collector vless.txt) and an optional `"sources": [...]` array in `v2ray.json`. Only encrypted links (tls / reality / vmess / ss) are kept, duplicates are dropped, and at most `V2_SOURCE_MAX` (20) per source are added, shown as "Public • ...".
+
+- Public V2 sources now include `vless.txt` and `vmess.txt` from iboxz/free-v2ray-collector. Extracted servers are named `Game Gaming Pubg EzzDns <n>` (`V2_AUTO_NAME`), and the V2Gaming list refreshes every 2 hours while the app is open (`V2_REFRESH_HOURS`).
+
+- V2Gaming: after connecting, the app checks the server end to end through a local SOCKS inbound and shows "✅ سرور جواب می‌دهد" or a warning. Extracted public servers are tested with a TCP connect first (dead ones are dropped; up to 20 live per source from 60 candidates) and named `Gaming <n>` (`V2_AUTO_NAME`).
+- Theme: "📱 خودکار" (default) follows the phone's dark/light mode; dark and light can also be forced in the Tools tab. The subscription card shows "به زودی...".
+
+- Accounts: the Gaming Server tab has a per-user login ("اشتراک ویژه"). Each user gets their own WireGuard (and optionally V2Ray) config from your hosting (PHP + MySQL). Set `SUB_BASE` in `Model.kt`. The server folder `ezzsub` is a separate download; do not commit it (or its config.php) to a public repo. The old Cloudflare Worker version was removed.
