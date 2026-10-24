@@ -91,14 +91,11 @@ import java.util.concurrent.Executors
 
 // The app tries these in order. Edit dns.json on GitHub (repo root) or on your site
 // to update the DNS list without releasing a new APK.
-// Subscription: set these two to your server. The payment page is opened in the browser;
-// SUB_API serves /<code>/status.json and /<code>/<dns|v2ray|wireguard>.json for active codes.
-// True while the light (white) theme is active; custom-drawn views read it.
-@Volatile
-var uiLight = false
-
-const val SUB_BUY_URL = "https://YOUR-WORKER.workers.dev/buy"
-const val SUB_API = "https://YOUR-WORKER.workers.dev/sub"
+// Subscription server (PHP on your hosting, see ezzsub/README_FA.md).
+// Replace YOUR-DOMAIN (and the folder) with where you uploaded the "ezzsub" folder.
+const val SUB_BASE = "https://YOUR-DOMAIN/ezzsub"
+const val SUB_API = SUB_BASE + "/api.php"
+const val SUB_BUY_URL = SUB_BASE + "/"
 
 // Public text lists (one link per line) that are pulled into V2Gaming automatically.
 // A GitHub "blob" link is converted to the raw file. More can be added in v2ray.json
