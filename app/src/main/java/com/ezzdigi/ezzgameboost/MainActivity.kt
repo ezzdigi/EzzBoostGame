@@ -108,6 +108,18 @@ class MainActivity : Activity() {
     internal var warn = Color.rgb(255, 176, 32)
     internal var bad = Color.rgb(255, 55, 70)
 
+    // Theme mode: "auto" follows the phone's dark/light setting, otherwise the user's choice.
+    internal fun resolveLight(): Boolean {
+        val mode = prefs.getString("themeMode", null)
+            ?: (if (prefs.contains("light")) (if (prefs.getBoolean("light", false)) "light" else "dark") else "auto")
+        return when (mode) {
+            "light" -> true
+            "dark" -> false
+            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) !=
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+    }
+
     internal fun applyPalette(light: Boolean) {
         uiLight = light
         if (light) {
@@ -250,7 +262,7 @@ class MainActivity : Activity() {
         Tr.load(this)
         val idx = prefs.getInt("accent", 0)
         accent = accents[idx.coerceIn(0, accents.size - 1)]
-        applyPalette(prefs.getBoolean("light", false))
+        applyPalette(resolveLight())
         if (!prefs.getBoolean("onboarded", false)) {
             showOnboarding()
         } else {

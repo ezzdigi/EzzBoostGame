@@ -883,30 +883,10 @@ internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> 
 }
 
 internal fun MainActivity.buildVpn() {
-    // ---------------- Subscription
+    // ---------------- Subscription (coming soon)
     section("اشتراک ویژه")
     val sCard = card()
-    var lockCard: android.view.View? = null
-    val subLbl = label(subStatusText(), 12.5f, accent, true, false)
-    sCard.addView(subLbl, vlp(0, 6))
-    val bBuy = button("🛒 خرید اشتراک از سایت", true) {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SUB_BUY_URL)))
-        } catch (_: Exception) {
-            toast("مرورگر پیدا نشد.")
-        }
-    }
-    sCard.addView(bBuy, vlp(0, 8))
-    val subIn = input("کد اشتراک")
-    subIn.setText(prefs.getString("subCode", "") ?: "")
-    sCard.addView(subIn, vlp(0, 8))
-    val bAct = button("فعال‌سازی", false) {
-        activateSub(subIn.text.toString()) {
-            subLbl.text = Tr.t(subStatusText())
-            lockCard?.visibility = if (prefs.getBoolean("subActive", false)) android.view.View.GONE else android.view.View.VISIBLE
-        }
-    }
-    sCard.addView(bAct, vlp(0, 4))
+    sCard.addView(label("به زودی...", 14f, muted, true, false))
     content.addView(sCard, vlp(0, 4))
 
     // ---------------- WireGuard
@@ -954,12 +934,6 @@ internal fun MainActivity.buildVpn() {
     wList.orientation = LinearLayout.VERTICAL
     wCard.addView(wList)
     content.addView(wCard, vlp(0, 4))
-    val lk = card()
-    lk.alpha = 0.6f
-    lk.addView(label("🔒 سرورهای ویژه — با اشتراک", 13f, muted, true, false))
-    lk.visibility = if (prefs.getBoolean("subActive", false)) android.view.View.GONE else android.view.View.VISIBLE
-    lockCard = lk
-    content.addView(lk, vlp(0, 4))
 
     var wKey = ""
     fun renderW(force: Boolean) {

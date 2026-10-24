@@ -310,7 +310,7 @@ private fun streamSettings(f: V2Full): JSONObject {
 }
 
 // Returns the full Xray JSON. Throws IllegalArgumentException (Persian message) on problems.
-internal fun buildXrayConfig(raw: String): String {
+internal fun buildXrayConfig(raw: String, probePort: Int = 0): String {
     val f = parseV2Full(raw) ?: throw IllegalArgumentException("لینک نامعتبر یا پشتیبانی‌نشده")
     val p = f.params
     val ob = JSONObject()
@@ -433,7 +433,18 @@ internal fun buildXrayConfig(raw: String): String {
 
     val root = JSONObject()
     root.put("log", JSONObject().put("loglevel", "warning"))
-    root.put("inbounds", JSONArray().put(tun))
+    val inbounds = JSONArray().put(tun)
+    if (probePort > 0) {
+        // Local SOCKS inbound (127.0.0.1, random port) so the app can check the server end to end.
+        val socks = JSONObject()
+        socks.put("tag", "probe-in")
+        socks.put("protocol", "socks")
+        socks.put("listen", "127.0.0.1")
+        socks.put("port", probePort)
+        socks.put("settings", JSONObject().put("auth", "noauth").put("udp", false))
+        inbounds.put(socks)
+    }
+    root.put("inbounds", inbounds)
     root.put("outbounds", JSONArray().put(ob).put(direct).put(block))
     root.put("routing", routing)
     return root.toString()

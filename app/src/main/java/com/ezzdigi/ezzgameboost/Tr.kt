@@ -219,6 +219,8 @@ object Tr {
         Pair("دریافت سرور گیمینگ وایرگارد", "Get WireGuard gaming servers"),
         Pair("سرور گیمینگ", "Gaming Server"),
         Pair("اشتراک ویژه", "Premium subscription"),
+        Pair("به زودی...", "Coming soon..."),
+        Pair("📱 خودکار", "📱 Auto"),
         Pair("حالت نمایش", "Display mode"),
         Pair("🌙 تیره", "🌙 Dark"),
         Pair("☀️ سفید", "☀️ Light"),

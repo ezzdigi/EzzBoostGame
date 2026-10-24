@@ -202,6 +202,18 @@ class V2VpnService : VpnService() {
         @Volatile
         var activeId = ""
 
+        // Result of the end-to-end check through the local SOCKS inbound after connecting.
+        @Volatile
+        var probe = ""
+
+        @Volatile
+        var lastProbePort = 0
+
+        fun pickProbePort(): Int {
+            lastProbePort = 20000 + java.util.Random().nextInt(30000)
+            return lastProbePort
+        }
+
         @Volatile
         var lastError = ""
 
@@ -257,6 +269,7 @@ class V2VpnService : VpnService() {
         instance = this
         busy = true
         lastError = ""
+        probe = ""
         goForeground(name)
         Thread { startCore(name, id, config, pkgs) }.start()
         return Service.START_NOT_STICKY
@@ -299,6 +312,9 @@ class V2VpnService : VpnService() {
             activeName = name
             activeId = id
             running = true
+            probe = "⏳ در حال تست سرور…"
+            val pp = lastProbePort
+            Thread { probeServer(pp, id) }.start()
         } catch (e: Throwable) {
             lastError = XrayCore.explain(e)
             running = false
@@ -312,6 +328,40 @@ class V2VpnService : VpnService() {
         } finally {
             busy = false
         }
+    }
+
+    // Sends one small HTTPS request through the proxy to tell "connected" from "really works".
+    private fun probeServer(port: Int, id: String) {
+        var result = ""
+        try {
+            Thread.sleep(700)
+            if (port <= 0) return
+            val urls = arrayOf("https://cp.cloudflare.com/generate_204", "https://www.google.com/generate_204")
+            val proxy = java.net.Proxy(java.net.Proxy.Type.SOCKS, java.net.InetSocketAddress("127.0.0.1", port))
+            for (u in urls) {
+                if (!running || activeId != id) return
+                val t0 = System.currentTimeMillis()
+                try {
+                    val c = java.net.URL(u).openConnection(proxy) as java.net.HttpURLConnection
+                    c.connectTimeout = 7000
+                    c.readTimeout = 7000
+                    c.instanceFollowRedirects = false
+                    val code = c.responseCode
+                    c.disconnect()
+                    if (code in 200..399) {
+                        result = "✅ سرور جواب می‌دهد • " + (System.currentTimeMillis() - t0) + " ms"
+                        break
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            if (result.isEmpty()) {
+                result = "⚠️ وصل شد ولی سرور جواب نمی‌دهد (خاموش یا فیلتر است). سرور دیگری را امتحان کن."
+            }
+        } catch (_: Throwable) {
+            return
+        }
+        if (running && activeId == id) probe = result
     }
 
     // Closes the copy of the TUN fd that was handed to Go, only if it is still open

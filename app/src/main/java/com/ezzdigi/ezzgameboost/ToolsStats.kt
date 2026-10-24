@@ -245,14 +245,23 @@ internal fun MainActivity.buildStats() {
     modeRow.orientation = LinearLayout.HORIZONTAL
     val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
     m1.marginEnd = dp(8)
-    modeRow.addView(chip("🌙 تیره", !uiLight, false) {
-        prefs.edit().putBoolean("light", false).apply()
+    val curMode = prefs.getString("themeMode", null) ?: (if (prefs.contains("light")) (if (prefs.getBoolean("light", false)) "light" else "dark") else "auto")
+    val m2 = LinearLayout.LayoutParams(WRAP, WRAP)
+    m2.marginEnd = dp(8)
+    modeRow.addView(chip("📱 خودکار", curMode == "auto", false) {
+        prefs.edit().putString("themeMode", "auto").apply()
+        applyPalette(resolveLight())
+        buildShell()
+        showTab(tab)
+    }, m2)
+    modeRow.addView(chip("🌙 تیره", curMode == "dark", false) {
+        prefs.edit().putString("themeMode", "dark").apply()
         applyPalette(false)
         buildShell()
         showTab(tab)
     }, m1)
-    modeRow.addView(chip("☀️ سفید", uiLight, false) {
-        prefs.edit().putBoolean("light", true).apply()
+    modeRow.addView(chip("☀️ سفید", curMode == "light", false) {
+        prefs.edit().putString("themeMode", "light").apply()
         applyPalette(true)
         buildShell()
         showTab(tab)

@@ -324,8 +324,8 @@ internal fun MainActivity.importV2FromUri(uri: Uri) {
 
 // Extracts usable links from a plain-text list (or a base64 subscription): keeps encrypted
 // links only (tls / reality / vmess / ss), drops duplicates and unusable entries.
-internal fun githubTextLinks(body: String, max: Int, startIndex: Int = 0): List<Pair<String, String>> {
-    val out = ArrayList<Pair<String, String>>()
+internal fun githubTextLinks(body: String, maxCandidates: Int): List<String> {
+    val out = ArrayList<String>()
     val seenLinks = HashSet<String>()
     var text = body
     if (!text.contains("://")) {
@@ -347,11 +347,54 @@ internal fun githubTextLinks(body: String, max: Int, startIndex: Int = 0): List<
         if (!encrypted) continue
         if (link.contains("@0.0.0.0")) continue
         if (parseV2Link(link) == null) continue
-        val name = V2_AUTO_NAME + " " + (startIndex + out.size + 1)
-        out.add(Pair(name, link))
-        if (out.size >= max) break
+        out.add(link)
+        if (out.size >= maxCandidates) break
     }
     return out
+}
+
+// Keeps (in order) the first `keep` links whose server accepts a TCP connection.
+// Dead public servers are dropped here instead of showing up as "connected but not working".
+internal fun v2LiveLinks(links: List<String>, keep: Int): List<String> {
+    if (links.isEmpty()) return links
+    val pool = java.util.concurrent.Executors.newFixedThreadPool(16)
+    try {
+        val futures = links.map { l ->
+            pool.submit(java.util.concurrent.Callable<Boolean> {
+                var ok = false
+                try {
+                    val f = parseV2Full(l)
+                    if (f != null) {
+                        val sock = java.net.Socket()
+                        try {
+                            sock.connect(java.net.InetSocketAddress(f.host, f.port), 3000)
+                            ok = true
+                        } finally {
+                            try {
+                                sock.close()
+                            } catch (_: Exception) {
+                            }
+                        }
+                    }
+                } catch (_: Throwable) {
+                }
+                ok
+            })
+        }
+        val out = ArrayList<String>()
+        for (i in links.indices) {
+            val ok = try {
+                futures[i].get(8, java.util.concurrent.TimeUnit.SECONDS)
+            } catch (_: Throwable) {
+                false
+            }
+            if (ok) out.add(links[i])
+            if (out.size >= keep) break
+        }
+        return out
+    } finally {
+        pool.shutdownNow()
+    }
 }
 
 internal fun MainActivity.refreshRemoteV2(force: Boolean, onDone: ((Int) -> Unit)?) {
@@ -386,7 +429,10 @@ internal fun MainActivity.refreshRemoteV2(force: Boolean, onDone: ((Int) -> Unit
         val extra = ArrayList<Pair<String, String>>()
         for (su in sources) {
             val b = httpGet(githubRawUrl(su), 10000, 1500000)
-            if (b != null) extra.addAll(githubTextLinks(b, V2_SOURCE_MAX, extra.size))
+            if (b != null) {
+                val live = v2LiveLinks(githubTextLinks(b, V2_SOURCE_CANDIDATES), V2_SOURCE_MAX)
+                for (l in live) extra.add(Pair(V2_AUTO_NAME + " " + (extra.size + 1), l))
+            }
         }
         var merged: List<Pair<String, String>>? = got
         if (extra.isNotEmpty()) {
@@ -445,6 +491,7 @@ internal fun MainActivity.v2Status(): String {
         out += "\n⏳ ..."
     } else if (V2VpnService.running) {
         out += "\n🟢 V2Gaming متصل: " + V2VpnService.activeName
+        if (V2VpnService.probe.isNotBlank()) out += "\n" + V2VpnService.probe
     } else if (V2VpnService.lastError.isNotBlank()) {
         out += "\n⚠️ خطا: " + V2VpnService.lastError
     }
@@ -457,7 +504,7 @@ internal fun MainActivity.connectV2(item: V2Item) {
         return
     }
     val cfg = try {
-        buildXrayConfig(item.raw)
+        buildXrayConfig(item.raw, V2VpnService.pickProbePort())
     } catch (e: Exception) {
         toast(Tr.t("ساخت پیکربندی ناموفق:") + " " + (e.message ?: ""))
         return
@@ -536,7 +583,7 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
         val items = v2Items()
         val k = items.joinToString("|") { it.raw.hashCode().toString() } + "|" +
             prefs.getLong("remoteV2Ts", 0L) + "|" + V2VpnService.running + "|" +
-            V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError + "|" +
+            V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError + "|" + V2VpnService.probe + "|" +
             (System.currentTimeMillis() / 3600000L)
         val stText = v2Status()
         statusLbl.text = if (stText.isEmpty()) "" else Tr.t(stText)

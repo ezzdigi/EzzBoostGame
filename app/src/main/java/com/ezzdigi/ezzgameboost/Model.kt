@@ -108,10 +108,12 @@ val V2_SOURCES = listOf(
     "https://github.com/iboxz/free-v2ray-collector/blob/main/main/vmess.txt"
 )
 // Extracted public servers are all shown as "<V2_AUTO_NAME> <number>".
-const val V2_AUTO_NAME = "Game Gaming Pubg EzzDns"
+const val V2_AUTO_NAME = "Gaming"
 // How often the V2Gaming online list (and the public sources) is refreshed.
 const val V2_REFRESH_HOURS = 2L
 const val V2_SOURCE_MAX = 20
+// Candidates per source that are tested (TCP connect) before the first V2_SOURCE_MAX live ones are kept.
+const val V2_SOURCE_CANDIDATES = 60
 
 // Online lists (dns.json, v2ray.json, wireguard.json) live in the repo root.
 // Several mirrors are tried because raw.githubusercontent.com is blocked on some networks.
