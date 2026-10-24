@@ -103,30 +103,6 @@ private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 @Volatile
 var lastHttpErr = ""
 
-internal fun httpPost(url: String, form: String, timeoutMs: Int = 10000): Pair<Int, String>? {
-    return try {
-        val c = URL(url).openConnection() as HttpURLConnection
-        c.requestMethod = "POST"
-        c.doOutput = true
-        c.connectTimeout = timeoutMs
-        c.readTimeout = timeoutMs
-        c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-        c.outputStream.use { it.write(form.toByteArray(Charsets.UTF_8)) }
-        val code = c.responseCode
-        val st = if (code in 200..299) c.inputStream else c.errorStream
-        val text = st?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
-        c.disconnect()
-        Pair(code, text.take(20000))
-    } catch (e: Exception) {
-        lastHttpErr = when (e) {
-            is java.net.UnknownHostException -> "آدرس پیدا نشد (اینترنت یا فیلتر)"
-            is java.net.SocketTimeoutException -> "timeout (احتمالاً فیلتر)"
-            else -> e.javaClass.simpleName
-        }
-        null
-    }
-}
-
 internal fun httpGet(url: String, timeoutMs: Int = 8000, maxBytes: Int = 300000): String? {
     var holder: HttpURLConnection? = null
     try {
@@ -427,8 +403,8 @@ internal fun parseRepo(raw: String): String? {
 // With an active subscription code the server's list (free + premium) is tried first;
 // an expired or invalid code gets an HTTP error there and the free GitHub list is used.
 internal fun MainActivity.listUrls(file: String): List<String> {
-    val token = prefs.getString("subCode", "") ?: ""
+    val code = prefs.getString("subCode", "") ?: ""
     val base = remoteUrls(ghRepo(), file)
-    if (token.isEmpty() || !prefs.getBoolean("subActive", false)) return base
-    return listOf(SUB_API + "?a=list&f=" + file + "&t=" + android.net.Uri.encode(token)) + base
+    if (code.isEmpty()) return base
+    return listOf(SUB_API + "/" + android.net.Uri.encode(code) + "/" + file) + base
 }

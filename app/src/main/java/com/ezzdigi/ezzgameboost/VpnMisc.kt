@@ -476,120 +476,66 @@ internal fun isAwgConfig(text: String): Boolean {
     return false
 }
 
-// ----- Subscription (per-user account) ---------------------------------------
+// ----- Subscription ----------------------------------------------------------
 
 internal fun MainActivity.subStatusText(): String {
     val code = prefs.getString("subCode", "") ?: ""
-    if (code.isEmpty()) return "وارد حساب نشده‌ای؛ لیست‌های رایگان استفاده می‌شوند."
-    val user = prefs.getString("subUser", "") ?: ""
+    if (code.isEmpty()) return "اشتراک فعال نیست؛ لیست‌های رایگان استفاده می‌شوند."
     val exp = prefs.getString("subExp", "") ?: ""
     return if (prefs.getBoolean("subActive", false)) {
-        "✅ " + (if (user.isNotEmpty()) user + " • " else "") + "اشتراک فعال" + (if (exp.isNotEmpty()) " تا $exp" else "")
+        "✅ اشتراک فعال" + (if (exp.isNotEmpty()) " تا $exp" else "")
     } else {
         "❌ اشتراک منقضی یا نامعتبر است."
     }
 }
 
-// Deletes the account's WireGuard servers (the ones that came from the subscription) from the phone.
-internal fun MainActivity.removeSubConfig() {
-    try {
-        val names = prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
-        for (n in names) {
-            try {
-                java.io.File(cfgDir("wg"), n + ".conf").delete()
-            } catch (_: Throwable) {
-            }
-        }
-        prefs.edit().remove("subWgNames").apply()
-    } catch (_: Throwable) {
-    }
-}
-
 internal fun MainActivity.fetchSubStatus(code: String): Triple<Boolean, String, String> {
-    val body = httpGet(SUB_API + "?a=status&t=" + android.net.Uri.encode(code))
-        ?: return Triple(false, "", if (lastHttpErr.startsWith("HTTP 4")) "حساب نامعتبر یا منقضی است." else "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")")
+    val body = httpGet(SUB_API + "/" + android.net.Uri.encode(code) + "/status.json", 8000, 20000)
+        ?: return Triple(false, "", if (lastHttpErr.startsWith("HTTP 4")) "کد نامعتبر یا منقضی است." else "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")")
     return try {
         val o = org.json.JSONObject(body)
         val ok = o.optBoolean("active", false)
-        Triple(ok, o.optString("expires", ""), if (ok) "" else "حساب نامعتبر یا منقضی است.")
+        Triple(ok, o.optString("expires", ""), if (ok) "" else "کد نامعتبر یا منقضی است.")
     } catch (_: Throwable) {
         Triple(false, "", "پاسخ سرور معتبر نیست.")
     }
 }
 
-internal fun MainActivity.loginSub(user: String, pass: String, onDone: () -> Unit) {
-    val u = user.trim()
-    if (u.isEmpty() || pass.isEmpty()) {
-        toast("نام کاربری و رمز را وارد کن.")
+internal fun MainActivity.activateSub(code: String, onDone: () -> Unit) {
+    val c = code.trim()
+    if (c.isEmpty()) {
+        toast("کد اشتراک را وارد کن.")
         return
     }
-    toast("در حال ورود…")
+    toast("در حال بررسی…")
     runBg {
-        val r = httpPost(
-            SUB_API + "?a=login",
-            "u=" + android.net.Uri.encode(u) + "&p=" + android.net.Uri.encode(pass)
-        )
-        var ok = false
-        var token = ""
-        var exp = ""
-        var err = ""
-        if (r == null) {
-            err = "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")"
-        } else {
-            try {
-                val o = org.json.JSONObject(r.second)
-                ok = o.optBoolean("ok", false)
-                token = o.optString("token", "")
-                exp = o.optString("expires", "")
-                if (!ok) err = o.optString("error", "ورود ناموفق بود.")
-            } catch (_: Throwable) {
-                err = "پاسخ سرور معتبر نیست."
-            }
-            if (ok && token.isEmpty()) {
-                ok = false
-                err = "پاسخ سرور معتبر نیست."
-            }
-        }
+        val r = fetchSubStatus(c)
         ui {
-            if (ok) {
-                prefs.edit().putString("subCode", token).putString("subUser", u)
-                    .putBoolean("subActive", true).putString("subExp", exp).apply()
-                toast("وارد شدی ✅")
+            if (r.first) {
+                prefs.edit().putString("subCode", c).putBoolean("subActive", true).putString("subExp", r.second).apply()
+                toast("اشتراک فعال شد ✅")
                 onDone()
                 refreshRemoteDns(true, null)
                 refreshRemoteV2(true, null)
                 importDefaultWgList(true) { vpnRender?.invoke() }
             } else {
-                toast(err)
+                toast(r.third)
             }
         }
     }
-}
-
-internal fun MainActivity.logoutSub() {
-    prefs.edit().remove("subCode").remove("subUser").remove("subExp").putBoolean("subActive", false).apply()
-    removeSubConfig()
-    vpnRender?.invoke()
 }
 
 internal fun MainActivity.checkSubSilently() {
     val code = prefs.getString("subCode", "") ?: ""
     if (code.isEmpty()) return
     val last = prefs.getLong("subCheck", 0L)
-    if (System.currentTimeMillis() - last < 3L * 3600L * 1000L) return
+    if (System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
     prefs.edit().putLong("subCheck", System.currentTimeMillis()).apply()
     runBg {
         val r = fetchSubStatus(code)
         // Only a definite answer changes the state; a network error keeps the last one.
-        if (r.first || r.third.startsWith("حساب")) {
+        if (r.first || r.third.startsWith("کد")) {
             prefs.edit().putBoolean("subActive", r.first).putString("subExp", r.second).apply()
-            // Expired / disabled / removed account: the personal server is deleted from the phone.
-            if (!r.first) removeSubConfig()
-            ui {
-                vpnRender?.invoke()
-                // still active: pick up servers the admin added or changed for this account
-                if (r.first) importDefaultWgList(true) { vpnRender?.invoke() }
-            }
         }
     }
 }
@@ -600,12 +546,10 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
     if (!silent) toast("در حال دریافت سرورهای گیمینگ…")
     runBg {
         var body: String? = null
-        var premium = false
         for (u in listUrls("wireguard.json")) {
             val b = httpGet(u, 6000, 1500000)
             if (b != null && b.trimStart().startsWith("{")) {
                 body = b
-                premium = u.startsWith(SUB_API)
                 break
             }
             if (b != null) lastHttpErr = "فایل JSON نیست"
@@ -652,19 +596,6 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     "سرور گیمینگ معتبری پیدا نشد."
                 }
             }
-        }
-        if (premium && body != null) {
-            // Account servers: remember them (removed on logout / expiry) and drop ones the admin took away.
-            val oldNames = prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
-            for (n in oldNames) {
-                if (!listed.contains(n)) {
-                    try {
-                        java.io.File(cfgDir("wg"), n + ".conf").delete()
-                    } catch (_: Throwable) {
-                    }
-                }
-            }
-            prefs.edit().putStringSet("subWgNames", HashSet<String>(listed)).apply()
         }
         ui {
             if (listed.isNotEmpty()) markNewKeys("wg", listed)
@@ -952,33 +883,10 @@ internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> 
 }
 
 internal fun MainActivity.buildVpn() {
-    // ---------------- Subscription (per-user account)
+    // ---------------- Subscription (coming soon)
     section("اشتراک ویژه")
     val sCard = card()
-    val subLbl = label(subStatusText(), 12.5f, accent, true, false)
-    sCard.addView(subLbl, vlp(0, 6))
-    val uIn = input("نام کاربری")
-    uIn.setText(prefs.getString("subUser", "") ?: "")
-    sCard.addView(uIn, vlp(0, 8))
-    val pIn = input("رمز عبور")
-    pIn.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-    pIn.transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
-    sCard.addView(pIn, vlp(0, 8))
-    val bLogin = button("ورود به حساب", true) {
-        loginSub(uIn.text.toString(), pIn.text.toString()) {
-            pIn.setText("")
-            subLbl.text = Tr.t(subStatusText())
-        }
-    }
-    sCard.addView(bLogin, vlp(0, 6))
-    val bOut = button("خروج از حساب", false) {
-        logoutSub()
-        subLbl.text = Tr.t(subStatusText())
-        uIn.setText("")
-    }
-    sCard.addView(bOut, vlp(0, 4))
-    val bBuy = button("🛒 دریافت اکانت", false) { openUrl(SUB_BUY_URL) }
-    sCard.addView(bBuy, vlp(0, 4))
+    sCard.addView(label("به زودی...", 14f, muted, true, false))
     content.addView(sCard, vlp(0, 4))
 
     // ---------------- WireGuard
