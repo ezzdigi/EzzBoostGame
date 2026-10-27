@@ -181,7 +181,6 @@ object Tr {
         Pair("هنوز به‌روز نشده", "Not updated yet"),
         Pair("نسخه جدید موجود است:", "New version available:"),
         Pair("⬇️ دانلود نسخه", "⬇️ Download version"),
-        Pair("آخرین به‌روزرسانی:", "Last update:"),
         Pair("لیست آنلاین:", "Online list:"),
         Pair("پروفایل بازی:", "Game profile:"),
         Pair("نسخه فعلی:", "Current version:")

@@ -178,8 +178,8 @@ class MainActivity : Activity() {
     internal val accentNames = arrayOf("قرمز", "فیروزه‌ای", "بنفش", "سبز", "نارنجی")
     internal var accent = accents[0]
 
-    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "🛠", "📊")
-    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "ابزار", "آمار")
+    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "⭐", "📊")
+    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار")
 
     internal var dnsCache: List<DnsProvider>? = null
     internal val dnsProviders: List<DnsProvider>
@@ -475,7 +475,7 @@ class MainActivity : Activity() {
             1 -> buildGames()
             2 -> buildNetwork()
             3 -> buildVpn()
-            4 -> buildTools()
+            4 -> buildPremium()
             else -> buildStats()
         }
         scroll.scrollTo(0, 0)

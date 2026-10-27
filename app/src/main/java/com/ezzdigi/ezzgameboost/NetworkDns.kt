@@ -599,23 +599,6 @@ internal fun MainActivity.buildDnsChanger() {
             }
         })
     }
-
-    val remoteLbl = label(remoteDnsStatus(), 11.5f, muted)
-    dCard.addView(remoteLbl, dCard.childCount - 1, vlp(0, 6))
-    val remoteBtn = button("🌐 به‌روزرسانی لیست DNS آنلاین", false) {}
-    dCard.addView(remoteBtn, dCard.childCount - 1, vlp(0, 8))
-    remoteBtn.setOnClickListener {
-        remoteBtn.text = Tr.t("در حال دریافت…")
-        refreshRemoteDns(true) { n ->
-            remoteBtn.text = Tr.t("🌐 به‌روزرسانی لیست DNS آنلاین")
-            remoteLbl.text = Tr.t(remoteDnsStatus())
-            toast(if (n > 0) Tr.t("لیست به‌روز شد") + ": $n" else Tr.t("دریافت لیست ناموفق بود") + " (" + lastHttpErr + ")")
-            render(true)
-        }
-    }
-
-    netRefresh = { render(false) }
-    render(true)
 }
 
 internal fun MainActivity.buildDnsQuery(name: String, id: Int): ByteArray {

@@ -956,11 +956,10 @@ internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> 
     return b
 }
 
-internal fun MainActivity.buildVpn() {
-    // ---------------- Subscription (per-user account)
+internal fun MainActivity.buildPremium() {
     section("اشتراک ویژه")
     val sCard = card()
-    val subLbl = label(subStatusText(), 12.5f, accent, true, false)
+    val subLbl = label(subStatusText(), 13f, accent, true, false)
     sCard.addView(subLbl, vlp(0, 6))
     val uIn = input("نام کاربری")
     uIn.setText(prefs.getString("subUser", "") ?: "")
@@ -969,23 +968,40 @@ internal fun MainActivity.buildVpn() {
     pIn.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
     pIn.transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
     sCard.addView(pIn, vlp(0, 8))
-    val bLogin = button("ورود به حساب", true) {
+    sCard.addView(button("ورود به حساب", true) {
         loginSub(uIn.text.toString(), pIn.text.toString()) {
             pIn.setText("")
             subLbl.text = Tr.t(subStatusText())
+            renderPremiumDetails(sCard)
         }
-    }
-    sCard.addView(bLogin, vlp(0, 6))
-    val bOut = button("خروج از حساب", false) {
+    }, vlp(0, 6))
+    sCard.addView(button("خروج از حساب", false) {
         logoutSub()
         subLbl.text = Tr.t(subStatusText())
         uIn.setText("")
-    }
-    sCard.addView(bOut, vlp(0, 4))
-    val bBuy = button("🛒 دریافت اکانت", false) { openUrl(SUB_BUY_URL) }
-    sCard.addView(bBuy, vlp(0, 4))
+        renderPremiumDetails(sCard)
+    }, vlp(0, 4))
+    sCard.addView(button("🛒 خرید اشتراک", false) { openUrl(SUB_BUY_URL) }, vlp(0, 4))
+    renderPremiumDetails(sCard)
     content.addView(sCard, vlp(0, 4))
+}
 
+internal fun MainActivity.renderPremiumDetails(card: LinearLayout) {
+    val old = card.findViewWithTag<View>("premium_details")
+    if (old != null) card.removeView(old)
+    val details = LinearLayout(this).apply {
+        tag = "premium_details"
+        orientation = LinearLayout.VERTICAL
+    }
+    val active = prefs.getBoolean("subActive", false)
+    val exp = prefs.getString("subExp", "") ?: ""
+    details.addView(label(if (active) "وضعیت: فعال" else "وضعیت: غیرفعال", 12.5f, if (active) accent else muted, true))
+    if (active && exp.isNotBlank()) details.addView(label("اعتبار تا: $exp", 12.5f, white))
+    details.addView(label("حجم باقی‌مانده: در صورت ارائه توسط سرور اشتراک نمایش داده می‌شود.", 12f, muted))
+    card.addView(details)
+}
+
+internal fun MainActivity.buildVpn() {
     // ---------------- WireGuard
     section("WireGuard Gaming")
     val wCard = card()
