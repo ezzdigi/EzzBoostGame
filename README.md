@@ -44,7 +44,3 @@ Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PA
 - Accounts: the Gaming Server tab has a per-user login ("اشتراک ویژه"). Each user gets their own WireGuard (and optionally V2Ray) config from your hosting (PHP + MySQL). Set `SUB_BASE` in `Model.kt`. The server folder `ezzsub` is a separate download; do not commit it (or its config.php) to a public repo. The old Cloudflare Worker version was removed.
 
 - Accounts now give each user separate WireGuard and V2Ray configs from the pool; logout/expiry also restores the free V2Ray/DNS lists. See `README_FA.md` in the `ezzsub` package for the full hosting + domain guide and `tools/gen_wg_configs.py` for bulk WireGuard configs.
-
-- DNS tab now has sub-tabs (DNS / Private DNS (DoT) / PING); only the selected DNS is shown, the others are under a collapsible "سایر DNSها" row. The Gaming Server tab is subscription-only: after login the account's WireGuard and V2Ray servers (connect / disconnect / test) appear under the login card; there is no free import, free list or public source any more (only the DNS list keeps a free source).
-
-- The subscription ("اشتراک ویژه") has its own WireGuard and V2Ray lists (VIP WG n / VIP V2 n) kept apart from the free lists; free lists (GitHub, public sources, own imports) are unchanged. Server addresses are never shown in the app, and VLESS links without TLS/Reality (refused by the Xray core) get a clear message instead of the raw core error.
