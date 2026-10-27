@@ -392,7 +392,6 @@ class MainActivity : Activity() {
         val titleCol = LinearLayout(this)
         titleCol.orientation = LinearLayout.VERTICAL
         titleCol.addView(titleView)
-        titleCol.addView(label("ایزی دیجی", 10.5f, muted))
         header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
         val ver = TextView(this).apply {
             text = "v2.1"

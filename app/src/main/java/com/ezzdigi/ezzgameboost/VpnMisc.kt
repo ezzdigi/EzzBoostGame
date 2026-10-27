@@ -159,9 +159,7 @@ internal fun MainActivity.showOnboarding() {
     nameView.setTextColor(white)
     nameView.gravity = Gravity.CENTER
     col.addView(nameView, vlp(14, 2))
-    val by = label("ساخته‌شده توسط ایزی دیجی", 13f, muted)
-    by.gravity = Gravity.CENTER
-    col.addView(by, vlp(0, 10))
+    col.addView(label("", 8f, muted), vlp(0, 6))
 
     val langRow = LinearLayout(this)
     langRow.orientation = LinearLayout.HORIZONTAL

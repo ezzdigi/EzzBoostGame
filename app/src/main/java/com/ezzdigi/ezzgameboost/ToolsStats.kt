@@ -312,7 +312,6 @@ internal fun MainActivity.buildStats() {
     section("ABOUT")
     val about = card()
     about.addView(label("EzzGameBOOST v" + currentVersion(), 14f, white, true, false))
-    about.addView(label("ساخته‌شده توسط ایزی دیجی", 12.5f, white), vlp(4, 0))
     about.addView(
         label(
             "این اپ بدون روت کار می‌کند. دکمه‌ی BOOST فقط از API رسمی اندروید برای بستن پردازش‌های پس‌زمینه استفاده می‌کند و اندروید ممکن است بعضی برنامه‌ها را دوباره اجرا کند. هیچ اپ معمولی نمی‌تواند FPS یا پینگ داخل بازی را تضمین کند؛ تست شبکه فقط زمان اتصال TCP را اندازه می‌گیرد.",
