@@ -545,7 +545,6 @@ private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
     box.setPadding(dp(12), dp(10), dp(12), dp(10))
     box.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
     box.addView(label(if (isActive) item.name + "  ✓" else item.name, 13.5f, white, true, false))
-    box.addView(label(item.proto.uppercase() + " • " + item.host + ":" + item.port, 11.5f, muted, false, false))
     val resLbl = label("", 12f, white, false, false)
     box.addView(resLbl)
     val br = LinearLayout(this)
@@ -591,8 +590,6 @@ private fun MainActivity.subWgRow(base: String): LinearLayout {
     val col = LinearLayout(this)
     col.orientation = LinearLayout.VERTICAL
     col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
-    val ep = wgEndpoint(readCfg("wg", "$base.conf"))
-    if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
     val tr = wgTestRes[base] ?: ""
     if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
     row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))

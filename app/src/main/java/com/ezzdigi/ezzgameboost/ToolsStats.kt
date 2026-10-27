@@ -232,7 +232,8 @@ internal fun MainActivity.buildStats() {
             } else if (r == "latest") {
                 toast(Tr.t("آخرین نسخه را داری ✅"))
             } else {
-                toast(Tr.t("بررسی آپدیت ناموفق بود"))
+                val why = r.removePrefix("fail|")
+                toast(Tr.t("بررسی آپدیت ناموفق بود") + (if (why.isNotEmpty() && why != "fail") " (" + why + ")" else ""))
             }
         }
     }
