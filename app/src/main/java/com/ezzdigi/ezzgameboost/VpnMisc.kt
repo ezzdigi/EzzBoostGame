@@ -509,6 +509,18 @@ internal fun MainActivity.fetchSubStatus(code: String): Triple<Boolean, String, 
     return try {
         val o = org.json.JSONObject(body)
         val ok = o.optBoolean("active", false)
+        fun firstValue(vararg keys: String): String {
+            for (key in keys) {
+                val v = o.optString(key, "").trim()
+                if (v.isNotEmpty() && v != "null") return v
+            }
+            return ""
+        }
+        val used = firstValue("used", "used_bytes", "traffic_used", "upload_download", "consumed")
+        val total = firstValue("total", "total_bytes", "traffic_total", "quota", "limit", "data_limit")
+        val remaining = firstValue("remaining", "remaining_bytes", "traffic_remaining", "left", "balance")
+        prefs.edit().putString("subTrafficUsed", used).putString("subTrafficTotal", total)
+            .putString("subTrafficRemaining", remaining).apply()
         Triple(ok, o.optString("expires", ""), if (ok) "" else "حساب نامعتبر یا منقضی است.")
     } catch (_: Throwable) {
         Triple(false, "", "پاسخ سرور معتبر نیست.")
@@ -565,7 +577,9 @@ internal fun MainActivity.loginSub(user: String, pass: String, onDone: () -> Uni
 }
 
 internal fun MainActivity.logoutSub() {
-    prefs.edit().remove("subCode").remove("subUser").remove("subExp").putBoolean("subActive", false).apply()
+    prefs.edit().remove("subCode").remove("subUser").remove("subExp")
+        .remove("subTrafficUsed").remove("subTrafficTotal").remove("subTrafficRemaining")
+        .putBoolean("subActive", false).apply()
     removeSubConfig()
     // back to the free lists right away (the account's V2Ray links disappear too)
     refreshRemoteV2(true, null)
@@ -997,7 +1011,36 @@ internal fun MainActivity.renderPremiumDetails(card: LinearLayout) {
     val exp = prefs.getString("subExp", "") ?: ""
     details.addView(label(if (active) "وضعیت: فعال" else "وضعیت: غیرفعال", 12.5f, if (active) accent else muted, true))
     if (active && exp.isNotBlank()) details.addView(label("اعتبار تا: $exp", 12.5f, white))
-    details.addView(label("حجم باقی‌مانده: در صورت ارائه توسط سرور اشتراک نمایش داده می‌شود.", 12f, muted))
+
+    // Purchased services are shown here; the free server list remains in the Gaming Server tab.
+    details.addView(label("سرویس خریداری‌شده", 14f, accent, true), vlp(0, 10))
+    val wgNames = (prefs.getStringSet("subWgNames", null) ?: emptySet<String>()).toList()
+    val purchasedV2 = prefs.getStringSet("subV2Names", null) ?: emptySet<String>()
+    if (!active) {
+        details.addView(label("برای مشاهده سرویس‌های خریداری‌شده، ابتدا وارد حساب شوید.", 12f, muted))
+    } else if (wgNames.isEmpty() && purchasedV2.isEmpty()) {
+        details.addView(label("سرویس اختصاصی WireGuard یا V2Gaming برای این حساب دریافت نشده است.", 12f, muted))
+    } else {
+        if (wgNames.isNotEmpty()) {
+            details.addView(label("WireGuard Gaming", 12.5f, white, true), vlp(0, 4))
+            wgNames.sorted().forEach { details.addView(label("• ${it.removeSuffix(".conf")}", 12f, white)) }
+        }
+        if (purchasedV2.isNotEmpty()) {
+            details.addView(label("V2Gaming", 12.5f, white, true), vlp(0, 4))
+            purchasedV2.sorted().forEach { details.addView(label("• $it", 12f, white)) }
+        }
+    }
+    details.addView(label("مصرف کانفیگ خریداری‌شده", 14f, accent, true), vlp(0, 10))
+    val used = prefs.getString("subTrafficUsed", "") ?: ""
+    val total = prefs.getString("subTrafficTotal", "") ?: ""
+    val remain = prefs.getString("subTrafficRemaining", "") ?: ""
+    if (used.isNotBlank()) {
+        details.addView(label("حجم مصرف‌شده: $used", 12.5f, white))
+        if (total.isNotBlank()) details.addView(label("حجم کل: $total", 12.5f, white))
+        if (remain.isNotBlank()) details.addView(label("حجم باقی‌مانده: $remain", 12.5f, white))
+    } else {
+        details.addView(label("اطلاعات مصرف باید از API سرویس اشتراک دریافت شود؛ سرور فعلاً مقدار مصرف را گزارش نکرده است.", 12f, muted))
+    }
     card.addView(details)
 }
 
