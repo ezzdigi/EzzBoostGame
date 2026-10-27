@@ -316,11 +316,6 @@ class MainActivity : Activity() {
             } catch (_: Throwable) {
             }
         }
-        val stage = prefs.getString("v2Stage", "") ?: ""
-        if (stage.isNotEmpty()) {
-            prefs.edit().remove("v2Stage").apply()
-            if (txt.isNotEmpty()) txt = "V2Ray: " + stage + "\n" + txt
-        }
         if (txt.isEmpty() || isDestroyed || isFinishing) return
         val shown = txt
         try {
