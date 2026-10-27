@@ -114,6 +114,16 @@ object Tr {
 
     // Whole-string translations (short labels, buttons).
     private val EXACT: Map<String, String> = mapOf(
+        "وارد حساب نشده‌ای" to "You are not logged in",
+        "❌ اشتراک منقضی شده" to "❌ Subscription expired",
+        "✅ اشتراک فعال" to "✅ Subscription active",
+        "تاریخ پایان:" to "Ends on:",
+        "🔄 به‌روزرسانی" to "🔄 Refresh",
+        "در حال به‌روزرسانی…" to "Updating…",
+        "به‌روز شد ✅" to "Updated ✅",
+        "هنوز کانفیگی نیست." to "No configs yet.",
+        "🛒 تمدید / دریافت اکانت" to "🛒 Renew / get an account",
+        "همگام‌سازی ناموفق بود." to "Sync failed.",
         "🌐 به‌روزرسانی لیست DNS آنلاین" to "🌐 Update online DNS list",
         "📋 کلیپ‌بورد" to "📋 Clipboard",
         "هسته‌ی Xray در این نسخه نیست. نسخه‌ی Release را نصب کن." to "The Xray core is not included in this build. Install the Release version.",
@@ -181,6 +191,7 @@ object Tr {
         Pair("هنوز به‌روز نشده", "Not updated yet"),
         Pair("نسخه جدید موجود است:", "New version available:"),
         Pair("⬇️ دانلود نسخه", "⬇️ Download version"),
+        Pair("آخرین به‌روزرسانی:", "Last update:"),
         Pair("لیست آنلاین:", "Online list:"),
         Pair("پروفایل بازی:", "Game profile:"),
         Pair("نسخه فعلی:", "Current version:")

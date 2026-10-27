@@ -233,7 +233,6 @@ internal fun MainActivity.buildNetwork() {
     section("PING LAB")
     val pingCard = card()
     pingCard.addView(label("تست تأخیر اتصال", 15f, white, true))
-    pingCard.addView(label("زمان برقراری اتصال TCP تا سرور انتخابی؛ پینگ ICMP یا پینگ داخل بازی نیست.", 12f, muted))
 
     var onTargetChanged: () -> Unit = {}
     val hs = HorizontalScrollView(this)
@@ -458,17 +457,11 @@ internal fun MainActivity.buildNetwork() {
     section("PRIVATE DNS (DoT)")
     val dnsCard = card()
     dnsCard.addView(label("Private DNS در اندروید (DNS-over-TLS)", 15f, white, true))
-    dnsCard.addView(
-        label(
-            "روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. با زدن «کپی» نام میزبان کپی می‌شود؛ آن را در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان.",
-            12f, muted
-        ), vlp(2, 6)
-    )
     val dnsOptions = listOf(
-        Pair("Cloudflare • سریع و عمومی", "one.one.one.one"),
-        Pair("Google Public DNS • عمومی", "dns.google"),
-        Pair("Quad9 • مسدودسازی دامنه‌های مخرب", "dns.quad9.net"),
-        Pair("AdGuard DNS • فیلتر تبلیغات", "dns.adguard-dns.com")
+        Pair("Cloudflare", "one.one.one.one"),
+        Pair("Google Public DNS", "dns.google"),
+        Pair("Quad9", "dns.quad9.net"),
+        Pair("AdGuard DNS", "dns.adguard-dns.com")
     )
     for (opt in dnsOptions) {
         val r = LinearLayout(this)
@@ -515,12 +508,6 @@ internal fun MainActivity.buildDnsChanger() {
     dCard.addView(fastBtn, vlp(0, 8))
     val benchBtn = button("تست سرعت همه‌ی DNSها", false) {}
     dCard.addView(benchBtn, vlp(0, 8))
-    dCard.addView(
-        label(
-            "اتصال با یک VPN محلی انجام می‌شود که فقط درخواست‌های DNS را به سرور انتخابی می‌فرستد؛ بقیه‌ی ترافیک از مسیر عادی می‌رود. اندروید هم‌زمان فقط یک VPN را نگه می‌دارد، پس VPN دیگر قطع می‌شود. اگر Private DNS روی حالت hostname است، اول آن را Off یا Automatic کن.",
-            11.5f, muted
-        )
-    )
     content.addView(dCard, vlp(0, 4))
 
     var lastKey = ""
@@ -599,6 +586,23 @@ internal fun MainActivity.buildDnsChanger() {
             }
         })
     }
+
+    val remoteLbl = label(remoteDnsStatus(), 11.5f, muted)
+    dCard.addView(remoteLbl, vlp(0, 6))
+    val remoteBtn = button("🌐 به‌روزرسانی لیست DNS آنلاین", false) {}
+    dCard.addView(remoteBtn, vlp(0, 8))
+    remoteBtn.setOnClickListener {
+        remoteBtn.text = Tr.t("در حال دریافت…")
+        refreshRemoteDns(true) { n ->
+            remoteBtn.text = Tr.t("🌐 به‌روزرسانی لیست DNS آنلاین")
+            remoteLbl.text = Tr.t(remoteDnsStatus())
+            toast(if (n > 0) Tr.t("لیست به‌روز شد") + ": $n" else Tr.t("دریافت لیست ناموفق بود") + " (" + lastHttpErr + ")")
+            render(true)
+        }
+    }
+
+    netRefresh = { render(false) }
+    render(true)
 }
 
 internal fun MainActivity.buildDnsQuery(name: String, id: Int): ByteArray {

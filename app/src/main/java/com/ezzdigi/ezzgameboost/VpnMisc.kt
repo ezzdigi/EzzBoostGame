@@ -474,157 +474,16 @@ internal fun isAwgConfig(text: String): Boolean {
     return false
 }
 
-// ----- Subscription (per-user account) ---------------------------------------
-
-internal fun MainActivity.subStatusText(): String {
-    val code = prefs.getString("subCode", "") ?: ""
-    if (code.isEmpty()) return "وارد حساب نشده‌ای؛ لیست‌های رایگان استفاده می‌شوند."
-    val user = prefs.getString("subUser", "") ?: ""
-    val exp = prefs.getString("subExp", "") ?: ""
-    return if (prefs.getBoolean("subActive", false)) {
-        "✅ " + (if (user.isNotEmpty()) user + " • " else "") + "اشتراک فعال" + (if (exp.isNotEmpty()) " تا $exp" else "")
-    } else {
-        "❌ اشتراک منقضی یا نامعتبر است."
-    }
-}
-
-// Deletes the account's WireGuard servers (the ones that came from the subscription) from the phone.
-internal fun MainActivity.removeSubConfig() {
-    try {
-        val names = prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
-        for (n in names) {
-            try {
-                java.io.File(cfgDir("wg"), n + ".conf").delete()
-            } catch (_: Throwable) {
-            }
-        }
-        prefs.edit().remove("subWgNames").apply()
-    } catch (_: Throwable) {
-    }
-}
-
-internal fun MainActivity.fetchSubStatus(code: String): Triple<Boolean, String, String> {
-    val body = httpGet(SUB_API + "?a=status&t=" + android.net.Uri.encode(code))
-        ?: return Triple(false, "", if (lastHttpErr.startsWith("HTTP 4")) "حساب نامعتبر یا منقضی است." else "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")")
-    return try {
-        val o = org.json.JSONObject(body)
-        val ok = o.optBoolean("active", false)
-        fun firstValue(vararg keys: String): String {
-            for (key in keys) {
-                val v = o.optString(key, "").trim()
-                if (v.isNotEmpty() && v != "null") return v
-            }
-            return ""
-        }
-        val used = firstValue("used", "used_bytes", "traffic_used", "upload_download", "consumed")
-        val total = firstValue("total", "total_bytes", "traffic_total", "quota", "limit", "data_limit")
-        val remaining = firstValue("remaining", "remaining_bytes", "traffic_remaining", "left", "balance")
-        prefs.edit().putString("subTrafficUsed", used).putString("subTrafficTotal", total)
-            .putString("subTrafficRemaining", remaining).apply()
-        Triple(ok, o.optString("expires", ""), if (ok) "" else "حساب نامعتبر یا منقضی است.")
-    } catch (_: Throwable) {
-        Triple(false, "", "پاسخ سرور معتبر نیست.")
-    }
-}
-
-internal fun MainActivity.loginSub(user: String, pass: String, onDone: () -> Unit) {
-    val u = user.trim()
-    if (u.isEmpty() || pass.isEmpty()) {
-        toast("نام کاربری و رمز را وارد کن.")
-        return
-    }
-    toast("در حال ورود…")
-    runBg {
-        val r = httpPost(
-            SUB_API + "?a=login",
-            "u=" + android.net.Uri.encode(u) + "&p=" + android.net.Uri.encode(pass)
-        )
-        var ok = false
-        var token = ""
-        var exp = ""
-        var err = ""
-        if (r == null) {
-            err = "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")"
-        } else {
-            try {
-                val o = org.json.JSONObject(r.second)
-                ok = o.optBoolean("ok", false)
-                token = o.optString("token", "")
-                exp = o.optString("expires", "")
-                if (!ok) err = o.optString("error", "ورود ناموفق بود.")
-            } catch (_: Throwable) {
-                err = "پاسخ سرور معتبر نیست."
-            }
-            if (ok && token.isEmpty()) {
-                ok = false
-                err = "پاسخ سرور معتبر نیست."
-            }
-        }
-        ui {
-            if (ok) {
-                prefs.edit().putString("subCode", token).putString("subUser", u)
-                    .putBoolean("subActive", true).putString("subExp", exp).apply()
-                toast("وارد شدی ✅")
-                onDone()
-                refreshRemoteDns(true, null)
-                refreshRemoteV2(true, null)
-                importDefaultWgList(true) { vpnRender?.invoke() }
-            } else {
-                toast(err)
-            }
-        }
-    }
-}
-
-internal fun MainActivity.logoutSub() {
-    prefs.edit().remove("subCode").remove("subUser").remove("subExp")
-        .remove("subTrafficUsed").remove("subTrafficTotal").remove("subTrafficRemaining")
-        .putBoolean("subActive", false).apply()
-    removeSubConfig()
-    // back to the free lists right away (the account's V2Ray links disappear too)
-    refreshRemoteV2(true, null)
-    refreshRemoteDns(true, null)
-    vpnRender?.invoke()
-}
-
-internal fun MainActivity.checkSubSilently() {
-    val code = prefs.getString("subCode", "") ?: ""
-    if (code.isEmpty()) return
-    val last = prefs.getLong("subCheck", 0L)
-    if (System.currentTimeMillis() - last < 3L * 3600L * 1000L) return
-    prefs.edit().putLong("subCheck", System.currentTimeMillis()).apply()
-    runBg {
-        val r = fetchSubStatus(code)
-        // Only a definite answer changes the state; a network error keeps the last one.
-        if (r.first || r.third.startsWith("حساب")) {
-            prefs.edit().putBoolean("subActive", r.first).putString("subExp", r.second).apply()
-            // Expired / disabled / removed account: the personal server is deleted from the phone.
-            if (!r.first) removeSubConfig()
-            ui {
-                vpnRender?.invoke()
-                if (!r.first) {
-                    refreshRemoteV2(true, null)
-                    refreshRemoteDns(true, null)
-                }
-                // still active: pick up servers the admin added or changed for this account
-                if (r.first) importDefaultWgList(true) { vpnRender?.invoke() }
-            }
-        }
-    }
-}
-
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
 
 internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: () -> Unit) {
     if (!silent) toast("در حال دریافت سرورهای گیمینگ…")
     runBg {
         var body: String? = null
-        var premium = false
         for (u in listUrls("wireguard.json")) {
             val b = httpGet(u, 6000, 1500000)
             if (b != null && b.trimStart().startsWith("{")) {
                 body = b
-                premium = u.startsWith(SUB_API)
                 break
             }
             if (b != null) lastHttpErr = "فایل JSON نیست"
@@ -655,6 +514,8 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                         continue
                     }
                     val base = cleanName(nm, "wg")
+                    // never overwrite an account server with a free one of the same name
+                    if (subWgNameSet().contains(base)) continue
                     listed.add(base)
                     val exists = java.io.File(cfgDir("wg"), base + ".conf").exists()
                     if (!exists && listCfg("wg").size >= 20) continue
@@ -671,19 +532,6 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     "سرور گیمینگ معتبری پیدا نشد."
                 }
             }
-        }
-        if (premium && body != null) {
-            // Account servers: remember them (removed on logout / expiry) and drop ones the admin took away.
-            val oldNames = prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
-            for (n in oldNames) {
-                if (!listed.contains(n)) {
-                    try {
-                        java.io.File(cfgDir("wg"), n + ".conf").delete()
-                    } catch (_: Throwable) {
-                    }
-                }
-            }
-            prefs.edit().putStringSet("subWgNames", HashSet<String>(listed)).apply()
         }
         ui {
             if (listed.isNotEmpty()) markNewKeys("wg", listed)
@@ -970,80 +818,6 @@ internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> 
     return b
 }
 
-internal fun MainActivity.buildPremium() {
-    section("اشتراک ویژه")
-    val sCard = card()
-    val subLbl = label(subStatusText(), 13f, accent, true, false)
-    sCard.addView(subLbl, vlp(0, 6))
-    val uIn = input("نام کاربری")
-    uIn.setText(prefs.getString("subUser", "") ?: "")
-    sCard.addView(uIn, vlp(0, 8))
-    val pIn = input("رمز عبور")
-    pIn.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-    pIn.transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
-    sCard.addView(pIn, vlp(0, 8))
-    sCard.addView(button("ورود به حساب", true) {
-        loginSub(uIn.text.toString(), pIn.text.toString()) {
-            pIn.setText("")
-            subLbl.text = Tr.t(subStatusText())
-            renderPremiumDetails(sCard)
-        }
-    }, vlp(0, 6))
-    sCard.addView(button("خروج از حساب", false) {
-        logoutSub()
-        subLbl.text = Tr.t(subStatusText())
-        uIn.setText("")
-        renderPremiumDetails(sCard)
-    }, vlp(0, 4))
-    sCard.addView(button("🛒 خرید اشتراک", false) { openUrl(SUB_BUY_URL) }, vlp(0, 4))
-    renderPremiumDetails(sCard)
-    content.addView(sCard, vlp(0, 4))
-}
-
-internal fun MainActivity.renderPremiumDetails(card: LinearLayout) {
-    val old = card.findViewWithTag<View>("premium_details")
-    if (old != null) card.removeView(old)
-    val details = LinearLayout(this).apply {
-        tag = "premium_details"
-        orientation = LinearLayout.VERTICAL
-    }
-    val active = prefs.getBoolean("subActive", false)
-    val exp = prefs.getString("subExp", "") ?: ""
-    details.addView(label(if (active) "وضعیت: فعال" else "وضعیت: غیرفعال", 12.5f, if (active) accent else muted, true))
-    if (active && exp.isNotBlank()) details.addView(label("اعتبار تا: $exp", 12.5f, white))
-
-    // Purchased services are shown here; the free server list remains in the Gaming Server tab.
-    details.addView(label("سرویس خریداری‌شده", 14f, accent, true), vlp(0, 10))
-    val wgNames = (prefs.getStringSet("subWgNames", null) ?: emptySet<String>()).toList()
-    val purchasedV2 = prefs.getStringSet("subV2Names", null) ?: emptySet<String>()
-    if (!active) {
-        details.addView(label("برای مشاهده سرویس‌های خریداری‌شده، ابتدا وارد حساب شوید.", 12f, muted))
-    } else if (wgNames.isEmpty() && purchasedV2.isEmpty()) {
-        details.addView(label("سرویس اختصاصی WireGuard یا V2Gaming برای این حساب دریافت نشده است.", 12f, muted))
-    } else {
-        if (wgNames.isNotEmpty()) {
-            details.addView(label("WireGuard Gaming", 12.5f, white, true), vlp(0, 4))
-            wgNames.sorted().forEach { details.addView(label("• ${it.removeSuffix(".conf")}", 12f, white)) }
-        }
-        if (purchasedV2.isNotEmpty()) {
-            details.addView(label("V2Gaming", 12.5f, white, true), vlp(0, 4))
-            purchasedV2.sorted().forEach { details.addView(label("• $it", 12f, white)) }
-        }
-    }
-    details.addView(label("مصرف کانفیگ خریداری‌شده", 14f, accent, true), vlp(0, 10))
-    val used = prefs.getString("subTrafficUsed", "") ?: ""
-    val total = prefs.getString("subTrafficTotal", "") ?: ""
-    val remain = prefs.getString("subTrafficRemaining", "") ?: ""
-    if (used.isNotBlank()) {
-        details.addView(label("حجم مصرف‌شده: $used", 12.5f, white))
-        if (total.isNotBlank()) details.addView(label("حجم کل: $total", 12.5f, white))
-        if (remain.isNotBlank()) details.addView(label("حجم باقی‌مانده: $remain", 12.5f, white))
-    } else {
-        details.addView(label("اطلاعات مصرف باید از API سرویس اشتراک دریافت شود؛ سرور فعلاً مقدار مصرف را گزارش نکرده است.", 12f, muted))
-    }
-    card.addView(details)
-}
-
 internal fun MainActivity.buildVpn() {
     // ---------------- WireGuard
     section("WireGuard Gaming")
@@ -1097,7 +871,8 @@ internal fun MainActivity.buildVpn() {
         val act = WgState.activeName
         wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
         wStatus.setTextColor(if (up) good else white)
-        val names = listCfg("wg")
+        val acct = subWgNameSet()
+        val names = listCfg("wg").filter { !acct.contains(it.removeSuffix(".conf")) }
         val key = "$up|$act|$wgBusy|" + names.joinToString(",") + "|" + wgTestRes.toString() + "|" + (System.currentTimeMillis() / 3600000L)
         if (!force && key == wKey) return
         wKey = key
@@ -1119,7 +894,6 @@ internal fun MainActivity.buildVpn() {
             col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
             val ep = wgEndpoint(readCfg("wg", file))
             if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
-            col.addView(label("🎮 فقط بازی‌ها", 11.5f, accent, true), vlp(4, 2))
             val tr = wgTestRes[base] ?: ""
             if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
             row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
@@ -1225,12 +999,6 @@ internal fun MainActivity.buildVpn() {
     cRow.addView(bSave, lpS)
     cCard.addView(cRow, vlp(10, 6))
     cCard.addView(cRes, vlp(0, 6))
-    cCard.addView(
-        label(
-            "IPv6 فقط وقتی کار می‌کند که اینترنت شبکه‌ات IPv6 داشته باشد؛ اگر تست آن ✕ شد، از IPv4 استفاده کن. DNS ذخیره‌شده در لیست «DNS CHANGER» (تب شبکه) هم دیده می‌شود.",
-            11.5f, muted
-        ), vlp(2, 8)
-    )
     val cList = LinearLayout(this)
     cList.orientation = LinearLayout.VERTICAL
     cCard.addView(cList)
