@@ -109,98 +109,6 @@ internal fun MainActivity.applyWindowToggles() {
     window.attributes = wlp
 }
 
-internal fun MainActivity.toggleRow(parent: LinearLayout, title: String, desc: String, key: String) {
-    val row = LinearLayout(this)
-    row.orientation = LinearLayout.HORIZONTAL
-    row.gravity = Gravity.CENTER_VERTICAL
-    row.setPadding(0, dp(8), 0, dp(8))
-    val col = LinearLayout(this)
-    col.orientation = LinearLayout.VERTICAL
-    col.addView(label(title, 14f, white, true))
-    col.addView(label(desc, 11.5f, muted))
-    val pill = TextView(this)
-    pill.textSize = 12.5f
-    pill.typeface = Typeface.DEFAULT_BOLD
-    pill.gravity = Gravity.CENTER
-    pill.setPadding(dp(16), dp(8), dp(16), dp(8))
-    fun paint() {
-        val on = prefs.getBoolean(key, false)
-        pill.text = Tr.t(if (on) "روشن" else "خاموش")
-        pill.setTextColor(if (on) onAccent() else muted)
-        pill.background = if (on) rounded(accent, 20) else rounded(panel2, 20, stroke)
-    }
-    paint()
-    pill.setOnClickListener {
-        prefs.edit().putBoolean(key, !prefs.getBoolean(key, false)).apply()
-        applyWindowToggles()
-        paint()
-    }
-    val cp = LinearLayout.LayoutParams(0, WRAP, 1f)
-    cp.marginEnd = dp(10)
-    row.addView(col, cp)
-    row.addView(pill)
-    parent.addView(row, LinearLayout.LayoutParams(MATCH, WRAP))
-}
-
-internal fun MainActivity.buildTools() {
-    section("GAME MODE")
-    val modeCard = card()
-    toggleRow(modeCard, "روشن نگه‌داشتن صفحه", "تا وقتی این اپ بازه، صفحه خاموش نمی‌شود.", "keepOn")
-    toggleRow(modeCard, "حداکثر روشنایی", "فقط داخل همین اپ؛ روشنایی کل سیستم تغییر نمی‌کند.", "maxBright")
-    toggleRow(modeCard, "اتصال خودکار DNS", "اگر قبلاً یک‌بار DNS را وصل کرده باشی، با اجرای بازی از همین اپ، DNS انتخابی خودکار وصل می‌شود.", "autoDns")
-    content.addView(modeCard, vlp(0, 4))
-
-    section("SYSTEM SHORTCUTS")
-    val sCard = card()
-    sCard.addView(label("میان‌برهای مهم برای گیمینگ؛ تنظیمات سیستم را مستقیم باز می‌کنند.", 12f, muted), vlp(0, 8))
-    val items = listOf(
-        Pair("نمایشگر", Settings.ACTION_DISPLAY_SETTINGS),
-        Pair("باتری", Settings.ACTION_BATTERY_SAVER_SETTINGS),
-        Pair("مزاحم نشوید (DND)", Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS),
-        Pair("Wi-Fi", Settings.ACTION_WIFI_SETTINGS),
-        Pair("صدا", Settings.ACTION_SOUND_SETTINGS),
-        Pair("حافظه", Settings.ACTION_INTERNAL_STORAGE_SETTINGS),
-        Pair("گزینه‌های توسعه‌دهنده", Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-        Pair("مدیریت برنامه‌ها", Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS)
-    )
-    for (rowItems in items.chunked(2)) {
-        val r = LinearLayout(this)
-        r.orientation = LinearLayout.HORIZONTAL
-        for (it2 in rowItems) {
-            val b = button(it2.first, false) { openSettings(it2.second) }
-            b.textSize = 12.5f
-            val bp = LinearLayout.LayoutParams(0, WRAP, 1f)
-            bp.marginStart = dp(4)
-            bp.marginEnd = dp(4)
-            r.addView(b, bp)
-        }
-        sCard.addView(r, vlp(0, 8))
-    }
-    content.addView(sCard, vlp(0, 4))
-
-    section("PRE-GAME CHECKLIST")
-    val cCard = card()
-    val checks = listOf(
-        "حالت «مزاحم نشوید» را روشن کن",
-        "باتری بالای ۳۰٪ یا گوشی روی شارژر",
-        "Wi-Fi پایدار؛ دانلودهای پس‌زمینه را متوقف کن",
-        "کاور ضخیم را بردار تا گوشی خنک‌تر بماند",
-        "برنامه‌های سنگین را از Recent ببند"
-    )
-    for (c in checks) {
-        val t = label("☐   $c", 13.5f, white)
-        t.setPadding(0, dp(8), 0, dp(8))
-        var done = false
-        t.setOnClickListener {
-            done = !done
-            t.text = Tr.t((if (done) "☑   " else "☐   ") + c)
-            t.setTextColor(if (done) good else white)
-        }
-        cCard.addView(t, LinearLayout.LayoutParams(MATCH, WRAP))
-    }
-    content.addView(cCard, vlp(0, 4))
-}
-
 // ----- STATS ------------------------------------------------------------
 
 internal fun MainActivity.buildStats() {
@@ -234,7 +142,6 @@ internal fun MainActivity.buildStats() {
             val t = times[idx]
             topCard.addView(barRow(appLabel(t.first), fmtDur(t.second), t.second.toFloat() / top.toFloat(), accent, idx == 0))
         }
-        topCard.addView(label("زمان‌ها تقریبی‌اند: از لحظه‌ی اجرا تا بازگشت به این اپ حساب می‌شود.", 11.5f, muted), vlp(8, 0))
     }
     content.addView(topCard, vlp(0, 4))
 
@@ -312,12 +219,6 @@ internal fun MainActivity.buildStats() {
     section("ABOUT")
     val about = card()
     about.addView(label("EzzGameBOOST v" + currentVersion(), 14f, white, true, false))
-    about.addView(
-        label(
-            "این اپ بدون روت کار می‌کند. دکمه‌ی BOOST فقط از API رسمی اندروید برای بستن پردازش‌های پس‌زمینه استفاده می‌کند و اندروید ممکن است بعضی برنامه‌ها را دوباره اجرا کند. هیچ اپ معمولی نمی‌تواند FPS یا پینگ داخل بازی را تضمین کند؛ تست شبکه فقط زمان اتصال TCP را اندازه می‌گیرد.",
-            12f, muted
-        ), vlp(6, 10)
-    )
     about.addView(label(Tr.t("نسخه فعلی:") + " " + currentVersion(), 12f, muted, false, false), vlp(2, 6))
     val updBtn = button("🔄 بررسی آپدیت", false) {}
     about.addView(updBtn, vlp(0, 8))

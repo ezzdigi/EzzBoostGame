@@ -327,6 +327,11 @@ internal fun MainActivity.autoChecks() {
         prefs.edit().putLong("remoteWgTry", System.currentTimeMillis()).apply()
         importDefaultWgList(true) { vpnRender?.invoke() }
     }
+    // one-time: free V2Gaming list used to be merged with the account's servers; reload it clean
+    if (!prefs.getBoolean("subSplit1", false)) {
+        prefs.edit().putBoolean("subSplit1", true).apply()
+        refreshRemoteV2(true, null)
+    }
     checkSubSilently()
     checkUpdate(false, null)
 }
@@ -424,6 +429,14 @@ internal fun parseRepo(raw: String): String? {
 }
 
 
-// With an active subscription code the server's list (free + premium) is tried first;
-// an expired or invalid code gets an HTTP error there and the free GitHub list is used.
-internal fun MainActivity.listUrls(file: String): List<String> = remoteUrls(ghRepo(), file)
+// With an active subscription the server's DNS list (free + premium) is tried first.
+// V2Gaming / WireGuard account servers are not merged here: they are downloaded into the
+// "اشتراک ویژه" tab only (see Subscription.kt). An expired code gets an HTTP error and the
+// free GitHub list is used.
+internal fun MainActivity.listUrls(file: String): List<String> {
+    val token = prefs.getString("subCode", "") ?: ""
+    val base = remoteUrls(ghRepo(), file)
+    if (file != "dns.json") return base
+    if (token.isEmpty() || !prefs.getBoolean("subActive", false)) return base
+    return listOf(SUB_API + "?a=list&f=" + file + "&t=" + android.net.Uri.encode(token)) + base
+}

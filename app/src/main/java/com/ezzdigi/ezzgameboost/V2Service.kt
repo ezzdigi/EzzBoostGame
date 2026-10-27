@@ -141,6 +141,10 @@ object XrayCore {
         var c: Throwable = e
         if (c is InvocationTargetException && c.targetException != null) c = c.targetException
         val m = c.message
+        if (m != null && m.contains("without TLS or other encryption is prohibited")) {
+            return "این هسته‌ی Xray کانفیگ VLESS/Trojan بدون TLS یا Reality را قبول نمی‌کند. " +
+                "از ادمین بخواه Reality/TLS فعال کند، یا اپ را با هسته‌ی v26.6.27 بیلد کن."
+        }
         return if (m.isNullOrBlank()) c.javaClass.simpleName else m
     }
 
