@@ -453,33 +453,7 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
             inserted = true
         }
     }
-    return if (inserted) wgEnsureKeepalive(out.joinToString("\n")) else null
-}
-
-// Mobile NATs drop idle UDP mappings; a peer without PersistentKeepalive then stops receiving.
-internal fun wgEnsureKeepalive(text: String): String {
-    val src = text.split("\n")
-    val needs = ArrayList<Boolean>()
-    var cur = -1
-    for (ln in src) {
-        val t = ln.trim().lowercase()
-        if (t == "[peer]") {
-            cur++
-            needs.add(true)
-        } else if (cur >= 0 && t.startsWith("persistentkeepalive")) {
-            needs[cur] = false
-        }
-    }
-    val out = ArrayList<String>()
-    var idx = -1
-    for (ln in src) {
-        out.add(ln)
-        if (ln.trim().equals("[Peer]", ignoreCase = true)) {
-            idx++
-            if (needs[idx]) out.add("PersistentKeepalive = 25")
-        }
-    }
-    return out.joinToString("\n")
+    return if (inserted) out.joinToString("\n") else null
 }
 
 

@@ -493,7 +493,7 @@ internal fun MainActivity.launchGame(pkg: String) {
         launchWithProfile(pkg, prof)
         return
     }
-    if (prefs.getBoolean("autoDns", false) && !DnsVpnService.running && !V2VpnService.running && !WgState.up) {
+    if (prefs.getBoolean("autoDns", false) && !DnsVpnService.running) {
         val needConsent = try {
             VpnService.prepare(this) != null
         } catch (_: Exception) {

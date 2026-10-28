@@ -115,9 +115,6 @@ object Tr {
     // Whole-string translations (short labels, buttons).
     private val EXACT: Map<String, String> = mapOf(
         "وارد حساب نشده‌ای" to "You are not logged in",
-        "این پروتکل در اپ پشتیبانی نمی‌شود." to "This protocol is not supported in the app.",
-        "پشتیبانی نمی‌شود" to "Not supported",
-        "با این حساب در دستگاه دیگری وارد شده‌اند؛ دوباره وارد شو." to "This account was signed in on another device; sign in again.",
         "❌ اشتراک منقضی شده" to "❌ Subscription expired",
         "✅ اشتراک فعال" to "✅ Subscription active",
         "تاریخ پایان:" to "Ends on:",

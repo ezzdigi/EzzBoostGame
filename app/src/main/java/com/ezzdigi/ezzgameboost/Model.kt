@@ -238,9 +238,6 @@ class WgTun(private val tunnelName: String) : Tunnel {
     }
 }
 
-// Names of the games that go through the active WireGuard tunnel (shown in the row).
-val wgAppsInfo = java.util.concurrent.ConcurrentHashMap<String, String>()
-
 object WgState {
     @Volatile
     var up = false

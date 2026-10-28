@@ -457,12 +457,10 @@ class V2VpnService : VpnService() {
     }
 
     override fun onRevoke() {
-        lastError = "VPN توسط برنامه‌ی دیگری یا یک اتصال دیگر همین اپ (DNS / WireGuard) جایگزین شد."
         shutdown()
     }
 
     override fun onDestroy() {
-        if (running) lastError = "سرویس توسط سیستم بسته شد (احتمالاً محدودیت باتری یا رم)."
         running = false
         activeName = ""
         activeId = ""
