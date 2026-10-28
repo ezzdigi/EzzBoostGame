@@ -8,6 +8,54 @@
     {
       "name": "Game-From-File",
       "url": "https://github.com/ezzdigi/EzzBoostGame/blob/main/configs/game1.conf"
+    },
+    {
+      "name": "BE🇧🇪@super_Config_fast",
+      "conf": "[Interface]\nPrivateKey = qLc79pVskNMFinJ1OudypvwLyJKI1IsmDgxi2qHTI0g=\nAddress = 100.64.69.101/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.240.80:51820\nAllowedIPs = 0.0.0.0/0"
+    },
+    {
+      "name": "TR🇹🇷@super_Config_fast",
+      "conf": "[Interface]\nPrivateKey = 0AqbC2DOb1IK3l0hmCnFq6x1h9gR9ihonYkUVW4oMk0=\nAddress = 100.64.32.150/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.248.80:51820\nAllowedIPs = 0.0.0.0/0"
+    },
+    {
+      "name": "AR🇦🇷@super_Config_fast",
+      "conf": "[Interface]\nPrivateKey = SOYLEsyPzgxeO9HjVHLBfzGYo28urXiPUsSYaEaM03Y=\nAddress = 100.64.23.166/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.248.32:51820\nAllowedIPs = 0.0.0.0/0"
+    },
+    {
+      "name": "BG🇧🇬@super_Config_fast",
+      "conf": "[Interface]\nPrivateKey = ILX3L3crrdtApy69KR2yHUTF0QMsg3tkEvpKU450Yn8=\nAddress = 100.64.21.126/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.248.192:51820\nAllowedIPs = 0.0.0.0/0"
+    },
+    {
+      "name": "UA🇺🇦@super_Config_fast",
+      "conf": "[Interface]\nPrivateKey = aM0iOVTOYfWySCCBk3Hr96QY7yuUBbO/TVCvTWPyCG8=\nAddress = 100.64.20.31/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.248.64:51820\nAllowedIPs = 0.0.0.0/0"
+    },
+    {
+      "name": "USA🇺🇸@super_Config_fast",
+      "conf": "[Interface]\nPrivateKey = SHKOCec5hZ86+TG47EVdWolw4b/aeO+JqLeudtSc6Gs=\nAddress = 100.64.33.169/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 45.38.17.47:51820\nAllowedIPs = 0.0.0.0/0"
+    },
+    {
+      "name": "VIP-TURKIYE-Z91",
+      "conf": "[Interface]\nAddress = 84.44.39.159/32\nDNS = 84.44.39.159, 1.1.1.1\nMTU = 1200\nPrivateKey = qMWziE+2Y08nmj0mCNRi6Y9zfaRQzIYWzRba9F76GGc=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+    },
+    {
+      "name": "VIP-UKRAIN_SOK",
+      "conf": "[Interface]\nAddress = 93.171.157.249/32\nDNS = 93.171.157.249, 1.1.1.1\nMTU = 1200\nPrivateKey = AILCopv8wwIu7OYYwv37wlQcSDvYcQG4GSg9tr6cPFM=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+    },
+    {
+      "name": "VIP-GARMANY_DQO",
+      "conf": "[Interface]\nAddress = 213.142.159.108/32\nDNS = 213.142.159.108, 1.1.1.1\nMTU = 1200\nPrivateKey = mK9UEo/gKxS6xhKCs2/uQ8BLVexZs+n8XpoyyWmxakg=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+    },
+    {
+      "name": "VIP-FRANC_KOP",
+      "conf": "[Interface]\nAddress = 8.52.194.84/32\nDNS = 8.52.194.84, 1.1.1.1\nMTU = 1200\nPrivateKey = eI522zQstI3DpZBfYq9YJwEsA87p321K8Cfu6a50PGw=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+    },
+    {
+      "name": "Dns-EzzDigi",
+      "conf": "[Interface]\nPrivateKey = CPY04UnGehFDZGWOxRPCEs6UbZGFSgsNsUEod333TEQ=\nAddress = 192.168.67.202/32\nMTU = 1300\nDNS = 1.1.1.1,8.8.8.8,95.85.95.85,2.56.220.2,94.140.14.14,149.112.112.112\n\n[Peer]\nPublicKey = rtKJ7YW0UBdvgb5bY+ojafsFOUf0Y3MziiaWLL0ytkY=\nEndpoint = t1wire.steelping.ir:58531\nAllowedIPs = 0.0.0.0/0,::/0\nPersistentKeepalive = 20"
+    },
+    {
+      "name": "Ezzdigi-dnss",
+      "conf": "[Interface]\nPrivateKey = EOo7u6j6n+0EKHQiPOy8YZS1a4d0Fv0PJpb1a5T3SWI=\nAddress = 192.168.74.136/32\nMTU = 1300\nDNS = 1.1.1.1,8.8.8.8,95.85.95.85,2.56.220.2,94.140.14.14,149.112.112.112\n\n[Peer]\nPublicKey = rtKJ7YW0UBdvgb5bY+ojafsFOUf0Y3MziiaWLL0ytkY=\nEndpoint = t1wire.steelping.ir:58531\nAllowedIPs = 0.0.0.0/0,::/0\nPersistentKeepalive = 20"
     }
   ]
 }
