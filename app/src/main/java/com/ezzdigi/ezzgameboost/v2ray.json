@@ -2,8 +2,16 @@
   "version": 1,
   "configs": [
     {
-      "name": "نمونه - جایگزینش کن",
-      "link": "vless://00000000-0000-0000-0000-000000000000@example.com:443?security=tls&type=ws&path=%2F#Example"
+      "name": "Barry-far | Trojan",
+      "link": "https://raw.githubusercontent.com/barry-far/V2ray-Config/main/Splitted-By-Protocol/trojan.txt"
+    },
+    {
+      "name": "Barry-far | Shadowsocks",
+      "link": "https://raw.githubusercontent.com/barry-far/V2ray-Config/main/Splitted-By-Protocol/ss.txt"
+    },
+    {
+      "name": "Barry-far | VMess",
+      "link": "https://raw.githubusercontent.com/barry-far/V2ray-Config/main/Splitted-By-Protocol/vmess.txt"
     }
   ]
 }
