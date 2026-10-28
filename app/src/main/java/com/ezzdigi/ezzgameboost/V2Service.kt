@@ -141,10 +141,6 @@ object XrayCore {
         var c: Throwable = e
         if (c is InvocationTargetException && c.targetException != null) c = c.targetException
         val m = c.message
-        if (m != null && m.contains("without TLS or other encryption is prohibited")) {
-            return "این هسته‌ی Xray کانفیگ VLESS/Trojan بدون TLS یا Reality را قبول نمی‌کند. " +
-                "از ادمین بخواه Reality/TLS فعال کند، یا اپ را با هسته‌ی v26.6.27 بیلد کن."
-        }
         return if (m.isNullOrBlank()) c.javaClass.simpleName else m
     }
 
@@ -312,13 +308,6 @@ class V2VpnService : VpnService() {
             } catch (_: Exception) {
                 null
             }
-            // crash marker: if the process dies natively inside the core, the next launch shows this
-            try {
-                getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE).edit()
-                    .putString("v2Stage", "core " + XrayCore.version() + (if (config.contains("relay-in")) " + relay" else ""))
-                    .commit()
-            } catch (_: Throwable) {
-            }
             XrayCore.start(this, config, fd)
             activeName = name
             activeId = id
@@ -328,10 +317,6 @@ class V2VpnService : VpnService() {
             Thread { probeServer(pp, id) }.start()
         } catch (e: Throwable) {
             lastError = XrayCore.explain(e)
-            try {
-                getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE).edit().remove("v2Stage").apply()
-            } catch (_: Throwable) {
-            }
             running = false
             activeName = ""
             activeId = ""
@@ -414,10 +399,6 @@ class V2VpnService : VpnService() {
     }
 
     fun shutdown() {
-        try {
-            getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE).edit().remove("v2Stage").apply()
-        } catch (_: Throwable) {
-        }
         running = false
         activeName = ""
         activeId = ""

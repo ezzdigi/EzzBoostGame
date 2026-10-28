@@ -178,8 +178,8 @@ class MainActivity : Activity() {
     internal val accentNames = arrayOf("قرمز", "فیروزه‌ای", "بنفش", "سبز", "نارنجی")
     internal var accent = accents[0]
 
-    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊")
-    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار")
+    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "🛠", "📊")
+    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "ابزار", "آمار")
 
     internal var dnsCache: List<DnsProvider>? = null
     internal val dnsProviders: List<DnsProvider>
@@ -315,11 +315,6 @@ class MainActivity : Activity() {
                 }
             } catch (_: Throwable) {
             }
-        }
-        val stage = prefs.getString("v2Stage", "") ?: ""
-        if (stage.isNotEmpty()) {
-            prefs.edit().remove("v2Stage").apply()
-            if (txt.isNotEmpty()) txt = "V2Ray: " + stage + "\n" + txt
         }
         if (txt.isEmpty() || isDestroyed || isFinishing) return
         val shown = txt
@@ -480,7 +475,7 @@ class MainActivity : Activity() {
             1 -> buildGames()
             2 -> buildNetwork()
             3 -> buildVpn()
-            4 -> buildSubscription()
+            4 -> buildTools()
             else -> buildStats()
         }
         scroll.scrollTo(0, 0)
