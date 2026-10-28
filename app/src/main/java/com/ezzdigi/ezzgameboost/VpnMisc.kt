@@ -365,7 +365,7 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
             inserted = true
         }
     }
-    return if (inserted) out.joinToString("\n") else null
+    return if (inserted) wgEnsureKeepalive(out.joinToString("\n")) else null
 }
 
 internal fun MainActivity.testWg(base: String) {
@@ -394,6 +394,55 @@ internal fun MainActivity.testWg(base: String) {
 
 // Brings the tunnel up for this app only (never the whole phone), sends a small
 // request through it and reports whether the server answered.
+// Blocking: brings the config up for this app only, sends one small request through it and
+// brings it down again. Returns a one-line result. Call from a background thread.
+internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): String {
+    var result = ""
+    val tun = WgTestTun()
+    var up = false
+    try {
+        val scoped = wgScopeToPackages(text, listOf(packageName))
+        if (scoped == null) {
+            result = "✕ کانفیگ ساختار معتبر ندارد."
+        } else {
+            val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+            val be = wgBackendGet()
+            be.setState(tun, Tunnel.State.UP, cfg)
+            up = true
+            Thread.sleep(600)
+            var ms = -1L
+            val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
+            for (u in urls) {
+                val t0 = System.currentTimeMillis()
+                val b = httpGet(u, if (fast) 4000 else 6000, 4000)
+                if (b != null) {
+                    ms = System.currentTimeMillis() - t0
+                    break
+                }
+            }
+            result = if (ms >= 0) {
+                "✅ تونل جواب می‌دهد • $ms ms"
+            } else {
+                "✕ سرور وایرگارد جواب نمی‌دهد: کاربر روی سرور ساخته نشده، سرور خاموش یا بدون اینترنت است، یا پورت UDP بسته/فیلتر است. در این حالت بازی خطای شبکه می‌دهد."
+            }
+        }
+    } catch (e: Throwable) {
+        result = "✕ " + hideAddr((e.message ?: e.javaClass.simpleName).take(120))
+    }
+    if (up) {
+        try {
+            wgBackendGet().setState(tun, Tunnel.State.DOWN, null)
+        } catch (_: Throwable) {
+        }
+        // give the VPN service time to shut down so it cannot tear down the next tunnel
+        try {
+            Thread.sleep(2000)
+        } catch (_: Throwable) {
+        }
+    }
+    return result
+}
+
 internal fun MainActivity.runWgTest(base: String) {
     if (wgBusy) return
     val text = readCfg("wg", base + ".conf")
@@ -405,53 +454,7 @@ internal fun MainActivity.runWgTest(base: String) {
     wgTestRes[base] = "⏳ در حال تست…"
     vpnRefresh?.invoke()
     runBg {
-        var result = ""
-        val tun = WgTestTun()
-        var up = false
-        try {
-            val scoped = wgScopeToPackages(text, listOf(packageName))
-            if (scoped == null) {
-                result = "✕ کانفیگ ساختار معتبر ندارد."
-            } else {
-                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-                val be = wgBackendGet()
-                be.setState(tun, Tunnel.State.UP, cfg)
-                up = true
-                Thread.sleep(600)
-                var body: String? = null
-                var ms = -1L
-                val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
-                for (u in urls) {
-                    val t0 = System.currentTimeMillis()
-                    val b = httpGet(u, 6000, 4000)
-                    if (b != null) {
-                        body = b
-                        ms = System.currentTimeMillis() - t0
-                        break
-                    }
-                }
-                if (body != null) {
-                    var ip = ""
-                    var loc = ""
-                    for (ln in body.lines()) {
-                        if (ln.startsWith("ip=")) ip = ln.substring(3).trim()
-                        if (ln.startsWith("loc=")) loc = ln.substring(4).trim()
-                    }
-                    if (ip.isEmpty() && !body.contains("<") && body.length < 64) ip = body.trim()
-                    result = "✅ کار می‌کند • $ms ms" + (if (ip.isNotEmpty()) " • IP: $ip" else "") + (if (loc.isNotEmpty()) " • $loc" else "")
-                } else {
-                    result = "✕ جواب نیامد. سرور خاموش است، Endpoint/کلید اشتباه است یا پورت UDP بسته است."
-                }
-            }
-        } catch (e: Throwable) {
-            result = "✕ " + (e.message ?: e.javaClass.simpleName).take(120)
-        }
-        if (up) {
-            try {
-                wgBackendGet().setState(tun, Tunnel.State.DOWN, null)
-            } catch (_: Throwable) {
-            }
-        }
+        val result = wgSelfCheck(text)
         WgState.up = false
         WgState.activeName = ""
         ui {
@@ -771,6 +774,12 @@ internal fun MainActivity.doConnectWg(base: String) {
                 wgTunnel = tun
                 WgState.activeName = base
                 WgState.up = true
+                try {
+                    val pk = wgIncludePackages(base)
+                    val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
+                    wgAppsInfo[base] = if (labels.isEmpty()) "" else labels.take(4).joinToString("، ") + (if (labels.size > 4) " +" + (labels.size - 4) else "")
+                } catch (_: Throwable) {
+                }
             }
         } catch (e: Throwable) {
             err = (e.message ?: e.javaClass.simpleName).take(160)
@@ -782,7 +791,7 @@ internal fun MainActivity.doConnectWg(base: String) {
             } else if (err.isEmpty()) {
                 toast(Tr.t("متصل شد"))
             } else {
-                toast(Tr.t("خطای وایرگارد:") + " " + err)
+                toast(Tr.t("خطای وایرگارد:") + " " + hideAddr(err))
             }
             vpnRefresh?.invoke()
             homeRefresh?.invoke()
@@ -892,8 +901,8 @@ internal fun MainActivity.buildVpn() {
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
             col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
-            val ep = wgEndpoint(readCfg("wg", file))
-            if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
+            val gi = if (isActive) (wgAppsInfo[base] ?: "") else ""
+            if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
             val tr = wgTestRes[base] ?: ""
             if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
             row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))

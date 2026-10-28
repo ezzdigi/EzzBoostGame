@@ -342,7 +342,7 @@ internal fun githubTextLinks(body: String, maxCandidates: Int): List<String> {
             lower.startsWith("trojan://") || lower.startsWith("ss://")
         if (!known) continue
         if (!seenLinks.add(link)) continue
-        val encrypted = lower.startsWith("vmess://") || lower.startsWith("ss://") ||
+        val encrypted = lower.startsWith("vmess://") || lower.startsWith("ss://") || lower.startsWith("trojan://") ||
             lower.contains("security=tls") || lower.contains("security=reality")
         if (!encrypted) continue
         if (link.contains("@0.0.0.0")) continue
@@ -482,6 +482,27 @@ internal fun MainActivity.installedV2Clients(): List<Pair<String, String>> {
     return out
 }
 
+// Short Persian message for core errors (no technical text, no addresses).
+internal fun v2FriendlyError(raw: String): String {
+    if (raw.any { it in '\u0600'..'\u06FF' }) return hideAddr(raw)
+    val l = raw.lowercase()
+    return when {
+        l.contains("invalid key") || l.contains("bad key") -> "کلید این سرور نامعتبر است؛ لینک را دوباره از پنل بگیر."
+        l.contains("timeout") || l.contains("refused") || l.contains("unreachable") || l.contains("i/o") || l.contains("dial") ->
+            "سرور جواب نمی‌دهد؛ سرور دیگری را امتحان کن."
+        else -> "اتصال برقرار نشد؛ سرور دیگری را امتحان کن."
+    }
+}
+
+// Removes IPs and host:port pairs from text that is shown to the user.
+internal fun hideAddr(s: String): String {
+    var t = s
+    t = Regex("""\b\d{1,3}(?:\.\d{1,3}){3}(?::\d{1,5})?\b""").replace(t, "•••")
+    t = Regex("""\[[0-9a-fA-F:]+\](?::\d{1,5})?""").replace(t, "•••")
+    t = Regex("""\b[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+:\d{2,5}\b""").replace(t, "•••")
+    return t
+}
+
 internal fun MainActivity.v2Status(): String {
     var out = ""
     if (!XrayCore.available()) {
@@ -491,9 +512,9 @@ internal fun MainActivity.v2Status(): String {
         out += "\n⏳ ..."
     } else if (V2VpnService.running) {
         out += "\n🟢 V2Gaming متصل: " + V2VpnService.activeName
-        if (V2VpnService.probe.isNotBlank()) out += "\n" + V2VpnService.probe
+        if (V2VpnService.probe.isNotBlank()) out += "\n" + hideAddr(V2VpnService.probe)
     } else if (V2VpnService.lastError.isNotBlank()) {
-        out += "\n⚠️ خطا: " + V2VpnService.lastError
+        out += "\n⚠️ " + v2FriendlyError(V2VpnService.lastError)
     }
     return out.trim()
 }
@@ -601,7 +622,7 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
             box.setPadding(dp(12), dp(10), dp(12), dp(10))
             box.background = rounded(panel2, 12, stroke)
             box.addView(label((if (item.remote) "🌐 " else "") + item.name + (if (item.remote && isNewKey("v2", item.name)) "  🆕 جدید" else ""), 13.5f, white, true, false))
-            box.addView(label(item.proto.uppercase() + " • " + item.host + ":" + item.port, 11.5f, muted, false, false))
+            box.addView(label(item.proto.uppercase(), 11.5f, muted, false, false))
             val resLbl = label("", 12f, white, false, false)
             box.addView(resLbl)
             val br = LinearLayout(this)

@@ -289,6 +289,19 @@ private fun releaseFromJson(o: JSONObject): ReleaseInfo? {
 // "releases/latest" returns 404 when the newest release is a pre-release:
 //   1) /releases/latest   2) /releases?per_page=1   3) the releases.atom feed on github.com
 internal fun MainActivity.fetchLatestRelease(): ReleaseInfo? {
+    // Own server first (GitHub is blocked on many networks): SUB_BASE/update.json
+    try {
+        val own = httpGet(SUB_BASE + "/update.json", 8000, 20000)
+        if (own != null && own.trimStart().startsWith("{")) {
+            val o = JSONObject(own)
+            val v = o.optString("version", "").trim()
+            if (v.isNotEmpty()) {
+                val u = o.optString("url", "").trim()
+                return ReleaseInfo(v, if (u.isNotEmpty()) u else RELEASES_PAGE, o.optString("notes", "").trim().take(500))
+            }
+        }
+    } catch (_: Exception) {
+    }
     val repo = ghRepo()
     try {
         val b1 = httpGet("https://api.github.com/repos/$repo/releases/latest", 8000, 1000000)
@@ -453,7 +466,33 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
             inserted = true
         }
     }
-    return if (inserted) out.joinToString("\n") else null
+    return if (inserted) wgEnsureKeepalive(out.joinToString("\n")) else null
+}
+
+// Mobile NATs drop idle UDP mappings; a peer without PersistentKeepalive then stops receiving.
+internal fun wgEnsureKeepalive(text: String): String {
+    val src = text.split("\n")
+    val needs = ArrayList<Boolean>()
+    var cur = -1
+    for (ln in src) {
+        val t = ln.trim().lowercase()
+        if (t == "[peer]") {
+            cur++
+            needs.add(true)
+        } else if (cur >= 0 && t.startsWith("persistentkeepalive")) {
+            needs[cur] = false
+        }
+    }
+    val out = ArrayList<String>()
+    var idx = -1
+    for (ln in src) {
+        out.add(ln)
+        if (ln.trim().equals("[Peer]", ignoreCase = true)) {
+            idx++
+            if (needs[idx]) out.add("PersistentKeepalive = 25")
+        }
+    }
+    return out.joinToString("\n")
 }
 
 
