@@ -35,19 +35,19 @@
     },
     {
       "name": "VIP-TURKIYE-Z91",
-      "conf": "[Interface]\nAddress = 84.44.39.159/32\nDNS = 84.44.39.159, 1.1.1.1\nMTU = 1200\nPrivateKey = qMWziE+2Y08nmj0mCNRi6Y9zfaRQzIYWzRba9F76GGc=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+      "conf": "[Interface]\nAddress = 84.44.39.159/32\nDNS = 84.44.39.159, 1.1.1.1\nMTU = 1200\nPrivateKey = qMWziE+2Y08nmj0mCNRi6Y9zfaRQzIYWzRba9F76GGc=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\nEndpoint = t1wire.steelping.ir:58531\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
     },
     {
       "name": "VIP-UKRAIN_SOK",
-      "conf": "[Interface]\nAddress = 93.171.157.249/32\nDNS = 93.171.157.249, 1.1.1.1\nMTU = 1200\nPrivateKey = AILCopv8wwIu7OYYwv37wlQcSDvYcQG4GSg9tr6cPFM=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+      "conf": "[Interface]\nAddress = 93.171.157.249/32\nDNS = 93.171.157.249, 1.1.1.1\nMTU = 1200\nPrivateKey = AILCopv8wwIu7OYYwv37wlQcSDvYcQG4GSg9tr6cPFM=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\nEndpoint = t1wire.steelping.ir:58531\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
     },
     {
       "name": "VIP-GARMANY_DQO",
-      "conf": "[Interface]\nAddress = 213.142.159.108/32\nDNS = 213.142.159.108, 1.1.1.1\nMTU = 1200\nPrivateKey = mK9UEo/gKxS6xhKCs2/uQ8BLVexZs+n8XpoyyWmxakg=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+      "conf": "[Interface]\nAddress = 213.142.159.108/32\nDNS = 213.142.159.108, 1.1.1.1\nMTU = 1200\nPrivateKey = mK9UEo/gKxS6xhKCs2/uQ8BLVexZs+n8XpoyyWmxakg=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\nEndpoint = t1wire.steelping.ir:58531\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
     },
     {
       "name": "VIP-FRANC_KOP",
-      "conf": "[Interface]\nAddress = 8.52.194.84/32\nDNS = 8.52.194.84, 1.1.1.1\nMTU = 1200\nPrivateKey = eI522zQstI3DpZBfYq9YJwEsA87p321K8Cfu6a50PGw=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
+      "conf": "[Interface]\nAddress = 8.52.194.84/32\nDNS = 8.52.194.84, 1.1.1.1\nMTU = 1200\nPrivateKey = eI522zQstI3DpZBfYq9YJwEsA87p321K8Cfu6a50PGw=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\nEndpoint = t1wire.steelping.ir:58531\n\n# [Peer] TURN extensions\n#@wgt:EnableTURN = false\n#@wgt:UseUDP = false\n#@wgt:IPPort = \n#@wgt:VKLink = \n#@wgt:Mode = vk_link\n#@wgt:StreamNum = 4\n#@wgt:LocalPort = 9000\n#@wgt:PeerType = proxy_v2\n#@wgt:StreamsPerCred = 4"
     },
     {
       "name": "Dns-EzzDigi",
