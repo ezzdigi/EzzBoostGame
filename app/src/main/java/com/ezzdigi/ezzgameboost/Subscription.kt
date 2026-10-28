@@ -31,6 +31,8 @@ class SubStatus(
 @Volatile
 private var subSyncBusy = false
 
+private const val SESSION_LOST = "با این حساب در دستگاه دیگری وارد شده‌اند؛ دوباره وارد شو."
+
 internal fun jsonDays(o: JSONObject): Int {
     for (k in arrayOf("days_left", "daysLeft", "remaining_days", "days_remaining", "days")) {
         if (o.has(k)) {
@@ -184,15 +186,34 @@ internal fun MainActivity.removeSubItems() {
     removeSubConfig()
 }
 
+// Stable per-device id (hashed); the server locks an account to the first device that logs in.
+internal fun MainActivity.deviceId(): String {
+    var seed = try {
+        android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.ANDROID_ID) ?: ""
+    } catch (_: Throwable) {
+        ""
+    }
+    if (seed.isEmpty()) {
+        seed = prefs.getString("devFallback", "") ?: ""
+        if (seed.isEmpty()) {
+            seed = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("devFallback", seed).apply()
+        }
+    }
+    val md = java.security.MessageDigest.getInstance("SHA-256").digest(("ezzgb|" + seed).toByteArray())
+    return md.joinToString("") { "%02x".format(it) }
+}
+
 internal fun MainActivity.fetchSubStatus(token: String): SubStatus {
     val body = httpGet(SUB_API + "?a=status&t=" + Uri.encode(token))
     if (body == null) {
         val http4 = lastHttpErr.startsWith("HTTP 4")
-        return SubStatus(
-            false, "", -1,
-            if (http4) "حساب نامعتبر یا منقضی است." else "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")",
-            http4
-        )
+        val msg = when {
+            lastHttpErr == "HTTP 401" -> SESSION_LOST
+            http4 -> "حساب نامعتبر یا منقضی است."
+            else -> "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")"
+        }
+        return SubStatus(false, "", -1, msg, http4)
     }
     return try {
         val o = JSONObject(body)
@@ -238,14 +259,19 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
     runBg {
         var msg = ""
         var expired = false
+        var sessionLost = false
         try {
             val st = fetchSubStatus(token)
             if (!st.definite) {
                 msg = st.err
             } else if (!st.active) {
-                prefs.edit().putBoolean("subActive", false).putString("subExp", st.expires)
-                    .putInt("subDays", st.days).apply()
-                expired = true
+                if (st.err == SESSION_LOST) {
+                    sessionLost = true
+                } else {
+                    prefs.edit().putBoolean("subActive", false).putString("subExp", st.expires)
+                        .putInt("subDays", st.days).apply()
+                    expired = true
+                }
                 msg = st.err
             } else {
                 prefs.edit().putBoolean("subActive", true).putString("subExp", st.expires)
@@ -299,6 +325,11 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
         }
         ui {
             if (expired && subToken() == token) removeSubItems()
+            if (sessionLost && subToken() == token) {
+                logoutSub()
+                toast(msg)
+                if (tab == 4) showTab(4)
+            }
             vpnRender?.invoke()
             if (manual && onDone != null) onDone(msg)
         }
@@ -315,7 +346,7 @@ internal fun MainActivity.loginSub(user: String, pass: String, onDone: () -> Uni
     runBg {
         val r = httpPost(
             SUB_API + "?a=login",
-            "u=" + Uri.encode(u) + "&p=" + Uri.encode(pass)
+            "u=" + Uri.encode(u) + "&p=" + Uri.encode(pass) + "&d=" + deviceId()
         )
         var ok = false
         var token = ""
@@ -563,7 +594,7 @@ private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
         }
     }
     val b2 = if (!v2Supported(item.proto)) {
-        smallBtn("اتصال با کلاینت", true) { openInV2Client(item) }
+        smallBtn("پشتیبانی نمی‌شود", false) { toast("این پروتکل در اپ پشتیبانی نمی‌شود.") }
     } else if (isActive) {
         smallBtn("قطع اتصال", false) {
             V2VpnService.requestStop(this)
