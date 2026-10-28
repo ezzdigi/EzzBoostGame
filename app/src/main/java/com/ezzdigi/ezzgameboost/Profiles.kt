@@ -237,7 +237,7 @@ internal fun MainActivity.launchWithProfile(pkg: String, p: GameProfile) {
             connectWg(wgBase)
             return
         }
-    } else if (p.dns.isNotEmpty()) {
+    } else if (p.dns.isNotEmpty() && !WgState.up && !V2VpnService.running) {
         val pr = dnsProviders.firstOrNull { it.name == p.dns }
         if (pr != null && !(DnsVpnService.running && DnsVpnService.activeName == pr.name)) {
             pendingLaunch = pkg
