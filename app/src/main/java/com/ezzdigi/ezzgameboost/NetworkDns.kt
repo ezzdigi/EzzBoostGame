@@ -218,27 +218,8 @@ internal fun MainActivity.updatePingUi(
 }
 
 internal fun MainActivity.buildNetwork() {
-    val sub = prefs.getInt("netSub", 0)
-    val names = arrayOf("DNS", "Private DNS (DoT)", "PING")
-    val row = LinearLayout(this)
-    row.orientation = LinearLayout.HORIZONTAL
-    for (i in names.indices) {
-        val lp = LinearLayout.LayoutParams(WRAP, WRAP)
-        lp.marginEnd = dp(8)
-        row.addView(chip(names[i], i == sub) {
-            prefs.edit().putInt("netSub", i).apply()
-            showTab(tab)
-        }, lp)
-    }
-    content.addView(row, vlp(0, 10))
-    when (sub) {
-        1 -> buildPrivateDns()
-        2 -> buildPingLab()
-        else -> buildDnsChanger()
-    }
-}
+    buildDnsChanger()
 
-internal fun MainActivity.buildPingLab() {
     val hCard = card()
     val hTitle = label("", 13f, white, true, false)
     val hChart = ChartView(this, accent)
@@ -252,7 +233,6 @@ internal fun MainActivity.buildPingLab() {
     section("PING LAB")
     val pingCard = card()
     pingCard.addView(label("تست تأخیر اتصال", 15f, white, true))
-    pingCard.addView(label("زمان برقراری اتصال TCP تا سرور انتخابی؛ پینگ ICMP یا پینگ داخل بازی نیست.", 12f, muted))
 
     var onTargetChanged: () -> Unit = {}
     val hs = HorizontalScrollView(this)
@@ -474,23 +454,14 @@ internal fun MainActivity.buildPingLab() {
     content.addView(hCard, vlp(0, 4))
     refreshHistory()
 
-}
-
-internal fun MainActivity.buildPrivateDns() {
     section("PRIVATE DNS (DoT)")
     val dnsCard = card()
     dnsCard.addView(label("Private DNS در اندروید (DNS-over-TLS)", 15f, white, true))
-    dnsCard.addView(
-        label(
-            "روش دوم: DNS-over-TLS داخل تنظیمات خود اندروید. با زدن «کپی» نام میزبان کپی می‌شود؛ آن را در Private DNS وارد کن. اگر اتصال قطع شد، گزینه را روی Automatic برگردان.",
-            12f, muted
-        ), vlp(2, 6)
-    )
     val dnsOptions = listOf(
-        Pair("Cloudflare • سریع و عمومی", "one.one.one.one"),
-        Pair("Google Public DNS • عمومی", "dns.google"),
-        Pair("Quad9 • مسدودسازی دامنه‌های مخرب", "dns.quad9.net"),
-        Pair("AdGuard DNS • فیلتر تبلیغات", "dns.adguard-dns.com")
+        Pair("Cloudflare", "one.one.one.one"),
+        Pair("Google Public DNS", "dns.google"),
+        Pair("Quad9", "dns.quad9.net"),
+        Pair("AdGuard DNS", "dns.adguard-dns.com")
     )
     for (opt in dnsOptions) {
         val r = LinearLayout(this)
@@ -537,12 +508,6 @@ internal fun MainActivity.buildDnsChanger() {
     dCard.addView(fastBtn, vlp(0, 8))
     val benchBtn = button("تست سرعت همه‌ی DNSها", false) {}
     dCard.addView(benchBtn, vlp(0, 8))
-    dCard.addView(
-        label(
-            "اتصال با یک VPN محلی انجام می‌شود که فقط درخواست‌های DNS را به سرور انتخابی می‌فرستد؛ بقیه‌ی ترافیک از مسیر عادی می‌رود. اندروید هم‌زمان فقط یک VPN را نگه می‌دارد، پس VPN دیگر قطع می‌شود. اگر Private DNS روی حالت hostname است، اول آن را Off یا Automatic کن.",
-            11.5f, muted
-        )
-    )
     content.addView(dCard, vlp(0, 4))
 
     var lastKey = ""
@@ -566,15 +531,13 @@ internal fun MainActivity.buildDnsChanger() {
         }
         statusSub.text = Tr.t(statusSub.text.toString())
         connectBtn.text = Tr.t(connectBtn.text.toString())
-        val expanded = prefs.getBoolean("dnsExpand", false)
-        val key = "$running|$active|${sel.name}|${dnsPing.size}|$dnsBenchRunning|$expanded|${System.currentTimeMillis() / 3600000L}"
+        val key = "$running|$active|${sel.name}|${dnsPing.size}|$dnsBenchRunning|${System.currentTimeMillis() / 3600000L}"
         if (!force && key == lastKey) return
         lastKey = key
         listBox.removeAllViews()
         for (i in dnsProviders.indices) {
             val pr = dnsProviders[i]
             val isSel = pr.name == sel.name
-            if (!expanded && !isSel) continue
             val row = LinearLayout(this)
             row.orientation = LinearLayout.HORIZONTAL
             row.gravity = Gravity.CENTER_VERTICAL
@@ -597,17 +560,6 @@ internal fun MainActivity.buildDnsChanger() {
                 render(true)
             }
             listBox.addView(row, vlp(0, 6))
-        }
-        val others = dnsProviders.size - 1
-        if (others > 0) {
-            val ex = label(if (expanded) "▲ بستن سایر DNSها" else "▼ سایر DNSها ($others)", 13f, accent, true)
-            ex.gravity = Gravity.CENTER
-            ex.setPadding(0, dp(10), 0, dp(10))
-            ex.setOnClickListener {
-                prefs.edit().putBoolean("dnsExpand", !expanded).apply()
-                render(true)
-            }
-            listBox.addView(ex, vlp(2, 2))
         }
     }
 
@@ -636,9 +588,9 @@ internal fun MainActivity.buildDnsChanger() {
     }
 
     val remoteLbl = label(remoteDnsStatus(), 11.5f, muted)
-    dCard.addView(remoteLbl, dCard.childCount - 1, vlp(0, 6))
+    dCard.addView(remoteLbl, vlp(0, 6))
     val remoteBtn = button("🌐 به‌روزرسانی لیست DNS آنلاین", false) {}
-    dCard.addView(remoteBtn, dCard.childCount - 1, vlp(0, 8))
+    dCard.addView(remoteBtn, vlp(0, 8))
     remoteBtn.setOnClickListener {
         remoteBtn.text = Tr.t("در حال دریافت…")
         refreshRemoteDns(true) { n ->
