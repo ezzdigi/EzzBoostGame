@@ -47,8 +47,11 @@ class WgKeepService : Service() {
 
     private fun tick() {
         if (!WgState.wanted || WgState.reconnecting) return
+        // A VPN-slot conflict is handled by Android's VpnService/onRevoke path. Do not
+        // silently clear the user's intent here: the status row and reconnect logic must
+        // not permanently give up because another service's process flag is stale.
         if (DnsVpnService.running || V2VpnService.running) {
-            WgState.wanted = false
+            WgState.lastDrop = "یک سرویس VPN دیگر فعال است؛ وایرگارد تا آزاد شدن تونل منتظر می‌ماند"
             return
         }
         val be = WgState.backend ?: return
@@ -62,17 +65,21 @@ class WgKeepService : Service() {
             downTicks = 0
             val hs = wgLatestHandshake(be, tun)
             if (hs > 0L) {
+                // A stale handshake alone does NOT mean the tunnel is down. WireGuard
+                // does not create a new handshake on a fixed schedule when there is no
+                // traffic, even with PersistentKeepalive. Treating it as failure caused
+                // needless DOWN/UP cycles during idle periods.
                 WgState.attempts = 0
-                // with PersistentKeepalive the handshake is renewed about every 2 minutes while the server answers
-                if (now - hs > 210000L) reason = "سرور جواب نمی‌داد (هندشیک قدیمی)"
             } else if (now - WgState.upSince > 25000L) {
                 reason = "سرور جواب نمی‌داد (بدون هندشیک)"
             }
         }
         if (reason.isEmpty()) return
+        // Keep the user's connection request active. A temporary mobile-network or
+        // server outage must not permanently disable recovery after four attempts.
         if (WgState.attempts >= 4) {
-            WgState.wanted = false
-            WgState.lastDrop = reason + " • تلاش مجدد متوقف شد"
+            WgState.attempts = 0
+            WgState.lastDrop = reason + " • تلاش مجدد ادامه دارد"
             return
         }
         reconnect(be, tun, reason)
