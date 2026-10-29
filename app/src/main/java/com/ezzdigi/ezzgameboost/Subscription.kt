@@ -621,7 +621,7 @@ private fun MainActivity.subWgRow(base: String): LinearLayout {
     val col = LinearLayout(this)
     col.orientation = LinearLayout.VERTICAL
     col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
-    val gi = if (isActive) (wgAppsInfo[base] ?: "") else ""
+    val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
     if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
     val tr = wgTestRes[base] ?: ""
     if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))

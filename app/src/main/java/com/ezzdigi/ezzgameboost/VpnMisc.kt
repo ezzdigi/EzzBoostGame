@@ -713,17 +713,23 @@ internal fun MainActivity.testDnsAddrs(addrs: List<Pair<String, String>>, onDone
 
 // True once the server has answered the handshake. PersistentKeepalive makes the tunnel start one
 // right away, so no handshake within a few seconds means wrong endpoint/key or a closed UDP port.
+internal fun wgLatestHandshake(be: GoBackend, tun: Tunnel): Long {
+    var best = 0L
+    try {
+        val st = be.getStatistics(tun)
+        for (k in st.peers()) {
+            val ps = st.peer(k)
+            if (ps != null && ps.latestHandshakeEpochMillis() > best) best = ps.latestHandshakeEpochMillis()
+        }
+    } catch (_: Throwable) {
+    }
+    return best
+}
+
 internal fun waitWgHandshake(be: GoBackend, tun: Tunnel, timeoutMs: Long): Boolean {
     val end = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < end) {
-        try {
-            val st = be.getStatistics(tun)
-            for (k in st.peers()) {
-                val ps = st.peer(k)
-                if (ps != null && ps.latestHandshakeEpochMillis() > 0L) return true
-            }
-        } catch (_: Throwable) {
-        }
+        if (wgLatestHandshake(be, tun) > 0L) return true
         try {
             Thread.sleep(500)
         } catch (_: Throwable) {
@@ -731,6 +737,15 @@ internal fun waitWgHandshake(be: GoBackend, tun: Tunnel, timeoutMs: Long): Boole
     }
     return false
 }
+
+// One line for the active row: how often the watchdog had to bring the tunnel back, and why.
+internal fun wgHealthInfo(): String =
+    if (WgState.reconnects > 0 || WgState.lastDrop.isNotEmpty()) {
+        "\n🔁 " + WgState.reconnects + " بار دوباره وصل شد" +
+            (if (WgState.lastDrop.isNotEmpty()) " • " + WgState.lastDrop else "")
+    } else {
+        ""
+    }
 
 internal fun MainActivity.wgBackendGet(): GoBackend {
     var b = wgBackend
@@ -769,6 +784,7 @@ internal fun MainActivity.doConnectWg(base: String) {
     wgBusy = true
     toast(Tr.t("در حال اتصال به") + " " + base + "…")
     vpnRefresh?.invoke()
+    WgState.wanted = false
     runBg {
         var err = ""
         var noGames = false
@@ -807,6 +823,13 @@ internal fun MainActivity.doConnectWg(base: String) {
                     wgTunnel = tun
                     WgState.activeName = base
                     WgState.up = true
+                    WgState.baseName = base
+                    WgState.cfgText = scoped
+                    WgState.upSince = System.currentTimeMillis()
+                    WgState.attempts = 0
+                    WgState.reconnects = 0
+                    WgState.lastDrop = ""
+                    WgState.wanted = true
                     // keep the process alive (foreground) while the tunnel is up
                     try {
                         startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
@@ -843,6 +866,7 @@ internal fun MainActivity.doConnectWg(base: String) {
 
 internal fun MainActivity.disconnectWg() {
     if (wgBusy) return
+    WgState.wanted = false
     wgBusy = true
     runBg {
         try {
@@ -946,7 +970,7 @@ internal fun MainActivity.buildVpn() {
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
             col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
-            val gi = if (isActive) (wgAppsInfo[base] ?: "") else ""
+            val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
             if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
             val tr = wgTestRes[base] ?: ""
             if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
