@@ -293,14 +293,22 @@ class V2VpnService : VpnService() {
             b.addDnsServer("8.8.8.8")
             b.setMtu(1500)
             var allowed = 0
-            for (pk in pkgs) {
+            val rejected = ArrayList<String>()
+            // Android VPN allow-list: only these packages (favorite games + detected games)
+            // send traffic through this tunnel. Ignore stale/uninstalled package names safely.
+            for (pk in pkgs.distinct()) {
+                if (pk.isBlank() || pk == packageName) continue
                 try {
+                    packageManager.getApplicationInfo(pk, 0)
                     b.addAllowedApplication(pk)
                     allowed++
                 } catch (_: Exception) {
+                    rejected.add(pk)
                 }
             }
-            if (allowed == 0) throw IllegalStateException("بازی‌ای پیدا نشد؛ یک بازی را در تب بازی‌ها علاقه‌مند کن.")
+            if (allowed == 0) throw IllegalStateException(
+                "بازی قابل تونل پیدا نشد؛ در تب «بازی‌ها» روی ستاره بزن و دوباره وصل شو."
+            )
             if (Build.VERSION.SDK_INT >= 29) b.setMetered(false)
             val pfd = b.establish() ?: throw IllegalStateException("VPN ساخته نشد؛ اجازه‌ی VPN را بررسی کن.")
             tun = pfd

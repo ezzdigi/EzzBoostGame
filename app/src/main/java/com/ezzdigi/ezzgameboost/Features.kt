@@ -428,9 +428,15 @@ internal fun MainActivity.wgScopeGames(@Suppress("UNUSED_PARAMETER") base: Strin
 internal fun MainActivity.wgIncludePackages(base: String): List<String> = scopedPackages(base)
 
 internal fun MainActivity.scopedPackages(base: String?): List<String> {
+    // Build the allow-list from the same persisted favorites used by the Games tab.
+    // Read it AFTER loadApps(), because that call may auto-favorite newly detected games.
+    loadApps()
     val set = LinkedHashSet<String>()
-    for (a in loadApps()) if (a.isGame) set.add(a.pkg)
+    // Favorites are deliberately added first so they are never omitted just because Android
+    // did not classify an app as a game (many launchers/games do not set CATEGORY_GAME).
     set.addAll(favoriteSet())
+    // Keep automatic game discovery as a convenience in addition to explicit favorites.
+    for (a in loadApps()) if (a.isGame) set.add(a.pkg)
     for (k in prefs.all.keys) {
         if (k.startsWith("prof_")) {
             val pkg = k.removePrefix("prof_")
@@ -439,11 +445,13 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
         }
     }
     val out = ArrayList<String>()
-    for (p in set) {
+    for (pkg in set) {
+        if (pkg.isBlank() || pkg == packageName) continue
         try {
-            packageManager.getApplicationInfo(p, 0)
-            out.add(p)
+            packageManager.getApplicationInfo(pkg, 0)
+            out.add(pkg)
         } catch (_: Exception) {
+            // Ignore stale favorites for apps that have been uninstalled.
         }
     }
     return out

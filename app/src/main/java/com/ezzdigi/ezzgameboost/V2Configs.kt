@@ -552,7 +552,10 @@ internal fun MainActivity.startV2Service() {
     i.putExtra("name", p.first)
     i.putExtra("id", p.second)
     i.putExtra("config", p.third)
-    i.putExtra("pkgs", scopedPackages(null).toTypedArray())
+    // Resolve the current Games-tab favorites at connection time (after VPN permission
+    // dialogs too), then pass that exact allow-list to V2VpnService.
+    val gamePackages = scopedPackages(null)
+    i.putExtra("pkgs", gamePackages.toTypedArray())
     try {
         startService(i)
         toast(Tr.t("در حال اتصال V2Ray…"))
