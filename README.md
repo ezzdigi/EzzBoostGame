@@ -48,3 +48,5 @@ Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PA
 - WireGuard connect now runs a quick tunnel check first (handshake + one request) and shows the result in the row; the row also lists the games that go through the tunnel. Peers without PersistentKeepalive get 25 s added. DNS tab has sub-tabs (DNS / Private DNS (DoT) / PING) with the other DNS servers collapsed. Server addresses are hidden in V2 rows and error texts.
 
 - WireGuard connect no longer runs a pre-check tunnel (it could race with the real tunnel and drop it); the manual test now waits for the VPN service to shut down. V2Gaming shows short Persian errors. `v2ray.json` has a `sources` array (barry-far trojan/ss/vmess). The update check tries `SUB_BASE/update.json` first (see ezzsub/update.json), then GitHub.
+
+- WireGuard now runs a small foreground service (WgKeepService, notification "EzzGameBOOST WireGuard") while the tunnel is up, so the system does not kill the process when a heavy game starts (V2Ray and DNS already did this). It stops itself when the tunnel goes down.
