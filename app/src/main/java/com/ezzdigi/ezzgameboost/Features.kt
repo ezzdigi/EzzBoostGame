@@ -458,15 +458,17 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
 }
 
 internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
-    if (!wgScopeGames(base)) return text
+    // Preserve the user's WireGuard profile exactly: do not rewrite AllowedIPs, MTU, DNS,
+    // endpoints, or PersistentKeepalive. The only app-side addition is Android's per-app
+    // allow-list so selected games/favorites use this VPN.
     val pkgs = wgIncludePackages(base)
-    // Games-only mode must never fall back to a whole-phone tunnel.
     if (pkgs.isEmpty()) return null
     val out = ArrayList<String>()
     var inserted = false
     for (line in text.split("\n")) {
         val t = line.trim()
         val low = t.lowercase()
+        // Replace any old app-scope directives with the current favorites/game list.
         if (low.startsWith("includedapplications") || low.startsWith("excludedapplications")) continue
         out.add(line)
         if (!inserted && t.equals("[Interface]", ignoreCase = true)) {
@@ -474,7 +476,7 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
             inserted = true
         }
     }
-    return if (inserted) wgEnsureKeepalive(wgEnsureFullRoute(out.joinToString("\n"))) else null
+    return if (inserted) out.joinToString("\n") else null
 }
 
 // A game-only tunnel has to carry all traffic of the selected apps. A peer whose AllowedIPs lists only
