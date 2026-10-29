@@ -55,7 +55,6 @@ class WgKeepService : Service() {
         }
         val be = WgState.backend ?: return
         val tun = WgState.tunnel ?: return
-        val now = System.currentTimeMillis()
         var reason = ""
         if (!WgState.up) {
             downTicks++
@@ -63,13 +62,11 @@ class WgKeepService : Service() {
         } else {
             downTicks = 0
             val hs = wgLatestHandshake(be, tun)
-            if (hs > 0L) {
-                WgState.attempts = 0
-                // with PersistentKeepalive the handshake is renewed about every 2 minutes while the server answers
-                if (now - hs > 210000L) reason = "سرور جواب نمی‌داد (هندشیک قدیمی)"
-            } else if (now - WgState.upSince > 25000L) {
-                reason = "سرور جواب نمی‌داد (بدون هندشیک)"
-            }
+            // A stale handshake alone does NOT prove the tunnel is down: active traffic can
+            // continue without a new handshake, and forcing DOWN/UP here interrupts live games.
+            // PersistentKeepalive is added only when missing. Reconnect only if the backend
+            // actually reports the tunnel down (handled by the !WgState.up branch above).
+            if (hs > 0L) WgState.attempts = 0
         }
         if (reason.isEmpty()) return
         if (WgState.attempts >= 4) {
