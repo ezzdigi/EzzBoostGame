@@ -365,7 +365,7 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
             inserted = true
         }
     }
-    return if (inserted) wgEnsureKeepalive(out.joinToString("\n")) else null
+    return if (inserted) wgEnsureKeepalive(wgEnsureFullRoute(out.joinToString("\n"))) else null
 }
 
 internal fun MainActivity.testWg(base: String) {
@@ -711,6 +711,27 @@ internal fun MainActivity.testDnsAddrs(addrs: List<Pair<String, String>>, onDone
     }
 }
 
+// True once the server has answered the handshake. PersistentKeepalive makes the tunnel start one
+// right away, so no handshake within a few seconds means wrong endpoint/key or a closed UDP port.
+internal fun waitWgHandshake(be: GoBackend, tun: Tunnel, timeoutMs: Long): Boolean {
+    val end = System.currentTimeMillis() + timeoutMs
+    while (System.currentTimeMillis() < end) {
+        try {
+            val st = be.getStatistics(tun)
+            for (k in st.peers()) {
+                val ps = st.peer(k)
+                if (ps != null && ps.latestHandshakeEpochMillis() > 0L) return true
+            }
+        } catch (_: Throwable) {
+        }
+        try {
+            Thread.sleep(500)
+        } catch (_: Throwable) {
+        }
+    }
+    return false
+}
+
 internal fun MainActivity.wgBackendGet(): GoBackend {
     var b = wgBackend
     if (b == null) {
@@ -751,6 +772,7 @@ internal fun MainActivity.doConnectWg(base: String) {
     runBg {
         var err = ""
         var noGames = false
+        var noReply = false
         try {
             val scoped = try {
                 wgScopedConfig(base, text)
@@ -771,19 +793,31 @@ internal fun MainActivity.doConnectWg(base: String) {
                 }
                 val tun = WgTun(base)
                 be.setState(tun, Tunnel.State.UP, cfg)
-                wgTunnel = tun
-                WgState.activeName = base
-                WgState.up = true
-                // keep the process alive (foreground) while the tunnel is up
-                try {
-                    startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
-                } catch (_: Throwable) {
-                }
-                try {
-                    val pk = wgIncludePackages(base)
-                    val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
-                    wgAppsInfo[base] = if (labels.isEmpty()) "" else labels.take(4).joinToString("، ") + (if (labels.size > 4) " +" + (labels.size - 4) else "")
-                } catch (_: Throwable) {
+                if (!waitWgHandshake(be, tun, 9000L)) {
+                    // Do not show "connected" for a tunnel that carries nothing.
+                    try {
+                        be.setState(tun, Tunnel.State.DOWN, null)
+                    } catch (_: Throwable) {
+                    }
+                    wgTunnel = null
+                    WgState.up = false
+                    WgState.activeName = ""
+                    noReply = true
+                } else {
+                    wgTunnel = tun
+                    WgState.activeName = base
+                    WgState.up = true
+                    // keep the process alive (foreground) while the tunnel is up
+                    try {
+                        startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
+                    } catch (_: Throwable) {
+                    }
+                    try {
+                        val pk = wgIncludePackages(base)
+                        val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
+                        wgAppsInfo[base] = if (labels.isEmpty()) "" else labels.take(4).joinToString("، ") + (if (labels.size > 4) " +" + (labels.size - 4) else "")
+                    } catch (_: Throwable) {
+                    }
                 }
             }
         } catch (e: Throwable) {
@@ -793,6 +827,8 @@ internal fun MainActivity.doConnectWg(base: String) {
             wgBusy = false
             if (noGames) {
                 toast(Tr.t("بازی‌ای پیدا نشد. یک بازی نصب کن یا آن را در تب بازی‌ها علاقه‌مند کن."))
+            } else if (noReply) {
+                toast(Tr.t("سرور وایرگارد جواب نداد (Endpoint یا کلید اشتباه، یا پورت UDP بسته). این کانفیگ را عوض کن."))
             } else if (err.isEmpty()) {
                 toast(Tr.t("متصل شد"))
             } else {

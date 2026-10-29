@@ -558,7 +558,17 @@ internal fun MainActivity.buildDnsChanger() {
         if (!force && key == lastKey) return
         lastKey = key
         listBox.removeAllViews()
-        for (i in dnsProviders.indices) {
+        // Best ping first: measured servers ascending, untested keep their order, failed ones last.
+        val order = dnsProviders.indices.sortedWith(
+            compareBy<Int> {
+                val m = dnsPing[dnsProviders[it].name]
+                if (m == null) 1 else if (m < 0) 2 else 0
+            }.thenBy {
+                val m = dnsPing[dnsProviders[it].name]
+                if (m != null && m >= 0) m else 0
+            }
+        )
+        for (i in order) {
             val pr = dnsProviders[i]
             val isSel = pr.name == sel.name
             if (!expanded && !isSel) continue
@@ -607,7 +617,11 @@ internal fun MainActivity.buildDnsChanger() {
         }
         handler.postDelayed({ netRefresh?.invoke() }, 800)
     }
-    benchBtn.setOnClickListener { runDnsBench(benchBtn, { render(true) }, null) }
+    benchBtn.setOnClickListener {
+        // open the full list so the sorted results are visible
+        prefs.edit().putBoolean("dnsExpand", true).apply()
+        runDnsBench(benchBtn, { render(true) }, null)
+    }
     fastBtn.setOnClickListener {
         runDnsBench(benchBtn, { render(true) }, {
             val b = bestDnsIndex()
