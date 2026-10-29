@@ -545,6 +545,8 @@ internal fun MainActivity.connectV2(item: V2Item) {
 
 internal fun MainActivity.startV2Service() {
     val p = pendingV2 ?: return
+    // WireGuard, DNS and V2Ray cannot own Android's VPN slot simultaneously.
+    releaseOtherVpnForGaming()
     val i = Intent(this, V2VpnService::class.java)
     i.action = V2VpnService.ACTION_START
     i.putExtra("name", p.first)

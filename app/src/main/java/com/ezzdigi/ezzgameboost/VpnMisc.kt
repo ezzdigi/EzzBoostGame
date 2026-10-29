@@ -756,6 +756,24 @@ internal fun MainActivity.wgBackendGet(): GoBackend {
     return b
 }
 
+// Android permits only one active VpnService at a time. Before starting a premium gaming
+// tunnel, synchronously release DNS/V2Ray/WireGuard so an old service cannot replace the
+// new TUN or make the WireGuard watchdog abandon the connection.
+internal fun MainActivity.releaseOtherVpnForGaming() {
+    try { DnsVpnService.requestStop(this) } catch (_: Throwable) {}
+    try { V2VpnService.requestStop(this) } catch (_: Throwable) {}
+    WgState.wanted = false
+    val old = WgState.tunnel
+    val be = WgState.backend
+    if (old != null && be != null) {
+        try { be.setState(old, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
+    }
+    WgState.up = false
+    WgState.activeName = ""
+    WgState.tunnel = null
+    try { stopService(Intent(this, WgKeepService::class.java)) } catch (_: Throwable) {}
+}
+
 internal fun MainActivity.connectWg(base: String) {
     if (wgBusy) return
     pendingWg = base
@@ -790,6 +808,8 @@ internal fun MainActivity.doConnectWg(base: String) {
         var noGames = false
         var noReply = false
         try {
+            // Avoid competing local VPN services taking over Android's single VPN slot.
+            releaseOtherVpnForGaming()
             val scoped = try {
                 wgScopedConfig(base, text)
             } catch (_: Throwable) {
