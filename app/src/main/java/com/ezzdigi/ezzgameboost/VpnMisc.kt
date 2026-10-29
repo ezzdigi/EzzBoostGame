@@ -774,6 +774,11 @@ internal fun MainActivity.doConnectWg(base: String) {
                 wgTunnel = tun
                 WgState.activeName = base
                 WgState.up = true
+                // keep the process alive (foreground) while the tunnel is up
+                try {
+                    startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
+                } catch (_: Throwable) {
+                }
                 try {
                     val pk = wgIncludePackages(base)
                     val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
@@ -811,6 +816,10 @@ internal fun MainActivity.disconnectWg() {
         }
         WgState.up = false
         WgState.activeName = ""
+        try {
+            stopService(Intent(this, WgKeepService::class.java))
+        } catch (_: Throwable) {
+        }
         ui {
             wgBusy = false
             toast(Tr.t("وایرگارد قطع شد"))
