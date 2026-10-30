@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.ezzdigi.ezzgameboost"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.ezzdigi.ezzgameboost"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 3
         versionName = "2.1.0"
     }
