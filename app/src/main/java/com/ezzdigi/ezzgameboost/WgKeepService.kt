@@ -55,17 +55,17 @@ class WgKeepService : Service() {
         }
         val be = WgState.backend ?: return
         val tun = WgState.tunnel ?: return
+        val now = System.currentTimeMillis()
         var reason = ""
         if (!WgState.up) {
             downTicks++
             if (downTicks >= 2) reason = "تونل از سمت سیستم قطع شد"
         } else {
             downTicks = 0
+            // A stale/missing handshake is NOT enough evidence that the tunnel is down.
+            // Do not cycle DOWN/UP from the watchdog: that interrupts live-game sessions.
+            // Only an explicit backend-down state is handled by the branch above.
             val hs = wgLatestHandshake(be, tun)
-            // A stale handshake alone does NOT prove the tunnel is down: active traffic can
-            // continue without a new handshake, and forcing DOWN/UP here interrupts live games.
-            // PersistentKeepalive is added only when missing. Reconnect only if the backend
-            // actually reports the tunnel down (handled by the !WgState.up branch above).
             if (hs > 0L) WgState.attempts = 0
         }
         if (reason.isEmpty()) return
@@ -116,7 +116,7 @@ class WgKeepService : Service() {
         downChecks = 0
         downTicks = 0
         h.postDelayed(watcher, 6000)
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     private fun goForeground(name: String) {

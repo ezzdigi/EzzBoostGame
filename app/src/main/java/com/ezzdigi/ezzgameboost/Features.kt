@@ -458,14 +458,14 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
 }
 
 internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
-    // Keep the user's endpoint, keys, AllowedIPs, MTU and DNS intact. Add a conservative
-    // PersistentKeepalive only when a peer has none; this helps mobile NATs retain the UDP path.
-    val stableText = wgEnsureKeepalive(text)
+    // Preserve the user's WireGuard profile exactly: do not rewrite AllowedIPs, MTU, DNS,
+    // endpoints, or PersistentKeepalive. The only app-side addition is Android's per-app
+    // allow-list so selected games/favorites use this VPN.
     val pkgs = wgIncludePackages(base)
     if (pkgs.isEmpty()) return null
     val out = ArrayList<String>()
     var inserted = false
-    for (line in stableText.split("\n")) {
+    for (line in text.split("\n")) {
         val t = line.trim()
         val low = t.lowercase()
         // Replace any old app-scope directives with the current favorites/game list.
