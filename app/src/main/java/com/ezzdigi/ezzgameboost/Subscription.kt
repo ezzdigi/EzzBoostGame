@@ -153,6 +153,44 @@ internal fun MainActivity.subV2Items(): List<V2Item> {
     return out
 }
 
+// DNS Pro list (GitHub dns-pro.json, same format as dns.json), stored as "name<TAB>ip<TAB>ip" lines.
+private fun MainActivity.parseDnsLines(json: String): List<String>? {
+    return try {
+        val arr = JSONObject(json).optJSONArray("providers") ?: return null
+        val lines = ArrayList<String>()
+        for (i in 0 until minOf(arr.length(), 60)) {
+            val o = arr.optJSONObject(i) ?: continue
+            val name = o.optString("name", "").replace("\t", " ").replace("\n", " ").trim().take(40)
+            if (name.isEmpty()) continue
+            val sv = o.optJSONArray("servers") ?: continue
+            val ips = ArrayList<String>()
+            for (k in 0 until minOf(sv.length(), 4)) {
+                val ip = sv.optString(k, "").trim()
+                if (isIpv4(ip) || isIpv6(ip)) ips.add(ip)
+            }
+            if (ips.isEmpty()) continue
+            lines.add(name + "\t" + ips.joinToString("\t"))
+        }
+        lines
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+internal fun MainActivity.subDnsList(): List<DnsProvider> {
+    val out = ArrayList<DnsProvider>()
+    val raw = prefs.getString("subDns", "") ?: ""
+    for (line in raw.split("\n")) {
+        if (line.isBlank()) continue
+        val p = line.split("\t")
+        val ips = ArrayList<String>()
+        for (i in 1 until p.size) if (p[i].isNotBlank()) ips.add(p[i].trim())
+        if (p[0].isBlank() || ips.isEmpty()) continue
+        out.add(DnsProvider(p[0].trim(), ips[0], ips.getOrElse(1) { "" }, ips.getOrElse(2) { "" }, ips.getOrElse(3) { "" }))
+    }
+    return out
+}
+
 internal fun MainActivity.subWgNameSet(): Set<String> =
     prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
 
@@ -170,7 +208,7 @@ internal fun MainActivity.subWgList(): List<String> {
 internal fun MainActivity.removeSubConfig() {
     try {
         for (n in subWgNameSet()) deleteCfg("wg", "$n.conf")
-        prefs.edit().remove("subWgNames").remove("subV2").apply()
+        prefs.edit().remove("subWgNames").remove("subV2").remove("subDns").apply()
     } catch (_: Throwable) {
     }
 }
@@ -181,6 +219,7 @@ internal fun MainActivity.removeSubItems() {
         if (WgState.up && subWgNameSet().contains(WgState.activeName)) disconnectWg()
         val ids = subV2Items().map { it.raw.hashCode().toString() }
         if (V2VpnService.running && ids.contains(V2VpnService.activeId)) V2VpnService.requestStop(this)
+        if (DnsVpnService.running && subDnsList().any { it.name == DnsVpnService.activeName }) DnsVpnService.requestStop(this)
     } catch (_: Throwable) {
     }
     removeSubConfig()
@@ -367,6 +406,19 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
                     }
                 } else if (bodyWg == null && msg.isEmpty()) {
                     msg = "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")"
+                }
+                // DNS Pro (GitHub dns-pro.json)
+                var bodyDns: String? = null
+                for (u in remoteUrls(ghRepo(), "dns-pro.json")) {
+                    val b = httpGet(u, 8000, 600000)
+                    if (b != null && b.trimStart().startsWith("{")) {
+                        bodyDns = b
+                        break
+                    }
+                }
+                if (bodyDns != null && subToken() == token) {
+                    val dl = parseDnsLines(bodyDns)
+                    if (dl != null) prefs.edit().putString("subDns", dl.joinToString("\n")).apply()
                 }
                 if (msg.isEmpty()) prefs.edit().putLong("subSyncTs", System.currentTimeMillis()).apply()
             }
@@ -581,6 +633,38 @@ internal fun MainActivity.buildSubWg() {
     wCard.addView(wList, vlp(8, 0))
     content.addView(wCard, vlp(0, 4))
 
+    // DNS Pro: names only, with test + connect
+    section("X-PRO")
+    val dCard = card()
+    val dList = LinearLayout(this)
+    dList.orientation = LinearLayout.VERTICAL
+    dCard.addView(dList)
+    content.addView(dCard, vlp(0, 4))
+    val dnsRes = HashMap<String, String>()
+    var dKey = ""
+    fun renderD(force: Boolean) {
+        val items = subDnsList()
+        val run = DnsVpnService.running
+        val act = DnsVpnService.activeName
+        val k = items.joinToString(",") { it.name } + "|$run|$act|" + dnsRes.toString()
+        if (!force && k == dKey) return
+        dKey = k
+        dList.removeAllViews()
+        if (items.isEmpty()) {
+            dList.addView(label("هنوز DNSی نیست.", 12.5f, muted))
+            return
+        }
+        for (pr in items) {
+            dList.addView(
+                subDnsRow(pr, run && act == pr.name, dnsRes[pr.name] ?: "") { r ->
+                    dnsRes[pr.name] = r
+                    renderD(true)
+                },
+                vlp(0, 6)
+            )
+        }
+    }
+
 
     var wKey = ""
     fun renderW(force: Boolean) {
@@ -600,9 +684,10 @@ internal fun MainActivity.buildSubWg() {
         for (base in names) wList.addView(subWgRow(base), vlp(0, 6))
     }
 
-    vpnRefresh = { renderW(false) }
-    vpnRender = { renderW(true) }
+    vpnRefresh = { renderW(false); renderD(false) }
+    vpnRender = { renderW(true); renderD(true) }
     renderW(true)
+    renderD(true)
 }
 
 private fun MainActivity.buildSubLogin() {
@@ -697,6 +782,50 @@ private fun MainActivity.subWgRow(base: String): LinearLayout {
     row.addView(
         smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
             if (isActive) disconnectWg() else connectWg(base)
+        }
+    )
+    return row
+}
+
+private fun MainActivity.subDnsRow(
+    pr: DnsProvider,
+    isActive: Boolean,
+    res: String,
+    onRes: (String) -> Unit
+): LinearLayout {
+    val row = LinearLayout(this)
+    row.orientation = LinearLayout.HORIZONTAL
+    row.gravity = android.view.Gravity.CENTER_VERTICAL
+    row.setPadding(dp(12), dp(10), dp(12), dp(10))
+    row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
+    val col = LinearLayout(this)
+    col.orientation = LinearLayout.VERTICAL
+    col.addView(label(if (isActive) pr.name + "  ✓" else pr.name, 13.5f, white, true, false))
+    if (res.isNotEmpty()) col.addView(label(res, 11.5f, white, false, false), vlp(2, 2))
+    row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
+    val tlp = LinearLayout.LayoutParams(WRAP, WRAP)
+    tlp.marginEnd = dp(6)
+    row.addView(
+        smallBtn("🧪 تست", false) {
+            onRes(Tr.t("در حال تست…"))
+            runBg {
+                val vals = ArrayList<Int>()
+                for (k in 0 until 3) {
+                    val ms = dnsPingMs(pr.primary, 1200)
+                    if (ms >= 0) vals.add(ms)
+                }
+                val avg = if (vals.isEmpty()) -1 else vals.average().toInt()
+                ui {
+                    onRes(if (avg >= 0) "✅ $avg ms" else "❌ " + Tr.t("جواب نمی‌دهد"))
+                }
+            }
+        },
+        tlp
+    )
+    row.addView(
+        smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
+            if (isActive) stopDns() else connectDns(pr)
+            handler.postDelayed({ vpnRender?.invoke() }, 1200)
         }
     )
     return row
