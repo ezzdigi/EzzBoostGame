@@ -6,12 +6,16 @@ import org.amnezia.awg.backend.Tunnel
 import org.amnezia.awg.config.Config
 import java.io.ByteArrayInputStream
 
-private class EzzAwgTunnel(private val name: String) : Tunnel {
+internal class EzzAwgTunnel(private val name: String) : Tunnel {
     override fun getName(): String = name
     override fun onStateChange(newState: Tunnel.State) {
         AwgState.up = newState == Tunnel.State.UP
         if (!AwgState.up) AwgState.activeName = ""
     }
+
+    override fun isMetered(): Boolean = false
+
+    override fun isIpv4ResolutionPreferred(): Boolean = true
 }
 
 internal object AwgState {
@@ -71,16 +75,6 @@ internal fun MainActivity.connectAmneziaWg(base: String, raw: String) {
 
             val tunnel = EzzAwgTunnel(base)
             backend.setState(tunnel, Tunnel.State.UP, cfg)
-
-            val deadline = System.currentTimeMillis() + 10000L
-            while (System.currentTimeMillis() < deadline) {
-                if (backend.getLastHandshake(tunnel) > 0L) break
-                Thread.sleep(400)
-            }
-            if (backend.getLastHandshake(tunnel) <= 0L) {
-                try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
-                throw IllegalStateException("هندشیک دریافت نشد")
-            }
 
             AwgState.tunnel = tunnel
             AwgState.up = true
