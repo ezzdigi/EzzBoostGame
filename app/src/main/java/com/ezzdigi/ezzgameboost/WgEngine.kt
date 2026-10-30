@@ -28,10 +28,55 @@ object WgEngine {
     fun awg(ctx: Context): org.amnezia.awg.backend.GoBackend {
         var b = awg
         if (b == null) {
-            b = org.amnezia.awg.backend.GoBackend(ctx.applicationContext)
+            b = newAwgBackend(ctx.applicationContext)
             awg = b
         }
         return b
+    }
+
+    // The AmneziaWG GoBackend constructor takes an extra callback argument whose type differs between
+    // library versions. It is built by reflection and the callback is a do-nothing stub, because this
+    // app never uses pre/post-up scripts.
+    private fun newAwgBackend(ctx: Context): org.amnezia.awg.backend.GoBackend {
+        val cls = org.amnezia.awg.backend.GoBackend::class.java
+        for (c in cls.constructors) {
+            val p = c.parameterTypes
+            if (p.size == 1 && p[0].isAssignableFrom(ctx.javaClass)) {
+                return c.newInstance(ctx) as org.amnezia.awg.backend.GoBackend
+            }
+        }
+        for (c in cls.constructors) {
+            val p = c.parameterTypes
+            if (p.isNotEmpty() && p[0].isAssignableFrom(ctx.javaClass)) {
+                val args = arrayOfNulls<Any>(p.size)
+                args[0] = ctx
+                for (i in 1 until p.size) args[i] = stub(p[i])
+                return c.newInstance(*args) as org.amnezia.awg.backend.GoBackend
+            }
+        }
+        throw IllegalStateException("AmneziaWG GoBackend constructor not found")
+    }
+
+    private fun stub(t: Class<*>): Any? {
+        if (!t.isInterface) return null
+        return java.lang.reflect.Proxy.newProxyInstance(t.classLoader, arrayOf(t)) { proxy, m, args ->
+            when (m.name) {
+                "equals" -> proxy === args?.getOrNull(0)
+                "hashCode" -> System.identityHashCode(proxy)
+                "toString" -> "stub"
+                else -> when (m.returnType) {
+                    java.lang.Boolean.TYPE -> false
+                    java.lang.Integer.TYPE -> 0
+                    java.lang.Long.TYPE -> 0L
+                    java.lang.Float.TYPE -> 0f
+                    java.lang.Double.TYPE -> 0.0
+                    java.lang.Short.TYPE -> 0.toShort()
+                    java.lang.Byte.TYPE -> 0.toByte()
+                    java.lang.Character.TYPE -> '\u0000'
+                    else -> null
+                }
+            }
+        }
     }
 
     // Throws when the text is not a config its backend can parse.
@@ -65,6 +110,7 @@ class WgSession(ctx: Context, private val tunnelName: String, val awg: Boolean, 
 
     private val awgTun = object : org.amnezia.awg.backend.Tunnel {
         override fun getName(): String = tunnelName
+        override fun isIpv4ResolutionPreferred(): Boolean = false
         override fun onStateChange(newState: org.amnezia.awg.backend.Tunnel.State) {
             changed(newState == org.amnezia.awg.backend.Tunnel.State.UP)
         }
