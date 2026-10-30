@@ -760,6 +760,10 @@ internal fun MainActivity.connectDns(pr: DnsProvider) {
 }
 
 internal fun MainActivity.startDnsService(pr: DnsProvider) {
+    if (dnsGamePackages(this).isEmpty()) {
+        toast("بازی‌ای پیدا نشد؛ یک بازی را در تب بازی‌ها علاقه‌مند کن.")
+        return
+    }
     val i = Intent(this, DnsVpnService::class.java)
     i.action = DnsVpnService.ACTION_START
     i.putExtra("primary", pr.primary)

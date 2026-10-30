@@ -94,6 +94,36 @@ import java.util.concurrent.Executors
 // to the chosen DNS server (primary, then secondary as fallback).
 // ---------------------------------------------------------------------------
 
+// Installed games (plus the user's favorites) that the DNS tunnel is allowed to carry.
+// Everything else on the phone keeps its normal connection and DNS.
+internal fun dnsGamePackages(ctx: Context): List<String> {
+    val set = LinkedHashSet<String>()
+    try {
+        val pm = ctx.packageManager
+        val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
+        for (ri in pm.queryIntentActivities(intent, 0)) {
+            val ai = ri.activityInfo.applicationInfo
+            @Suppress("DEPRECATION")
+            val game = ai.category == ApplicationInfo.CATEGORY_GAME ||
+                (ai.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+            if (game) set.add(ri.activityInfo.packageName)
+        }
+        val fav = ctx.getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE).getStringSet("fav", null)
+        if (fav != null) set.addAll(fav)
+    } catch (_: Throwable) {
+    }
+    set.remove(ctx.packageName)
+    val out = ArrayList<String>()
+    for (p in set) {
+        try {
+            ctx.packageManager.getApplicationInfo(p, 0)
+            out.add(p)
+        } catch (_: Exception) {
+        }
+    }
+    return out
+}
+
 class DnsVpnService : VpnService() {
 
     companion object {
@@ -195,6 +225,21 @@ class DnsVpnService : VpnService() {
             b.addDnsServer(FAKE_DNS)
             b.setMtu(1500)
             b.setBlocking(true)
+            // Games only: the DNS tunnel must never touch Telegram, Instagram, browsers, YouTube...
+            var allowed = 0
+            for (pk in dnsGamePackages(this)) {
+                try {
+                    b.addAllowedApplication(pk)
+                    allowed++
+                } catch (_: Exception) {
+                }
+            }
+            if (allowed == 0) {
+                cleanup()
+                running = false
+                stopSelf()
+                return
+            }
             val pfd = b.establish()
             if (pfd == null) {
                 running = false
