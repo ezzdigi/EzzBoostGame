@@ -433,12 +433,17 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
 }
 
 internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
-    // Pro Gaming: accept the imported WireGuard .conf as-is.
-    // Do not inject IncludedApplications or rewrite Endpoint/AllowedIPs.
-    // WireGuard's own parser/backend validates the configuration at connect time.
+    // Pro Gaming accepts standard WireGuard .conf files, preserving the user's
+    // Endpoint, keys, addresses, DNS, MTU and peer settings. For a single-peer
+    // game tunnel, ensure the peer routes traffic through the tunnel; configs
+    // such as AllowedIPs=0.0.0.0/32 otherwise route only one address and games
+    // will not use the tunnel. This changes only the in-memory runtime config;
+    // the imported .conf file on disk remains untouched.
     @Suppress("UNUSED_VARIABLE")
     val ignoredBase = base
-    return text
+    if (isAwgConfig(text)) return null // Requires AmneziaWG backend, not standard WG.
+    val normalized = wgEnsureKeepalive(wgEnsureFullRoute(text))
+    return normalized
 }
 
 // A game-only tunnel has to carry all traffic of the selected apps. A peer whose AllowedIPs lists only
