@@ -238,10 +238,46 @@ class WgTun(private val tunnelName: String) : Tunnel {
     }
 }
 
+// Names of the games that go through the active WireGuard tunnel (shown in the row).
+val wgAppsInfo = java.util.concurrent.ConcurrentHashMap<String, String>()
+
 object WgState {
     @Volatile
     var up = false
 
     @Volatile
     var activeName = ""
+
+    // Process-wide (not tied to the activity) so the tunnel can be watched and revived while a game
+    // runs and the activity has been destroyed.
+    @Volatile
+    var backend: GoBackend? = null
+
+    @Volatile
+    var tunnel: WgTun? = null
+
+    // The user wants the tunnel up (set on connect, cleared on disconnect).
+    @Volatile
+    var wanted = false
+
+    @Volatile
+    var reconnecting = false
+
+    @Volatile
+    var baseName = ""
+
+    @Volatile
+    var cfgText = ""
+
+    @Volatile
+    var upSince = 0L
+
+    @Volatile
+    var attempts = 0
+
+    @Volatile
+    var reconnects = 0
+
+    @Volatile
+    var lastDrop = ""
 }

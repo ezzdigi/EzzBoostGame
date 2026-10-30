@@ -114,6 +114,19 @@ object Tr {
 
     // Whole-string translations (short labels, buttons).
     private val EXACT: Map<String, String> = mapOf(
+        "وارد حساب نشده‌ای" to "You are not logged in",
+        "این پروتکل در اپ پشتیبانی نمی‌شود." to "This protocol is not supported in the app.",
+        "پشتیبانی نمی‌شود" to "Not supported",
+        "با این حساب در دستگاه دیگری وارد شده‌اند؛ دوباره وارد شو." to "This account was signed in on another device; sign in again.",
+        "❌ اشتراک منقضی شده" to "❌ Subscription expired",
+        "✅ اشتراک فعال" to "✅ Subscription active",
+        "تاریخ پایان:" to "Ends on:",
+        "🔄 به‌روزرسانی" to "🔄 Refresh",
+        "در حال به‌روزرسانی…" to "Updating…",
+        "به‌روز شد ✅" to "Updated ✅",
+        "هنوز کانفیگی نیست." to "No configs yet.",
+        "🛒 تمدید / دریافت اکانت" to "🛒 Renew / get an account",
+        "همگام‌سازی ناموفق بود." to "Sync failed.",
         "🌐 به‌روزرسانی لیست DNS آنلاین" to "🌐 Update online DNS list",
         "📋 کلیپ‌بورد" to "📋 Clipboard",
         "هسته‌ی Xray در این نسخه نیست. نسخه‌ی Release را نصب کن." to "The Xray core is not included in this build. Install the Release version.",
@@ -220,8 +233,6 @@ object Tr {
         Pair("سرور گیمینگ", "Gaming Server"),
         Pair("اشتراک ویژه", "Premium subscription"),
         Pair("به زودی...", "Coming soon..."),
-        Pair("بعد از ورود با حساب اشتراک، سرورهای اختصاصی تو همین‌جا نمایش داده می‌شود.", "After you sign in, your own servers appear here."),
-        Pair("هنوز سروری به حساب تو اختصاص داده نشده.", "No server has been assigned to your account yet."),
         Pair("نام کاربری", "Username"),
         Pair("رمز عبور", "Password"),
         Pair("ورود به حساب", "Log in"),

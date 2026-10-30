@@ -342,7 +342,7 @@ internal fun githubTextLinks(body: String, maxCandidates: Int): List<String> {
             lower.startsWith("trojan://") || lower.startsWith("ss://")
         if (!known) continue
         if (!seenLinks.add(link)) continue
-        val encrypted = lower.startsWith("vmess://") || lower.startsWith("ss://") ||
+        val encrypted = lower.startsWith("vmess://") || lower.startsWith("ss://") || lower.startsWith("trojan://") ||
             lower.contains("security=tls") || lower.contains("security=reality")
         if (!encrypted) continue
         if (link.contains("@0.0.0.0")) continue
@@ -482,6 +482,27 @@ internal fun MainActivity.installedV2Clients(): List<Pair<String, String>> {
     return out
 }
 
+// Short Persian message for core errors (no technical text, no addresses).
+internal fun v2FriendlyError(raw: String): String {
+    if (raw.any { it in '\u0600'..'\u06FF' }) return hideAddr(raw)
+    val l = raw.lowercase()
+    return when {
+        l.contains("invalid key") || l.contains("bad key") -> "کلید این سرور نامعتبر است؛ لینک را دوباره از پنل بگیر."
+        l.contains("timeout") || l.contains("refused") || l.contains("unreachable") || l.contains("i/o") || l.contains("dial") ->
+            "سرور جواب نمی‌دهد؛ سرور دیگری را امتحان کن."
+        else -> "اتصال برقرار نشد؛ سرور دیگری را امتحان کن."
+    }
+}
+
+// Removes IPs and host:port pairs from text that is shown to the user.
+internal fun hideAddr(s: String): String {
+    var t = s
+    t = Regex("""\b\d{1,3}(?:\.\d{1,3}){3}(?::\d{1,5})?\b""").replace(t, "•••")
+    t = Regex("""\[[0-9a-fA-F:]+\](?::\d{1,5})?""").replace(t, "•••")
+    t = Regex("""\b[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+:\d{2,5}\b""").replace(t, "•••")
+    return t
+}
+
 internal fun MainActivity.v2Status(): String {
     var out = ""
     if (!XrayCore.available()) {
@@ -498,41 +519,7 @@ internal fun MainActivity.v2Status(): String {
     return out.trim()
 }
 
-// Removes IPs and host:port pairs from text that is shown to the user.
-internal fun hideAddr(s: String): String {
-    var t = s
-    t = Regex("""\b\d{1,3}(?:\.\d{1,3}){3}(?::\d{1,5})?\b""").replace(t, "•••")
-    t = Regex("""\[[0-9a-fA-F:]+\](?::\d{1,5})?""").replace(t, "•••")
-    t = Regex("""\b[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+:\d{2,5}\b""").replace(t, "•••")
-    return t
-}
-
-// Turns raw core errors into a short Persian explanation (and hides server addresses).
-internal fun v2FriendlyError(raw: String): String {
-    val l = raw.lowercase()
-    if (l.contains("vless without tls")) {
-        return "این سرور VLESS بدون رمزنگاری (TLS یا Reality) است و هسته‌ی جدید آن را رد می‌کند. در تنظیمات سرور security را روی tls یا reality بگذار."
-    }
-    if (l.contains("invalid key") || l.contains("bad key")) {
-        return "کلید این سرور نامعتبر است؛ لینک را از پنل دوباره کپی کن."
-    }
-    return "خطا: " + hideAddr(raw)
-}
-
-// True when the link is VLESS with neither TLS/Reality nor VLESS encryption (the core refuses it).
-internal fun v2IsPlainVless(raw: String): Boolean {
-    val l = raw.lowercase()
-    if (!l.startsWith("vless://")) return false
-    if (l.contains("security=tls") || l.contains("security=reality")) return false
-    val enc = Regex("""[?&]encryption=([^&#]*)""").find(l)?.groupValues?.get(1) ?: ""
-    return enc.isEmpty() || enc == "none"
-}
-
 internal fun MainActivity.connectV2(item: V2Item) {
-    if (v2IsPlainVless(item.raw)) {
-        toast(v2FriendlyError("vless without tls"))
-        return
-    }
     if (!XrayCore.available()) {
         toast(Tr.t("هسته‌ی Xray در این نسخه نیست. نسخه‌ی Release را نصب کن."))
         return
@@ -558,12 +545,17 @@ internal fun MainActivity.connectV2(item: V2Item) {
 
 internal fun MainActivity.startV2Service() {
     val p = pendingV2 ?: return
+    // WireGuard, DNS and V2Ray cannot own Android's VPN slot simultaneously.
+    releaseOtherVpnForGaming()
     val i = Intent(this, V2VpnService::class.java)
     i.action = V2VpnService.ACTION_START
     i.putExtra("name", p.first)
     i.putExtra("id", p.second)
     i.putExtra("config", p.third)
-    i.putExtra("pkgs", scopedPackages(null).toTypedArray())
+    // Resolve the current Games-tab favorites at connection time (after VPN permission
+    // dialogs too), then pass that exact allow-list to V2VpnService.
+    val gamePackages = scopedPackages(null)
+    i.putExtra("pkgs", gamePackages.toTypedArray())
     try {
         startService(i)
         toast(Tr.t("در حال اتصال V2Ray…"))
@@ -604,98 +596,6 @@ internal fun MainActivity.openInV2Client(item: V2Item) {
     toast(Tr.t("کلاینت V2Ray نصب نیست؛ لینک کپی شد."))
 }
 
-internal fun MainActivity.premiumV2Items(): List<V2Item> =
-    v2Lines(prefs.getString("premiumV2", "") ?: "", true)
-
-// One server row (test / connect / disconnect, optional delete for local items).
-internal fun MainActivity.v2RowView(item: V2Item, prefix: String, canDelete: Boolean, onDeleted: () -> Unit): LinearLayout {
-    val box = LinearLayout(this)
-    box.orientation = LinearLayout.VERTICAL
-    box.setPadding(dp(12), dp(10), dp(12), dp(10))
-    box.background = rounded(panel2, 12, stroke)
-    box.addView(label(prefix + item.name + (if (item.remote && prefix == "🌐 " && isNewKey("v2", item.name)) "  🆕 جدید" else ""), 13.5f, white, true, false))
-    box.addView(label(item.proto.uppercase(), 11.5f, muted, false, false))
-    val resLbl = label("", 12f, white, false, false)
-    box.addView(resLbl)
-    val br = LinearLayout(this)
-    br.orientation = LinearLayout.HORIZONTAL
-    val b1 = smallBtn("🧪 تست", false) {
-        if (item.proto == "hysteria2" || item.proto == "hy2" || item.proto == "tuic") {
-            resLbl.text = Tr.t("این پروتکل UDP است؛ تست TCP معنی ندارد.")
-        } else {
-            resLbl.text = Tr.t("در حال تست…")
-            runBg {
-                val ms = tcpPing(item.host, item.port, 3000)
-                ui {
-                    resLbl.text = if (ms >= 0) "✅ $ms ms" else "✕ " + Tr.t("پاسخ نداد")
-                }
-            }
-        }
-    }
-    val myId = item.raw.hashCode().toString()
-    val isActive = V2VpnService.running && V2VpnService.activeId == myId
-    val b2 = if (!v2Supported(item.proto)) {
-        smallBtn("اتصال با کلاینت", true) { openInV2Client(item) }
-    } else if (isActive) {
-        smallBtn("قطع اتصال", false) {
-            V2VpnService.requestStop(this)
-            handler.postDelayed({ vpnRender?.invoke() }, 700)
-        }
-    } else {
-        smallBtn("اتصال", true) { connectV2(item) }
-    }
-    val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
-    m1.marginEnd = dp(6)
-    val m2 = LinearLayout.LayoutParams(WRAP, WRAP)
-    m2.marginEnd = dp(6)
-    br.addView(b1, m1)
-    br.addView(b2, m2)
-    if (canDelete) {
-        val b4 = smallBtn("🗑", false) {
-            v2RemoveLocal(item.raw)
-            onDeleted()
-        }
-        val m4 = LinearLayout.LayoutParams(WRAP, WRAP)
-        m4.marginStart = dp(6)
-        br.addView(b4, m4)
-    }
-    box.addView(br, vlp(8, 0))
-    return box
-}
-
-private fun v2StateKey(items: List<V2Item>): String =
-    items.joinToString("|") { it.raw.hashCode().toString() } + "|" + V2VpnService.running + "|" +
-        V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError + "|" +
-        V2VpnService.probe + "|" + (System.currentTimeMillis() / 3600000L)
-
-// Subscription servers (separate from the free list below).
-internal fun MainActivity.buildPremiumV2(host: LinearLayout): (Boolean) -> Unit {
-    val statusLbl = label("", 11.5f, accent, false, false)
-    host.addView(statusLbl, vlp(4, 6))
-    val list = LinearLayout(this)
-    list.orientation = LinearLayout.VERTICAL
-    host.addView(list)
-    var key = ""
-    fun render(force: Boolean) {
-        val items = premiumV2Items()
-        val stText = v2Status()
-        statusLbl.text = if (stText.isEmpty()) "" else Tr.t(stText)
-        statusLbl.visibility = if (stText.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
-        val k = v2StateKey(items)
-        if (!force && k == key) return
-        key = k
-        list.removeAllViews()
-        if (items.isEmpty()) {
-            list.addView(label("هنوز V2Ray به حساب تو اختصاص داده نشده.", 12.5f, muted))
-            return
-        }
-        for (item in items) list.addView(v2RowView(item, "🔒 ", false) {}, vlp(0, 6))
-    }
-    render(true)
-    return { force -> render(force) }
-}
-
-// Free V2Ray list (online list, public sources, your own imports).
 internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
     section("V2Gaming")
     val vCard = card()
@@ -707,7 +607,10 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
     var key = ""
     fun render(force: Boolean) {
         val items = v2Items()
-        val k = v2StateKey(items) + "|" + prefs.getLong("remoteV2Ts", 0L)
+        val k = items.joinToString("|") { it.raw.hashCode().toString() } + "|" +
+            prefs.getLong("remoteV2Ts", 0L) + "|" + V2VpnService.running + "|" +
+            V2VpnService.busy + "|" + V2VpnService.activeId + "|" + V2VpnService.lastError + "|" + V2VpnService.probe + "|" +
+            (System.currentTimeMillis() / 3600000L)
         val stText = v2Status()
         statusLbl.text = if (stText.isEmpty()) "" else Tr.t(stText)
         statusLbl.visibility = if (stText.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
@@ -719,7 +622,58 @@ internal fun MainActivity.buildV2Section(): (Boolean) -> Unit {
             return
         }
         for (item in items) {
-            list.addView(v2RowView(item, if (item.remote) "🌐 " else "", !item.remote) { render(true) }, vlp(0, 6))
+            val box = LinearLayout(this)
+            box.orientation = LinearLayout.VERTICAL
+            box.setPadding(dp(12), dp(10), dp(12), dp(10))
+            box.background = rounded(panel2, 12, stroke)
+            box.addView(label((if (item.remote) "🌐 " else "") + item.name + (if (item.remote && isNewKey("v2", item.name)) "  🆕 جدید" else ""), 13.5f, white, true, false))
+            box.addView(label(item.proto.uppercase(), 11.5f, muted, false, false))
+            val resLbl = label("", 12f, white, false, false)
+            box.addView(resLbl)
+            val br = LinearLayout(this)
+            br.orientation = LinearLayout.HORIZONTAL
+            val b1 = smallBtn("🧪 تست", false) {
+                if (item.proto == "hysteria2" || item.proto == "hy2" || item.proto == "tuic") {
+                    resLbl.text = Tr.t("این پروتکل UDP است؛ تست TCP معنی ندارد.")
+                } else {
+                    resLbl.text = Tr.t("در حال تست…")
+                    runBg {
+                        val ms = tcpPing(item.host, item.port, 3000)
+                        ui {
+                            resLbl.text = if (ms >= 0) "✅ $ms ms" else "✕ " + Tr.t("پاسخ نداد")
+                        }
+                    }
+                }
+            }
+            val myId = item.raw.hashCode().toString()
+            val isActive = V2VpnService.running && V2VpnService.activeId == myId
+            val b2 = if (!v2Supported(item.proto)) {
+                smallBtn("اتصال با کلاینت", true) { openInV2Client(item) }
+            } else if (isActive) {
+                smallBtn("قطع اتصال", false) {
+                    V2VpnService.requestStop(this)
+                    handler.postDelayed({ vpnRender?.invoke() }, 700)
+                }
+            } else {
+                smallBtn("اتصال", true) { connectV2(item) }
+            }
+            val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
+            m1.marginEnd = dp(6)
+            val m2 = LinearLayout.LayoutParams(WRAP, WRAP)
+            m2.marginEnd = dp(6)
+            br.addView(b1, m1)
+            br.addView(b2, m2)
+            if (!item.remote) {
+                val b4 = smallBtn("🗑", false) {
+                    v2RemoveLocal(item.raw)
+                    render(true)
+                }
+                val m4 = LinearLayout.LayoutParams(WRAP, WRAP)
+                m4.marginStart = dp(6)
+                br.addView(b4, m4)
+            }
+            box.addView(br, vlp(8, 0))
+            list.addView(box, vlp(0, 6))
         }
     }
 
