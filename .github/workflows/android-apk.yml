@@ -57,9 +57,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p app/libs
-          # Core v26.6.27 still accepts VLESS/Trojan without TLS/Reality; newer cores refuse it.
-          gh release download v26.6.27 --repo 2dust/AndroidLibXrayLite --pattern 'libv2ray.aar' --dir app/libs --clobber \
-            || gh release download --repo 2dust/AndroidLibXrayLite --pattern 'libv2ray.aar' --dir app/libs --clobber \
+          gh release download --repo 2dust/AndroidLibXrayLite --pattern 'libv2ray.aar' --dir app/libs --clobber \
             || gh release download v26.8.20 --repo 2dust/AndroidLibXrayLite --pattern 'libv2ray.aar' --dir app/libs --clobber \
             || echo "::warning::Xray core download failed; V2Ray direct connect will be disabled in this build"
           ls -la app/libs
