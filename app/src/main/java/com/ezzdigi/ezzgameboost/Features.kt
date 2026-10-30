@@ -432,28 +432,90 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
     return out
 }
 
-// The config runs exactly as given: AllowedIPs, keepalive and every other key are left alone.
-// The only thing added is the games-only app list, and only when the config has no
-// IncludedApplications / ExcludedApplications of its own (those are used as written).
 internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
     if (!wgScopeGames(base)) return text
-    for (line in text.split("\n")) {
-        val low = line.trim().lowercase()
-        if (low.startsWith("includedapplications") || low.startsWith("excludedapplications")) return text
-    }
     val pkgs = wgIncludePackages(base)
     // Games-only mode must never fall back to a whole-phone tunnel.
     if (pkgs.isEmpty()) return null
     val out = ArrayList<String>()
     var inserted = false
     for (line in text.split("\n")) {
+        val t = line.trim()
+        val low = t.lowercase()
+        if (low.startsWith("includedapplications") || low.startsWith("excludedapplications")) continue
         out.add(line)
-        if (!inserted && line.trim().equals("[Interface]", ignoreCase = true)) {
+        if (!inserted && t.equals("[Interface]", ignoreCase = true)) {
             out.add("IncludedApplications = " + pkgs.joinToString(", "))
             inserted = true
         }
     }
-    return if (inserted) out.joinToString("\n") else null
+    return if (inserted) wgEnsureKeepalive(wgEnsureFullRoute(out.joinToString("\n"))) else null
+}
+
+// A game-only tunnel has to carry all traffic of the selected apps. A peer whose AllowedIPs lists only
+// a few addresses leaves the game servers and the DNS server outside the tunnel, so the game loses its
+// network right after it starts even though the tunnel shows as connected. Single-peer configs only.
+internal fun wgEnsureFullRoute(text: String): String {
+    val lines = text.split("\n")
+    var peers = 0
+    var v6 = false
+    for (ln in lines) {
+        val t = ln.trim().lowercase()
+        if (t == "[peer]") peers++
+        if (t.startsWith("address") && t.contains(":")) v6 = true
+    }
+    if (peers != 1) return text
+    val full = if (v6) "AllowedIPs = 0.0.0.0/0, ::/0" else "AllowedIPs = 0.0.0.0/0"
+    val out = ArrayList<String>()
+    var inPeer = false
+    var seen = false
+    for (ln in lines) {
+        val t = ln.trim()
+        if (t.startsWith("[")) {
+            if (inPeer && !seen) out.add(full)
+            inPeer = t.equals("[Peer]", ignoreCase = true)
+            seen = false
+            out.add(ln)
+            continue
+        }
+        if (inPeer && t.lowercase().startsWith("allowedips")) {
+            seen = true
+            val v = t.substringAfter("=", "")
+            if (!v.contains("0.0.0.0/0")) {
+                out.add(full)
+                continue
+            }
+        }
+        out.add(ln)
+    }
+    if (inPeer && !seen) out.add(full)
+    return out.joinToString("\n")
+}
+
+// Mobile NATs drop idle UDP mappings; a peer without PersistentKeepalive then stops receiving.
+internal fun wgEnsureKeepalive(text: String): String {
+    val src = text.split("\n")
+    val needs = ArrayList<Boolean>()
+    var cur = -1
+    for (ln in src) {
+        val t = ln.trim().lowercase()
+        if (t == "[peer]") {
+            cur++
+            needs.add(true)
+        } else if (cur >= 0 && t.startsWith("persistentkeepalive")) {
+            needs[cur] = false
+        }
+    }
+    val out = ArrayList<String>()
+    var idx = -1
+    for (ln in src) {
+        out.add(ln)
+        if (ln.trim().equals("[Peer]", ignoreCase = true)) {
+            idx++
+            if (needs[idx]) out.add("PersistentKeepalive = 25")
+        }
+    }
+    return out.joinToString("\n")
 }
 
 

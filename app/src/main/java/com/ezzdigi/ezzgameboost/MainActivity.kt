@@ -211,7 +211,12 @@ class MainActivity : Activity() {
     internal var netRefresh: (() -> Unit)? = null
     internal var vpnRefresh: (() -> Unit)? = null
     internal var vpnRender: (() -> Unit)? = null
-    internal var wgTunnel: WgSession?
+    internal var wgBackend: GoBackend?
+        get() = WgState.backend
+        set(v) {
+            WgState.backend = v
+        }
+    internal var wgTunnel: WgTun?
         get() = WgState.tunnel
         set(v) {
             WgState.tunnel = v
