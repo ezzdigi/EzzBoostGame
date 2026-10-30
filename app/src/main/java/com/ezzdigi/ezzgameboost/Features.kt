@@ -370,23 +370,6 @@ internal fun MainActivity.addUpdateBanner() {
     content.addView(c, vlp(0, 6))
 }
 
-internal fun MainActivity.autoChecks() {
-    refreshRemoteDns(false, null)
-    refreshRemoteV2(false, null)
-    val lastWg = prefs.getLong("remoteWgTry", 0L)
-    if (System.currentTimeMillis() - lastWg >= 12L * 3600L * 1000L) {
-        prefs.edit().putLong("remoteWgTry", System.currentTimeMillis()).apply()
-        importDefaultWgList(true) { vpnRender?.invoke() }
-    }
-    // one-time: free V2Gaming list used to be merged with the account's servers; reload it clean
-    if (!prefs.getBoolean("subSplit1", false)) {
-        prefs.edit().putBoolean("subSplit1", true).apply()
-        refreshRemoteV2(true, null)
-    }
-    checkSubSilently()
-    checkUpdate(false, null)
-}
-
 // ----- "New" badge: an item first seen in an online list is marked new for 24 hours.
 // The very first sync of a list is the baseline (nothing is marked new).
 

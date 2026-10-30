@@ -123,7 +123,7 @@ internal fun MainActivity.editProfile(item: AppItem, after: () -> Unit) {
     val old = getProfile(item.pkg)
     var dns = old?.dns ?: ""
     var wg = old?.wg ?: ""
-    var boost = old?.boost ?: false
+    val boost = false // RAM cleaning was removed
     var keepOn = old?.keepOn ?: false
     var again: () -> Unit = {}
 
@@ -147,7 +147,6 @@ internal fun MainActivity.editProfile(item: AppItem, after: () -> Unit) {
         val labels = arrayOf(
             "🌐 DNS: " + (if (dns.isEmpty()) Tr.t("بدون تغییر") else dns),
             "🔐 " + Tr.t("وایرگارد") + ": " + (if (wg.isEmpty()) Tr.t("بدون وایرگارد") else wg),
-            "⚡ " + Tr.t("پاک‌سازی RAM قبل از اجرا") + ": " + onOff(boost),
             "📱 " + Tr.t("روشن ماندن صفحه") + ": " + onOff(keepOn),
             "💾 " + Tr.t("ذخیره پروفایل"),
             "🗑 " + Tr.t("حذف پروفایل")
@@ -166,14 +165,10 @@ internal fun MainActivity.editProfile(item: AppItem, after: () -> Unit) {
                         wg
                     ) { wg = it }
                     2 -> {
-                        boost = !boost
-                        again()
-                    }
-                    3 -> {
                         keepOn = !keepOn
                         again()
                     }
-                    4 -> {
+                    3 -> {
                         if (dns.isEmpty() && wg.isEmpty() && !boost && !keepOn) {
                             deleteProfile(item.pkg)
                         } else {
@@ -197,26 +192,6 @@ internal fun MainActivity.editProfile(item: AppItem, after: () -> Unit) {
     showMain()
 }
 
-internal fun MainActivity.quietBoost(skipPkg: String) {
-    val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-    runBg {
-        try {
-            val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
-            val pkgs = packageManager.queryIntentActivities(intent, 0)
-                .map { it.activityInfo.packageName }
-                .distinct()
-                .filter { it != packageName && it != skipPkg }
-            for (p in pkgs) {
-                try {
-                    am.killBackgroundProcesses(p)
-                } catch (_: Exception) {
-                }
-            }
-        } catch (_: Exception) {
-        }
-    }
-}
-
 internal fun MainActivity.launchPendingSoon(delayMs: Long) {
     val pkg = pendingLaunch ?: return
     pendingLaunch = null
@@ -228,7 +203,6 @@ internal fun MainActivity.launchWithProfile(pkg: String, p: GameProfile) {
         prefs.edit().putBoolean("keepOn", true).apply()
         applyWindowToggles()
     }
-    if (p.boost) quietBoost(pkg)
     val wgBase = p.wg
     if (wgBase.isNotEmpty() && listCfg("wg").contains("$wgBase.conf")) {
         val already = WgState.up && WgState.activeName == wgBase

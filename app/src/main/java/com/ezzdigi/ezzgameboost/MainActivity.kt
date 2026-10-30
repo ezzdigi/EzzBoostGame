@@ -178,11 +178,11 @@ class MainActivity : Activity() {
     internal val accentNames = arrayOf("قرمز", "فیروزه‌ای", "بنفش", "سبز", "نارنجی")
     internal var accent = accents[0]
 
-    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊")
-    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار")
+    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊", "🚀", "⚡")
+    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار", "EzzGaming", "Pro Gaming")
     // The Home (0) and Gaming server (3) tabs are removed from the app. Indices stay the same so the
     // other tabs keep working; those two are neither shown nor built.
-    internal val visibleTabs = intArrayOf(1, 2, 4, 5)
+    internal val visibleTabs = intArrayOf(1, 2, 4, 6, 7, 5)
 
     internal var dnsCache: List<DnsProvider>? = null
     internal val dnsProviders: List<DnsProvider>
@@ -253,11 +253,6 @@ class MainActivity : Activity() {
             }
             try {
                 vpnRefresh?.invoke()
-            } catch (_: Throwable) {
-            }
-            try {
-                // cheap: returns at once unless V2_REFRESH_HOURS have passed
-                refreshRemoteV2(false, null)
             } catch (_: Throwable) {
             }
             handler.postDelayed(this, 2000)
@@ -349,7 +344,6 @@ class MainActivity : Activity() {
         buildShell()
         applyWindowToggles()
         showTab(1)
-        autoChecks()
     }
 
     override fun onResume() {
@@ -358,12 +352,10 @@ class MainActivity : Activity() {
         if (recorded && (tab == 0 || tab == 1 || tab == 5) && ::content.isInitialized) showTab(tab)
         handler.removeCallbacks(ticker)
         handler.post(ticker)
-        refreshWidget()
     }
 
     override fun onPause() {
         handler.removeCallbacks(ticker)
-        refreshWidget()
         super.onPause()
     }
 
@@ -493,6 +485,8 @@ class MainActivity : Activity() {
             2 -> buildNetwork()
             3 -> buildVpn()
             4 -> buildSubscription()
+            6 -> buildSubV2()
+            7 -> buildSubWg()
             else -> buildStats()
         }
         scroll.scrollTo(0, 0)

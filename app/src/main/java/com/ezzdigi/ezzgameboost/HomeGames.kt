@@ -118,24 +118,6 @@ internal fun MainActivity.buildHome() {
     gCard.addView(gRow)
     content.addView(gCard, vlp(0, 4))
 
-    section("BOOST CENTER")
-    val bCard = card()
-    bCard.gravity = Gravity.CENTER_HORIZONTAL
-    val boost = BoostView(this, accent, panel, white)
-    val bp = LinearLayout.LayoutParams(dp(170), dp(170))
-    bp.gravity = Gravity.CENTER_HORIZONTAL
-    bCard.addView(boost, bp)
-    val boostMsg = label("", 12.5f, muted)
-    boostMsg.gravity = Gravity.CENTER
-    val mp = LinearLayout.LayoutParams(MATCH, WRAP)
-    mp.topMargin = dp(10)
-    bCard.addView(boostMsg, mp)
-    boost.setOnClickListener {
-        it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-        runBoost(boost, boostMsg)
-    }
-    content.addView(bCard, vlp(0, 4))
-
     section("QUICK LAUNCH")
     val favs = favoriteSet()
     if (favs.isEmpty()) {
@@ -229,50 +211,6 @@ internal fun MainActivity.appTile(pkg: String): View {
     t.addView(name, np)
     t.setOnClickListener { launchGame(pkg) }
     return t
-}
-
-internal fun MainActivity.runBoost(view: BoostView, msg: TextView) {
-    if (view.running) return
-    val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-    val before = ramInfo().first
-    view.start()
-    msg.setTextColor(muted)
-    msg.text = Tr.t("در حال پاک‌سازی پردازش‌های پس‌زمینه…")
-    runBg {
-        var count = 0
-        try {
-            val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
-            val pkgs = packageManager.queryIntentActivities(intent, 0)
-                .map { it.activityInfo.packageName }
-                .distinct()
-                .filter { it != packageName }
-            for (p in pkgs) {
-                try {
-                    am.killBackgroundProcesses(p)
-                    count++
-                } catch (_: Exception) {
-                }
-            }
-        } catch (_: Exception) {
-        }
-        try {
-            Thread.sleep(1800)
-        } catch (_: InterruptedException) {
-        }
-        val after = ramInfo().first
-        ui {
-            view.stop()
-            val diff = mb(after) - mb(before)
-            msg.setTextColor(white)
-            msg.text = if (diff > 0) {
-                "✅ ${diff} MB آزاد شد • ${count} برنامه بررسی شد.\nRAM آزاد: ${mb(after)} MB"
-            } else {
-                "✅ ${count} برنامه بررسی شد؛ تغییر محسوسی در RAM آزاد دیده نشد.\nRAM آزاد: ${mb(after)} MB\n(اندروید معمولاً خودش RAM را خوب مدیریت می‌کند.)"
-            }
-            msg.text = Tr.t(msg.text.toString())
-            homeRefresh?.invoke()
-        }
-    }
 }
 
 // ----- GAMES ------------------------------------------------------------
@@ -438,7 +376,6 @@ internal fun MainActivity.appRow(item: AppItem, fav: Boolean, box: LinearLayout)
         val parts = ArrayList<String>()
         if (pf.dns.isNotEmpty()) parts.add("DNS: " + pf.dns)
         if (pf.wg.isNotEmpty()) parts.add("WG: " + pf.wg)
-        if (pf.boost) parts.add("⚡")
         if (pf.keepOn) parts.add("📱")
         col.addView(label("🎛 " + parts.joinToString(" • "), 11f, accent, false, false))
     }

@@ -368,7 +368,7 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
             if (sessionLost && subToken() == token) {
                 logoutSub()
                 toast(msg)
-                if (tab == 4) showTab(4)
+                if (tab == 4 || tab == 6 || tab == 7) showTab(tab)
             }
             vpnRender?.invoke()
             if (manual && onDone != null) onDone(msg)
@@ -435,14 +435,6 @@ internal fun MainActivity.logoutSub() {
         .remove("subSyncTs").putBoolean("subActive", false).apply()
     // back to the free DNS list right away (premium DNS entries disappear too)
     refreshRemoteDns(true, null)
-}
-
-internal fun MainActivity.checkSubSilently() {
-    if (subToken().isEmpty()) return
-    val last = prefs.getLong("subCheck", 0L)
-    if (System.currentTimeMillis() - last < 3L * 3600L * 1000L) return
-    prefs.edit().putLong("subCheck", System.currentTimeMillis()).apply()
-    syncSubscription(false)
 }
 
 // ----- "اشتراک ویژه" tab ---------------------------------------------------------
@@ -513,8 +505,28 @@ internal fun MainActivity.buildSubscription() {
     )
     content.addView(hCard, vlp(0, 4))
 
-    // ---------------- V2Gaming
-    section("V2GAMING")
+    vpnRefresh = { paintHead() }
+    vpnRender = { paintHead() }
+    paintHead()
+}
+
+// Shown in the EzzGaming / Pro Gaming tabs while nobody is logged in.
+private fun MainActivity.subNeedLogin(title: String) {
+    section(title)
+    val c = card()
+    c.addView(label("برای دیدن سرورها اول وارد «اشتراک ویژه» شو.", 13f, muted, true), vlp(0, 6))
+    c.addView(button("رفتن به اشتراک ویژه", true) { showTab(4) }, vlp(0, 0))
+    content.addView(c, vlp(0, 4))
+}
+
+// ----- "EzzGaming" tab (V2Ray servers of the account) -------------------------------
+
+internal fun MainActivity.buildSubV2() {
+    if (subToken().isEmpty()) {
+        subNeedLogin("EzzGaming")
+        return
+    }
+    section("EzzGaming")
     val vCard = card()
     val vStatus = label("", 11.5f, accent, false, false)
     vCard.addView(vStatus, vlp(0, 8))
@@ -523,15 +535,6 @@ internal fun MainActivity.buildSubscription() {
     vCard.addView(vList)
     content.addView(vCard, vlp(0, 4))
 
-    // ---------------- WireGuard Gaming
-    section("WIREGUARD GAMING")
-    val wCard = card()
-    val wStatus = label("", 15f, white, true, false)
-    wCard.addView(wStatus)
-    val wList = LinearLayout(this)
-    wList.orientation = LinearLayout.VERTICAL
-    wCard.addView(wList, vlp(8, 0))
-    content.addView(wCard, vlp(0, 4))
 
     var vKey = ""
     fun renderV(force: Boolean) {
@@ -551,6 +554,28 @@ internal fun MainActivity.buildSubscription() {
         for (item in items) vList.addView(subV2Row(item), vlp(0, 6))
     }
 
+    vpnRefresh = { renderV(false) }
+    vpnRender = { renderV(true) }
+    renderV(true)
+}
+
+// ----- "Pro Gaming" tab (WireGuard servers of the account) --------------------------
+
+internal fun MainActivity.buildSubWg() {
+    if (subToken().isEmpty()) {
+        subNeedLogin("Pro Gaming")
+        return
+    }
+    section("Pro Gaming")
+    val wCard = card()
+    val wStatus = label("", 15f, white, true, false)
+    wCard.addView(wStatus)
+    val wList = LinearLayout(this)
+    wList.orientation = LinearLayout.VERTICAL
+    wCard.addView(wList, vlp(8, 0))
+    content.addView(wCard, vlp(0, 4))
+
+
     var wKey = ""
     fun renderW(force: Boolean) {
         val up = WgState.up
@@ -569,24 +594,9 @@ internal fun MainActivity.buildSubscription() {
         for (base in names) wList.addView(subWgRow(base), vlp(0, 6))
     }
 
-    vpnRefresh = {
-        paintHead()
-        renderV(false)
-        renderW(false)
-    }
-    vpnRender = {
-        paintHead()
-        renderV(true)
-        renderW(true)
-    }
-    paintHead()
-    renderV(true)
+    vpnRefresh = { renderW(false) }
+    vpnRender = { renderW(true) }
     renderW(true)
-
-    // pick up changes the admin made to this account (cheap: at most every 5 minutes)
-    if (System.currentTimeMillis() - prefs.getLong("subSyncTs", 0L) > 5L * 60L * 1000L) {
-        syncSubscription(false)
-    }
 }
 
 private fun MainActivity.buildSubLogin() {

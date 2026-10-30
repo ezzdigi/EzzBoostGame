@@ -421,44 +421,6 @@ class DnsVpnService : VpnService() {
 
 
 // ---------------------------------------------------------------------------
-// Home-screen widget
-// ---------------------------------------------------------------------------
-
-class BoostWidget : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        Tr.load(context)
-        val v = build(context)
-        for (id in appWidgetIds) appWidgetManager.updateAppWidget(id, v)
-    }
-
-    companion object {
-        fun build(ctx: Context): RemoteViews {
-            val v = RemoteViews(ctx.packageName, R.layout.widget_boost)
-            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val mi = ActivityManager.MemoryInfo()
-            am.getMemoryInfo(mi)
-            val freeMb = mi.availMem / (1024L * 1024L)
-            val bi = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val level = bi?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = bi?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
-            val pct = if (level >= 0 && scale > 0) level * 100 / scale else 0
-            val dns = if (DnsVpnService.running) DnsVpnService.activeName else Tr.t("پیش‌فرض سیستم")
-            v.setTextViewText(R.id.w_title, "EzzGameBOOST")
-            v.setTextViewText(R.id.w_ram, "RAM " + Tr.t("آزاد") + ": " + freeMb + " MB")
-            v.setTextViewText(R.id.w_bat, Tr.t("باتری") + ": " + pct + "%")
-            v.setTextViewText(R.id.w_dns, "DNS: " + dns)
-            v.setTextViewText(R.id.w_site, "")
-            val pi = PendingIntent.getActivity(
-                ctx, 0, Intent(ctx, MainActivity::class.java),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
-            v.setOnClickPendingIntent(R.id.w_root, pi)
-            return v
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Quick Settings tile: toggle the DNS VPN from the notification shade
 // ---------------------------------------------------------------------------
 

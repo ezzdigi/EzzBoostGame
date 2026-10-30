@@ -120,16 +120,6 @@ internal fun MainActivity.setLang(l: String) {
     Tr.load(this)
     buildShell()
     showTab(tab)
-    refreshWidget()
-}
-
-internal fun MainActivity.refreshWidget() {
-    try {
-        val m = AppWidgetManager.getInstance(this)
-        val c = ComponentName(this, BoostWidget::class.java)
-        if (m.getAppWidgetIds(c).isNotEmpty()) m.updateAppWidget(c, BoostWidget.build(this))
-    } catch (_: Throwable) {
-    }
 }
 
 @Suppress("DEPRECATION")

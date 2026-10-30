@@ -511,7 +511,7 @@ internal fun MainActivity.v2Status(): String {
     if (V2VpnService.busy) {
         out += "\n⏳ ..."
     } else if (V2VpnService.running) {
-        out += "\n🟢 V2Gaming متصل: " + V2VpnService.activeName
+        out += "\n🟢 EzzGaming متصل: " + V2VpnService.activeName
         if (V2VpnService.probe.isNotBlank()) out += "\n" + hideAddr(V2VpnService.probe)
     } else if (V2VpnService.lastError.isNotBlank()) {
         out += "\n⚠️ " + v2FriendlyError(V2VpnService.lastError)
