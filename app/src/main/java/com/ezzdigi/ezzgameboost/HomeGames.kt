@@ -368,9 +368,6 @@ internal fun MainActivity.appRow(item: AppItem, fav: Boolean, box: LinearLayout)
     nm.maxLines = 1
     nm.ellipsize = TextUtils.TruncateAt.END
     col.addView(nm)
-    val pt = prefs.getLong("pt_" + item.pkg, 0L)
-    val lc = prefs.getInt("lc_" + item.pkg, 0)
-    col.addView(label(if (lc == 0) "هنوز اجرا نشده" else "${fmtDur(pt)} • ${lc} بار اجرا", 11.5f, muted))
     val pf = getProfile(item.pkg)
     if (pf != null) {
         val parts = ArrayList<String>()
@@ -452,28 +449,9 @@ internal fun MainActivity.doLaunch(pkg: String) {
         toast("اجرای این برنامه ممکن نیست.")
         return
     }
-    prefs.edit()
-        .putString("pendingPkg", pkg)
-        .putLong("pendingStart", System.currentTimeMillis())
-        .putInt("lc_$pkg", prefs.getInt("lc_$pkg", 0) + 1)
-        .apply()
     try {
         startActivity(i)
     } catch (_: Exception) {
         toast("اجرای این برنامه ممکن نیست.")
     }
-}
-
-internal fun MainActivity.finalizeSession(): Boolean {
-    val pkg = prefs.getString("pendingPkg", null) ?: return false
-    val start = prefs.getLong("pendingStart", 0L)
-    val dur = System.currentTimeMillis() - start
-    val e = prefs.edit().remove("pendingPkg").remove("pendingStart")
-    var recorded = false
-    if (start > 0L && dur >= 20000L && dur <= 43200000L) {
-        e.putLong("pt_$pkg", prefs.getLong("pt_$pkg", 0L) + dur)
-        recorded = true
-    }
-    e.apply()
-    return recorded
-}
+}\n

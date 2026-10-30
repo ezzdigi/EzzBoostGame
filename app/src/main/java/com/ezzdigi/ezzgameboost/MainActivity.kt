@@ -344,12 +344,12 @@ class MainActivity : Activity() {
         buildShell()
         applyWindowToggles()
         showTab(1)
+        checkUpdate(false) { refreshUpdateNotice() }
+        refreshUpdateNotice()
     }
 
     override fun onResume() {
         super.onResume()
-        val recorded = finalizeSession()
-        if (recorded && (tab == 0 || tab == 1 || tab == 5) && ::content.isInitialized) showTab(tab)
         handler.removeCallbacks(ticker)
         handler.post(ticker)
     }
@@ -656,12 +656,6 @@ class MainActivity : Activity() {
         vt.minWidth = dp(70)
         row.addView(vt, LinearLayout.LayoutParams(WRAP, WRAP))
         return row
-    }
-
-    internal fun fmtDur(ms: Long): String {
-        val m = ms / 60000L
-        val h = m / 60L
-        return if (h > 0) "${h} ساعت و ${m % 60} دقیقه" else "${m} دقیقه"
     }
 
     internal fun mb(bytes: Long): Long = bytes / (1024L * 1024L)

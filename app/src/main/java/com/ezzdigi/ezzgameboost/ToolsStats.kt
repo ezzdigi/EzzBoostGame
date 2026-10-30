@@ -112,38 +112,16 @@ internal fun MainActivity.applyWindowToggles() {
 // ----- STATS ------------------------------------------------------------
 
 internal fun MainActivity.buildStats() {
-    val times = ArrayList<Pair<String, Long>>()
-    var launches = 0
-    for (e in prefs.all.entries) {
-        val v = e.value
-        if (e.key.startsWith("pt_") && v is Long) times.add(Pair(e.key.removePrefix("pt_"), v))
-        if (e.key.startsWith("lc_") && v is Int) launches += v
-    }
-    times.sortByDescending { it.second }
-    var total = 0L
-    for (t in times) total += t.second
-
-    val hero = LinearLayout(this)
-    hero.orientation = LinearLayout.VERTICAL
-    hero.setPadding(dp(16), dp(16), dp(16), dp(16))
-    hero.background = heroBg()
-    hero.addView(label("زمان بازی ثبت‌شده", 12.5f, muted))
-    hero.addView(label(if (total == 0L) "—" else fmtDur(total), 26f, white, true), vlp(2, 2))
-    hero.addView(label("${launches} بار اجرا از طریق EzzGameBOOST", 12.5f, muted))
-    content.addView(hero, vlp(4, 4))
-
-    section("TOP GAMES")
-    val topCard = card()
-    if (times.isEmpty()) {
-        topCard.addView(label("هنوز داده‌ای نیست. بازی‌ها را از تب «بازی‌ها» اجرا کن تا زمان بازی ثبت شود.", 12.5f, muted))
-    } else {
-        val top = maxOf(times[0].second, 1L)
-        for (idx in 0 until minOf(5, times.size)) {
-            val t = times[idx]
-            topCard.addView(barRow(appLabel(t.first), fmtDur(t.second), t.second.toFloat() / top.toFloat(), accent, idx == 0))
-        }
-    }
-    content.addView(topCard, vlp(0, 4))
+    section("آموزش و راهنمای استفاده")
+    val guide = card()
+    guide.addView(label("۱) ورود و انتخاب بازی", 14f, white, true), vlp(0, 6))
+    guide.addView(label("از تب «بازی‌ها» بازی موردنظر را پیدا کن و برای اجرای آن روی دکمه اجرا بزن. در صورت نیاز می‌توانی تنظیمات DNS و پروفایل هر بازی را انتخاب کنی.", 12.5f, muted), vlp(0, 4))
+    guide.addView(label("۲) اتصال به سرورها", 14f, white, true), vlp(0, 10))
+    guide.addView(label("از تب‌های EzzGaming و Pro Gaming سرور موردنظر را انتخاب کن. برای قطع اتصال از دکمه قطع اتصال داخل همان بخش استفاده کن.", 12.5f, muted), vlp(0, 4))
+    guide.addView(label("۳) خرید و فعال‌سازی اشتراک", 14f, white, true), vlp(0, 10))
+    guide.addView(label("وارد تب «اشتراک ویژه» شو، روی دریافت اکانت یا تمدید اشتراک بزن و پس از خرید با نام کاربری و رمز عبور وارد شو. سپس فهرست سرورها را به‌روزرسانی کن.", 12.5f, muted), vlp(0, 4))
+    guide.addView(button("رفتن به اشتراک ویژه", true) { showTab(4) }, vlp(0, 10))
+    content.addView(guide, vlp(0, 4))
 
     section("THEME")
     val themeCard = card()
@@ -245,15 +223,5 @@ internal fun MainActivity.buildStats() {
         if (notes.isNotEmpty()) about.addView(label(notes, 11.5f, muted, false, false), vlp(0, 8))
     }
     about.addView(button("اشتراک‌گذاری اپ", false) { shareApp() }, vlp(0, 8))
-    about.addView(button("پاک کردن آمار بازی", false) {
-        val keys = ArrayList<String>()
-        for (k in prefs.all.keys) {
-            if (k.startsWith("pt_") || k.startsWith("lc_")) keys.add(k)
-        }
-        val ed = prefs.edit()
-        for (k in keys) ed.remove(k)
-        ed.apply()
-        showTab(5)
-    }, LinearLayout.LayoutParams(MATCH, WRAP))
     content.addView(about, vlp(0, 4))
 }

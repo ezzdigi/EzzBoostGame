@@ -354,6 +354,7 @@ internal fun MainActivity.checkUpdate(manual: Boolean, onDone: ((String) -> Unit
         }
         ui {
             onDone?.invoke(msg)
+            refreshUpdateNotice()
             if (msg == "new") homeRefresh?.invoke()
         }
     }
