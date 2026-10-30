@@ -125,10 +125,7 @@ internal fun MainActivity.buildHome() {
     val bp = LinearLayout.LayoutParams(dp(170), dp(170))
     bp.gravity = Gravity.CENTER_HORIZONTAL
     bCard.addView(boost, bp)
-    val boostMsg = label(
-        "با یک لمس، پردازش‌های پس‌زمینه‌ی برنامه‌ها بسته می‌شوند تا RAM آزاد بیشتری برای بازی بماند.",
-        12.5f, muted
-    )
+    val boostMsg = label("", 12.5f, muted)
     boostMsg.gravity = Gravity.CENTER
     val mp = LinearLayout.LayoutParams(MATCH, WRAP)
     mp.topMargin = dp(10)
@@ -496,7 +493,7 @@ internal fun MainActivity.launchGame(pkg: String) {
         launchWithProfile(pkg, prof)
         return
     }
-    if (prefs.getBoolean("autoDns", false) && !DnsVpnService.running) {
+    if (prefs.getBoolean("autoDns", false) && !DnsVpnService.running && !V2VpnService.running && !WgState.up) {
         val needConsent = try {
             VpnService.prepare(this) != null
         } catch (_: Exception) {

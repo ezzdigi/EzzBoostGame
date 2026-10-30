@@ -97,7 +97,7 @@ var uiLight = false
 
 // Subscription server (PHP on your hosting, see README_FA.md in the ezzsub package).
 // Replace YOUR-DOMAIN (and the folder) with where you uploaded the "ezzsub" folder.
-const val SUB_BASE = "https://YOUR-DOMAIN/ezzsub"
+const val SUB_BASE = "https://ezzgame.ir/ezzsub"
 const val SUB_API = SUB_BASE + "/api.php"
 const val SUB_BUY_URL = SUB_BASE + "/"
 

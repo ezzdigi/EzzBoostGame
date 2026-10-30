@@ -265,41 +265,79 @@ internal fun isNewerVersion(remote: String, local: String): Boolean {
     return false
 }
 
+class ReleaseInfo(val tag: String, val url: String, val notes: String)
+
+private fun releaseFromJson(o: JSONObject): ReleaseInfo? {
+    val tag = o.optString("tag_name", "")
+    if (tag.isEmpty()) return null
+    var url = o.optString("html_url", RELEASES_PAGE)
+    val assets = o.optJSONArray("assets")
+    if (assets != null) {
+        for (i in 0 until assets.length()) {
+            val a = assets.optJSONObject(i) ?: continue
+            val u = a.optString("browser_download_url", "")
+            if (u.endsWith(".apk")) {
+                url = u
+                break
+            }
+        }
+    }
+    return ReleaseInfo(tag, url, o.optString("body", "").trim().take(500))
+}
+
+// Tries three sources in turn, because api.github.com is often blocked or rate-limited and
+// "releases/latest" returns 404 when the newest release is a pre-release:
+//   1) /releases/latest   2) /releases?per_page=1   3) the releases.atom feed on github.com
+internal fun MainActivity.fetchLatestRelease(): ReleaseInfo? {
+    val repo = ghRepo()
+    try {
+        val b1 = httpGet("https://api.github.com/repos/$repo/releases/latest", 8000, 1000000)
+        if (b1 != null) {
+            val r = releaseFromJson(JSONObject(b1))
+            if (r != null) return r
+        }
+    } catch (_: Exception) {
+    }
+    try {
+        val b2 = httpGet("https://api.github.com/repos/$repo/releases?per_page=1", 8000, 1000000)
+        if (b2 != null) {
+            val arr = org.json.JSONArray(b2)
+            if (arr.length() > 0) {
+                val r = releaseFromJson(arr.getJSONObject(0))
+                if (r != null) return r
+            }
+        }
+    } catch (_: Exception) {
+    }
+    try {
+        val b3 = httpGet("https://github.com/$repo/releases.atom", 8000, 1000000)
+        if (b3 != null) {
+            val m = Regex("href=\"[^\"]*/releases/tag/([^\"]+)\"").find(b3)
+            if (m != null) {
+                val tag = android.net.Uri.decode(m.groupValues[1])
+                return ReleaseInfo(tag, "https://github.com/$repo/releases/tag/" + m.groupValues[1], "")
+            }
+        }
+    } catch (_: Exception) {
+    }
+    return null
+}
+
+// onDone gets "new", "latest", or "fail|<reason>"
 internal fun MainActivity.checkUpdate(manual: Boolean, onDone: ((String) -> Unit)?) {
     val last = prefs.getLong("updTry", 0L)
     if (!manual && System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
     prefs.edit().putLong("updTry", System.currentTimeMillis()).apply()
     runBg {
-        val body = httpGet("https://api.github.com/repos/" + ghRepo() + "/releases/latest")
-        var msg = "fail"
-        if (body != null) {
-            try {
-                val o = JSONObject(body)
-                val tag = o.optString("tag_name", "")
-                var url = o.optString("html_url", RELEASES_PAGE)
-                val assets = o.optJSONArray("assets")
-                if (assets != null) {
-                    for (i in 0 until assets.length()) {
-                        val a = assets.optJSONObject(i) ?: continue
-                        val u = a.optString("browser_download_url", "")
-                        if (u.endsWith(".apk")) {
-                            url = u
-                            break
-                        }
-                    }
-                }
-                val notes = o.optString("body", "").trim().take(500)
-                if (tag.isNotEmpty()) {
-                    prefs.edit()
-                        .putString("updTag", tag)
-                        .putString("updUrl", url)
-                        .putString("updNotes", notes)
-                        .apply()
-                    msg = if (isNewerVersion(tag, currentVersion())) "new" else "latest"
-                }
-            } catch (_: Exception) {
-                msg = "fail"
-            }
+        var msg = "fail|" + lastHttpErr
+        val r = fetchLatestRelease()
+        if (r != null) {
+            prefs.edit()
+                .putString("updTag", r.tag)
+                .putString("updUrl", r.url)
+                .putString("updNotes", r.notes)
+                .apply()
+            msg = if (isNewerVersion(r.tag, currentVersion())) "new" else "latest"
         }
         ui {
             onDone?.invoke(msg)
@@ -326,6 +364,11 @@ internal fun MainActivity.autoChecks() {
     if (System.currentTimeMillis() - lastWg >= 12L * 3600L * 1000L) {
         prefs.edit().putLong("remoteWgTry", System.currentTimeMillis()).apply()
         importDefaultWgList(true) { vpnRender?.invoke() }
+    }
+    // one-time: free V2Gaming list used to be merged with the account's servers; reload it clean
+    if (!prefs.getBoolean("subSplit1", false)) {
+        prefs.edit().putBoolean("subSplit1", true).apply()
+        refreshRemoteV2(true, null)
     }
     checkSubSilently()
     checkUpdate(false, null)
@@ -424,11 +467,14 @@ internal fun parseRepo(raw: String): String? {
 }
 
 
-// With an active subscription code the server's list (free + premium) is tried first;
-// an expired or invalid code gets an HTTP error there and the free GitHub list is used.
+// With an active subscription the server's DNS list (free + premium) is tried first.
+// V2Gaming / WireGuard account servers are not merged here: they are downloaded into the
+// "اشتراک ویژه" tab only (see Subscription.kt). An expired code gets an HTTP error and the
+// free GitHub list is used.
 internal fun MainActivity.listUrls(file: String): List<String> {
     val token = prefs.getString("subCode", "") ?: ""
     val base = remoteUrls(ghRepo(), file)
+    if (file != "dns.json") return base
     if (token.isEmpty() || !prefs.getBoolean("subActive", false)) return base
     return listOf(SUB_API + "?a=list&f=" + file + "&t=" + android.net.Uri.encode(token)) + base
 }

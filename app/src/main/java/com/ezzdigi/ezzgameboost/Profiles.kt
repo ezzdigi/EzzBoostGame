@@ -162,7 +162,7 @@ internal fun MainActivity.editProfile(item: AppItem, after: () -> Unit) {
                     ) { dns = it }
                     1 -> pick(
                         Tr.t("وایرگارد"),
-                        listOf(Tr.t("بدون وایرگارد")) + listCfg("wg").map { it.removeSuffix(".conf") },
+                        listOf(Tr.t("بدون وایرگارد")) + listCfg("wg").map { it.removeSuffix(".conf") }.filter { !subWgNameSet().contains(it) },
                         wg
                     ) { wg = it }
                     2 -> {
