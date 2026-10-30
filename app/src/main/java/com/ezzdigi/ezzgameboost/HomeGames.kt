@@ -454,4 +454,4 @@ internal fun MainActivity.doLaunch(pkg: String) {
     } catch (_: Exception) {
         toast("اجرای این برنامه ممکن نیست.")
     }
-}\n
+}}
