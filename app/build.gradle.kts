@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.ezzdigi.ezzgameboost"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.ezzdigi.ezzgameboost"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         // CI passes -PappVersion / -PappVersionCode when a GitHub Release is published,
         // so the app version always matches the release tag.
         versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 4
