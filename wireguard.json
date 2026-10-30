@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "configs": [
+    {
+      "name": "Pro Gaming 1",
+      "conf": "[Interface]\nPrivateKey = PRIVATE_KEY_HERE\nAddress = 10.0.0.2/32\nDNS = 1.1.1.1\nMTU = 1280\n\n[Peer]\nPublicKey = SERVER_PUBLIC_KEY_HERE\nEndpoint = 1.2.3.4:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25"
+    }
+  ]
+}
