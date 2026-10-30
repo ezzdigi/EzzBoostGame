@@ -159,7 +159,9 @@ internal fun MainActivity.showOnboarding() {
     nameView.setTextColor(white)
     nameView.gravity = Gravity.CENTER
     col.addView(nameView, vlp(14, 2))
-    col.addView(label("", 8f, muted), vlp(0, 6))
+    val by = label("ساخته‌شده توسط ایزی دیجی", 13f, muted)
+    by.gravity = Gravity.CENTER
+    col.addView(by, vlp(0, 10))
 
     val langRow = LinearLayout(this)
     langRow.orientation = LinearLayout.HORIZONTAL
@@ -365,7 +367,7 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
             inserted = true
         }
     }
-    return if (inserted) wgEnsureKeepalive(wgEnsureFullRoute(out.joinToString("\n"))) else null
+    return if (inserted) out.joinToString("\n") else null
 }
 
 internal fun MainActivity.testWg(base: String) {
@@ -394,55 +396,6 @@ internal fun MainActivity.testWg(base: String) {
 
 // Brings the tunnel up for this app only (never the whole phone), sends a small
 // request through it and reports whether the server answered.
-// Blocking: brings the config up for this app only, sends one small request through it and
-// brings it down again. Returns a one-line result. Call from a background thread.
-internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): String {
-    var result = ""
-    val tun = WgTestTun()
-    var up = false
-    try {
-        val scoped = wgScopeToPackages(text, listOf(packageName))
-        if (scoped == null) {
-            result = "✕ کانفیگ ساختار معتبر ندارد."
-        } else {
-            val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-            val be = wgBackendGet()
-            be.setState(tun, Tunnel.State.UP, cfg)
-            up = true
-            Thread.sleep(600)
-            var ms = -1L
-            val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
-            for (u in urls) {
-                val t0 = System.currentTimeMillis()
-                val b = httpGet(u, if (fast) 4000 else 6000, 4000)
-                if (b != null) {
-                    ms = System.currentTimeMillis() - t0
-                    break
-                }
-            }
-            result = if (ms >= 0) {
-                "✅ تونل جواب می‌دهد • $ms ms"
-            } else {
-                "✕ سرور وایرگارد جواب نمی‌دهد: کاربر روی سرور ساخته نشده، سرور خاموش یا بدون اینترنت است، یا پورت UDP بسته/فیلتر است. در این حالت بازی خطای شبکه می‌دهد."
-            }
-        }
-    } catch (e: Throwable) {
-        result = "✕ " + hideAddr((e.message ?: e.javaClass.simpleName).take(120))
-    }
-    if (up) {
-        try {
-            wgBackendGet().setState(tun, Tunnel.State.DOWN, null)
-        } catch (_: Throwable) {
-        }
-        // give the VPN service time to shut down so it cannot tear down the next tunnel
-        try {
-            Thread.sleep(2000)
-        } catch (_: Throwable) {
-        }
-    }
-    return result
-}
-
 internal fun MainActivity.runWgTest(base: String) {
     if (wgBusy) return
     val text = readCfg("wg", base + ".conf")
@@ -454,7 +407,53 @@ internal fun MainActivity.runWgTest(base: String) {
     wgTestRes[base] = "⏳ در حال تست…"
     vpnRefresh?.invoke()
     runBg {
-        val result = wgSelfCheck(text)
+        var result = ""
+        val tun = WgTestTun()
+        var up = false
+        try {
+            val scoped = wgScopeToPackages(text, listOf(packageName))
+            if (scoped == null) {
+                result = "✕ کانفیگ ساختار معتبر ندارد."
+            } else {
+                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                val be = wgBackendGet()
+                be.setState(tun, Tunnel.State.UP, cfg)
+                up = true
+                Thread.sleep(600)
+                var body: String? = null
+                var ms = -1L
+                val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
+                for (u in urls) {
+                    val t0 = System.currentTimeMillis()
+                    val b = httpGet(u, 6000, 4000)
+                    if (b != null) {
+                        body = b
+                        ms = System.currentTimeMillis() - t0
+                        break
+                    }
+                }
+                if (body != null) {
+                    var ip = ""
+                    var loc = ""
+                    for (ln in body.lines()) {
+                        if (ln.startsWith("ip=")) ip = ln.substring(3).trim()
+                        if (ln.startsWith("loc=")) loc = ln.substring(4).trim()
+                    }
+                    if (ip.isEmpty() && !body.contains("<") && body.length < 64) ip = body.trim()
+                    result = "✅ کار می‌کند • $ms ms" + (if (ip.isNotEmpty()) " • IP: $ip" else "") + (if (loc.isNotEmpty()) " • $loc" else "")
+                } else {
+                    result = "✕ جواب نیامد. سرور خاموش است، Endpoint/کلید اشتباه است یا پورت UDP بسته است."
+                }
+            }
+        } catch (e: Throwable) {
+            result = "✕ " + (e.message ?: e.javaClass.simpleName).take(120)
+        }
+        if (up) {
+            try {
+                wgBackendGet().setState(tun, Tunnel.State.DOWN, null)
+            } catch (_: Throwable) {
+            }
+        }
         WgState.up = false
         WgState.activeName = ""
         ui {
@@ -477,16 +476,143 @@ internal fun isAwgConfig(text: String): Boolean {
     return false
 }
 
+// ----- Subscription (per-user account) ---------------------------------------
+
+internal fun MainActivity.subStatusText(): String {
+    val code = prefs.getString("subCode", "") ?: ""
+    if (code.isEmpty()) return "وارد حساب نشده‌ای؛ لیست‌های رایگان استفاده می‌شوند."
+    val user = prefs.getString("subUser", "") ?: ""
+    val exp = prefs.getString("subExp", "") ?: ""
+    return if (prefs.getBoolean("subActive", false)) {
+        "✅ " + (if (user.isNotEmpty()) user + " • " else "") + "اشتراک فعال" + (if (exp.isNotEmpty()) " تا $exp" else "")
+    } else {
+        "❌ اشتراک منقضی یا نامعتبر است."
+    }
+}
+
+// Deletes the account's WireGuard servers (the ones that came from the subscription) from the phone.
+internal fun MainActivity.removeSubConfig() {
+    try {
+        val names = prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
+        for (n in names) {
+            try {
+                java.io.File(cfgDir("wg"), n + ".conf").delete()
+            } catch (_: Throwable) {
+            }
+        }
+        prefs.edit().remove("subWgNames").apply()
+    } catch (_: Throwable) {
+    }
+}
+
+internal fun MainActivity.fetchSubStatus(code: String): Triple<Boolean, String, String> {
+    val body = httpGet(SUB_API + "?a=status&t=" + android.net.Uri.encode(code))
+        ?: return Triple(false, "", if (lastHttpErr.startsWith("HTTP 4")) "حساب نامعتبر یا منقضی است." else "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")")
+    return try {
+        val o = org.json.JSONObject(body)
+        val ok = o.optBoolean("active", false)
+        Triple(ok, o.optString("expires", ""), if (ok) "" else "حساب نامعتبر یا منقضی است.")
+    } catch (_: Throwable) {
+        Triple(false, "", "پاسخ سرور معتبر نیست.")
+    }
+}
+
+internal fun MainActivity.loginSub(user: String, pass: String, onDone: () -> Unit) {
+    val u = user.trim()
+    if (u.isEmpty() || pass.isEmpty()) {
+        toast("نام کاربری و رمز را وارد کن.")
+        return
+    }
+    toast("در حال ورود…")
+    runBg {
+        val r = httpPost(
+            SUB_API + "?a=login",
+            "u=" + android.net.Uri.encode(u) + "&p=" + android.net.Uri.encode(pass)
+        )
+        var ok = false
+        var token = ""
+        var exp = ""
+        var err = ""
+        if (r == null) {
+            err = "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")"
+        } else {
+            try {
+                val o = org.json.JSONObject(r.second)
+                ok = o.optBoolean("ok", false)
+                token = o.optString("token", "")
+                exp = o.optString("expires", "")
+                if (!ok) err = o.optString("error", "ورود ناموفق بود.")
+            } catch (_: Throwable) {
+                err = "پاسخ سرور معتبر نیست."
+            }
+            if (ok && token.isEmpty()) {
+                ok = false
+                err = "پاسخ سرور معتبر نیست."
+            }
+        }
+        ui {
+            if (ok) {
+                prefs.edit().putString("subCode", token).putString("subUser", u)
+                    .putBoolean("subActive", true).putString("subExp", exp).apply()
+                toast("وارد شدی ✅")
+                onDone()
+                refreshRemoteDns(true, null)
+                refreshRemoteV2(true, null)
+                importDefaultWgList(true) { vpnRender?.invoke() }
+            } else {
+                toast(err)
+            }
+        }
+    }
+}
+
+internal fun MainActivity.logoutSub() {
+    prefs.edit().remove("subCode").remove("subUser").remove("subExp").putBoolean("subActive", false).apply()
+    removeSubConfig()
+    // back to the free lists right away (the account's V2Ray links disappear too)
+    refreshRemoteV2(true, null)
+    refreshRemoteDns(true, null)
+    vpnRender?.invoke()
+}
+
+internal fun MainActivity.checkSubSilently() {
+    val code = prefs.getString("subCode", "") ?: ""
+    if (code.isEmpty()) return
+    val last = prefs.getLong("subCheck", 0L)
+    if (System.currentTimeMillis() - last < 3L * 3600L * 1000L) return
+    prefs.edit().putLong("subCheck", System.currentTimeMillis()).apply()
+    runBg {
+        val r = fetchSubStatus(code)
+        // Only a definite answer changes the state; a network error keeps the last one.
+        if (r.first || r.third.startsWith("حساب")) {
+            prefs.edit().putBoolean("subActive", r.first).putString("subExp", r.second).apply()
+            // Expired / disabled / removed account: the personal server is deleted from the phone.
+            if (!r.first) removeSubConfig()
+            ui {
+                vpnRender?.invoke()
+                if (!r.first) {
+                    refreshRemoteV2(true, null)
+                    refreshRemoteDns(true, null)
+                }
+                // still active: pick up servers the admin added or changed for this account
+                if (r.first) importDefaultWgList(true) { vpnRender?.invoke() }
+            }
+        }
+    }
+}
+
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
 
 internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: () -> Unit) {
     if (!silent) toast("در حال دریافت سرورهای گیمینگ…")
     runBg {
         var body: String? = null
+        var premium = false
         for (u in listUrls("wireguard.json")) {
             val b = httpGet(u, 6000, 1500000)
             if (b != null && b.trimStart().startsWith("{")) {
                 body = b
+                premium = u.startsWith(SUB_API)
                 break
             }
             if (b != null) lastHttpErr = "فایل JSON نیست"
@@ -517,8 +643,6 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                         continue
                     }
                     val base = cleanName(nm, "wg")
-                    // never overwrite an account server with a free one of the same name
-                    if (subWgNameSet().contains(base)) continue
                     listed.add(base)
                     val exists = java.io.File(cfgDir("wg"), base + ".conf").exists()
                     if (!exists && listCfg("wg").size >= 20) continue
@@ -535,6 +659,19 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     "سرور گیمینگ معتبری پیدا نشد."
                 }
             }
+        }
+        if (premium && body != null) {
+            // Account servers: remember them (removed on logout / expiry) and drop ones the admin took away.
+            val oldNames = prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
+            for (n in oldNames) {
+                if (!listed.contains(n)) {
+                    try {
+                        java.io.File(cfgDir("wg"), n + ".conf").delete()
+                    } catch (_: Throwable) {
+                    }
+                }
+            }
+            prefs.edit().putStringSet("subWgNames", HashSet<String>(listed)).apply()
         }
         ui {
             if (listed.isNotEmpty()) markNewKeys("wg", listed)
@@ -711,42 +848,6 @@ internal fun MainActivity.testDnsAddrs(addrs: List<Pair<String, String>>, onDone
     }
 }
 
-// True once the server has answered the handshake. PersistentKeepalive makes the tunnel start one
-// right away, so no handshake within a few seconds means wrong endpoint/key or a closed UDP port.
-internal fun wgLatestHandshake(be: GoBackend, tun: Tunnel): Long {
-    var best = 0L
-    try {
-        val st = be.getStatistics(tun)
-        for (k in st.peers()) {
-            val ps = st.peer(k)
-            if (ps != null && ps.latestHandshakeEpochMillis() > best) best = ps.latestHandshakeEpochMillis()
-        }
-    } catch (_: Throwable) {
-    }
-    return best
-}
-
-internal fun waitWgHandshake(be: GoBackend, tun: Tunnel, timeoutMs: Long): Boolean {
-    val end = System.currentTimeMillis() + timeoutMs
-    while (System.currentTimeMillis() < end) {
-        if (wgLatestHandshake(be, tun) > 0L) return true
-        try {
-            Thread.sleep(500)
-        } catch (_: Throwable) {
-        }
-    }
-    return false
-}
-
-// One line for the active row: how often the watchdog had to bring the tunnel back, and why.
-internal fun wgHealthInfo(): String =
-    if (WgState.reconnects > 0 || WgState.lastDrop.isNotEmpty()) {
-        "\n🔁 " + WgState.reconnects + " بار دوباره وصل شد" +
-            (if (WgState.lastDrop.isNotEmpty()) " • " + WgState.lastDrop else "")
-    } else {
-        ""
-    }
-
 internal fun MainActivity.wgBackendGet(): GoBackend {
     var b = wgBackend
     if (b == null) {
@@ -754,24 +855,6 @@ internal fun MainActivity.wgBackendGet(): GoBackend {
         wgBackend = b
     }
     return b
-}
-
-// Android permits only one active VpnService at a time. Before starting a premium gaming
-// tunnel, synchronously release DNS/V2Ray/WireGuard so an old service cannot replace the
-// new TUN or make the WireGuard watchdog abandon the connection.
-internal fun MainActivity.releaseOtherVpnForGaming() {
-    try { DnsVpnService.requestStop(this) } catch (_: Throwable) {}
-    try { V2VpnService.requestStop(this) } catch (_: Throwable) {}
-    WgState.wanted = false
-    val old = WgState.tunnel
-    val be = WgState.backend
-    if (old != null && be != null) {
-        try { be.setState(old, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
-    }
-    WgState.up = false
-    WgState.activeName = ""
-    WgState.tunnel = null
-    try { stopService(Intent(this, WgKeepService::class.java)) } catch (_: Throwable) {}
 }
 
 internal fun MainActivity.connectWg(base: String) {
@@ -802,14 +885,10 @@ internal fun MainActivity.doConnectWg(base: String) {
     wgBusy = true
     toast(Tr.t("در حال اتصال به") + " " + base + "…")
     vpnRefresh?.invoke()
-    WgState.wanted = false
     runBg {
         var err = ""
         var noGames = false
-        var noReply = false
         try {
-            // Avoid competing local VPN services taking over Android's single VPN slot.
-            releaseOtherVpnForGaming()
             val scoped = try {
                 wgScopedConfig(base, text)
             } catch (_: Throwable) {
@@ -829,39 +908,9 @@ internal fun MainActivity.doConnectWg(base: String) {
                 }
                 val tun = WgTun(base)
                 be.setState(tun, Tunnel.State.UP, cfg)
-                if (!waitWgHandshake(be, tun, 9000L)) {
-                    // Do not show "connected" for a tunnel that carries nothing.
-                    try {
-                        be.setState(tun, Tunnel.State.DOWN, null)
-                    } catch (_: Throwable) {
-                    }
-                    wgTunnel = null
-                    WgState.up = false
-                    WgState.activeName = ""
-                    noReply = true
-                } else {
-                    wgTunnel = tun
-                    WgState.activeName = base
-                    WgState.up = true
-                    WgState.baseName = base
-                    WgState.cfgText = scoped
-                    WgState.upSince = System.currentTimeMillis()
-                    WgState.attempts = 0
-                    WgState.reconnects = 0
-                    WgState.lastDrop = ""
-                    WgState.wanted = true
-                    // keep the process alive (foreground) while the tunnel is up
-                    try {
-                        startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
-                    } catch (_: Throwable) {
-                    }
-                    try {
-                        val pk = wgIncludePackages(base)
-                        val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
-                        wgAppsInfo[base] = if (labels.isEmpty()) "" else labels.take(4).joinToString("، ") + (if (labels.size > 4) " +" + (labels.size - 4) else "")
-                    } catch (_: Throwable) {
-                    }
-                }
+                wgTunnel = tun
+                WgState.activeName = base
+                WgState.up = true
             }
         } catch (e: Throwable) {
             err = (e.message ?: e.javaClass.simpleName).take(160)
@@ -870,12 +919,10 @@ internal fun MainActivity.doConnectWg(base: String) {
             wgBusy = false
             if (noGames) {
                 toast(Tr.t("بازی‌ای پیدا نشد. یک بازی نصب کن یا آن را در تب بازی‌ها علاقه‌مند کن."))
-            } else if (noReply) {
-                toast(Tr.t("سرور وایرگارد جواب نداد (Endpoint یا کلید اشتباه، یا پورت UDP بسته). این کانفیگ را عوض کن."))
             } else if (err.isEmpty()) {
                 toast(Tr.t("متصل شد"))
             } else {
-                toast(Tr.t("خطای وایرگارد:") + " " + hideAddr(err))
+                toast(Tr.t("خطای وایرگارد:") + " " + err)
             }
             vpnRefresh?.invoke()
             homeRefresh?.invoke()
@@ -886,7 +933,6 @@ internal fun MainActivity.doConnectWg(base: String) {
 
 internal fun MainActivity.disconnectWg() {
     if (wgBusy) return
-    WgState.wanted = false
     wgBusy = true
     runBg {
         try {
@@ -896,10 +942,6 @@ internal fun MainActivity.disconnectWg() {
         }
         WgState.up = false
         WgState.activeName = ""
-        try {
-            stopService(Intent(this, WgKeepService::class.java))
-        } catch (_: Throwable) {
-        }
         ui {
             wgBusy = false
             toast(Tr.t("وایرگارد قطع شد"))
@@ -917,6 +959,35 @@ internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> 
 }
 
 internal fun MainActivity.buildVpn() {
+    // ---------------- Subscription (per-user account)
+    section("اشتراک ویژه")
+    val sCard = card()
+    val subLbl = label(subStatusText(), 12.5f, accent, true, false)
+    sCard.addView(subLbl, vlp(0, 6))
+    val uIn = input("نام کاربری")
+    uIn.setText(prefs.getString("subUser", "") ?: "")
+    sCard.addView(uIn, vlp(0, 8))
+    val pIn = input("رمز عبور")
+    pIn.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+    pIn.transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
+    sCard.addView(pIn, vlp(0, 8))
+    val bLogin = button("ورود به حساب", true) {
+        loginSub(uIn.text.toString(), pIn.text.toString()) {
+            pIn.setText("")
+            subLbl.text = Tr.t(subStatusText())
+        }
+    }
+    sCard.addView(bLogin, vlp(0, 6))
+    val bOut = button("خروج از حساب", false) {
+        logoutSub()
+        subLbl.text = Tr.t(subStatusText())
+        uIn.setText("")
+    }
+    sCard.addView(bOut, vlp(0, 4))
+    val bBuy = button("🛒 دریافت اکانت", false) { openUrl(SUB_BUY_URL) }
+    sCard.addView(bBuy, vlp(0, 4))
+    content.addView(sCard, vlp(0, 4))
+
     // ---------------- WireGuard
     section("WireGuard Gaming")
     val wCard = card()
@@ -969,8 +1040,7 @@ internal fun MainActivity.buildVpn() {
         val act = WgState.activeName
         wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
         wStatus.setTextColor(if (up) good else white)
-        val acct = subWgNameSet()
-        val names = listCfg("wg").filter { !acct.contains(it.removeSuffix(".conf")) }
+        val names = listCfg("wg")
         val key = "$up|$act|$wgBusy|" + names.joinToString(",") + "|" + wgTestRes.toString() + "|" + (System.currentTimeMillis() / 3600000L)
         if (!force && key == wKey) return
         wKey = key
@@ -990,8 +1060,9 @@ internal fun MainActivity.buildVpn() {
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
             col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
-            val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
-            if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
+            val ep = wgEndpoint(readCfg("wg", file))
+            if (ep.isNotEmpty()) col.addView(label(ep, 11.5f, muted, false, false))
+            col.addView(label("🎮 فقط بازی‌ها", 11.5f, accent, true), vlp(4, 2))
             val tr = wgTestRes[base] ?: ""
             if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
             row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
@@ -1097,6 +1168,12 @@ internal fun MainActivity.buildVpn() {
     cRow.addView(bSave, lpS)
     cCard.addView(cRow, vlp(10, 6))
     cCard.addView(cRes, vlp(0, 6))
+    cCard.addView(
+        label(
+            "IPv6 فقط وقتی کار می‌کند که اینترنت شبکه‌ات IPv6 داشته باشد؛ اگر تست آن ✕ شد، از IPv4 استفاده کن. DNS ذخیره‌شده در لیست «DNS CHANGER» (تب شبکه) هم دیده می‌شود.",
+            11.5f, muted
+        ), vlp(2, 8)
+    )
     val cList = LinearLayout(this)
     cList.orientation = LinearLayout.VERTICAL
     cCard.addView(cList)

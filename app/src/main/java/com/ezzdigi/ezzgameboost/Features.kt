@@ -265,92 +265,41 @@ internal fun isNewerVersion(remote: String, local: String): Boolean {
     return false
 }
 
-class ReleaseInfo(val tag: String, val url: String, val notes: String)
-
-private fun releaseFromJson(o: JSONObject): ReleaseInfo? {
-    val tag = o.optString("tag_name", "")
-    if (tag.isEmpty()) return null
-    var url = o.optString("html_url", RELEASES_PAGE)
-    val assets = o.optJSONArray("assets")
-    if (assets != null) {
-        for (i in 0 until assets.length()) {
-            val a = assets.optJSONObject(i) ?: continue
-            val u = a.optString("browser_download_url", "")
-            if (u.endsWith(".apk")) {
-                url = u
-                break
-            }
-        }
-    }
-    return ReleaseInfo(tag, url, o.optString("body", "").trim().take(500))
-}
-
-// Tries three sources in turn, because api.github.com is often blocked or rate-limited and
-// "releases/latest" returns 404 when the newest release is a pre-release:
-//   1) /releases/latest   2) /releases?per_page=1   3) the releases.atom feed on github.com
-internal fun MainActivity.fetchLatestRelease(): ReleaseInfo? {
-    // Own server first (GitHub is blocked on many networks): SUB_BASE/update.json
-    try {
-        val own = httpGet(SUB_BASE + "/update.json", 8000, 20000)
-        if (own != null && own.trimStart().startsWith("{")) {
-            val o = JSONObject(own)
-            val v = o.optString("version", "").trim()
-            if (v.isNotEmpty()) {
-                val u = o.optString("url", "").trim()
-                return ReleaseInfo(v, if (u.isNotEmpty()) u else RELEASES_PAGE, o.optString("notes", "").trim().take(500))
-            }
-        }
-    } catch (_: Exception) {
-    }
-    val repo = ghRepo()
-    try {
-        val b1 = httpGet("https://api.github.com/repos/$repo/releases/latest", 8000, 1000000)
-        if (b1 != null) {
-            val r = releaseFromJson(JSONObject(b1))
-            if (r != null) return r
-        }
-    } catch (_: Exception) {
-    }
-    try {
-        val b2 = httpGet("https://api.github.com/repos/$repo/releases?per_page=1", 8000, 1000000)
-        if (b2 != null) {
-            val arr = org.json.JSONArray(b2)
-            if (arr.length() > 0) {
-                val r = releaseFromJson(arr.getJSONObject(0))
-                if (r != null) return r
-            }
-        }
-    } catch (_: Exception) {
-    }
-    try {
-        val b3 = httpGet("https://github.com/$repo/releases.atom", 8000, 1000000)
-        if (b3 != null) {
-            val m = Regex("href=\"[^\"]*/releases/tag/([^\"]+)\"").find(b3)
-            if (m != null) {
-                val tag = android.net.Uri.decode(m.groupValues[1])
-                return ReleaseInfo(tag, "https://github.com/$repo/releases/tag/" + m.groupValues[1], "")
-            }
-        }
-    } catch (_: Exception) {
-    }
-    return null
-}
-
-// onDone gets "new", "latest", or "fail|<reason>"
 internal fun MainActivity.checkUpdate(manual: Boolean, onDone: ((String) -> Unit)?) {
     val last = prefs.getLong("updTry", 0L)
     if (!manual && System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
     prefs.edit().putLong("updTry", System.currentTimeMillis()).apply()
     runBg {
-        var msg = "fail|" + lastHttpErr
-        val r = fetchLatestRelease()
-        if (r != null) {
-            prefs.edit()
-                .putString("updTag", r.tag)
-                .putString("updUrl", r.url)
-                .putString("updNotes", r.notes)
-                .apply()
-            msg = if (isNewerVersion(r.tag, currentVersion())) "new" else "latest"
+        val body = httpGet("https://api.github.com/repos/" + ghRepo() + "/releases/latest")
+        var msg = "fail"
+        if (body != null) {
+            try {
+                val o = JSONObject(body)
+                val tag = o.optString("tag_name", "")
+                var url = o.optString("html_url", RELEASES_PAGE)
+                val assets = o.optJSONArray("assets")
+                if (assets != null) {
+                    for (i in 0 until assets.length()) {
+                        val a = assets.optJSONObject(i) ?: continue
+                        val u = a.optString("browser_download_url", "")
+                        if (u.endsWith(".apk")) {
+                            url = u
+                            break
+                        }
+                    }
+                }
+                val notes = o.optString("body", "").trim().take(500)
+                if (tag.isNotEmpty()) {
+                    prefs.edit()
+                        .putString("updTag", tag)
+                        .putString("updUrl", url)
+                        .putString("updNotes", notes)
+                        .apply()
+                    msg = if (isNewerVersion(tag, currentVersion())) "new" else "latest"
+                }
+            } catch (_: Exception) {
+                msg = "fail"
+            }
         }
         ui {
             onDone?.invoke(msg)
@@ -377,11 +326,6 @@ internal fun MainActivity.autoChecks() {
     if (System.currentTimeMillis() - lastWg >= 12L * 3600L * 1000L) {
         prefs.edit().putLong("remoteWgTry", System.currentTimeMillis()).apply()
         importDefaultWgList(true) { vpnRender?.invoke() }
-    }
-    // one-time: free V2Gaming list used to be merged with the account's servers; reload it clean
-    if (!prefs.getBoolean("subSplit1", false)) {
-        prefs.edit().putBoolean("subSplit1", true).apply()
-        refreshRemoteV2(true, null)
     }
     checkSubSilently()
     checkUpdate(false, null)
@@ -428,15 +372,9 @@ internal fun MainActivity.wgScopeGames(@Suppress("UNUSED_PARAMETER") base: Strin
 internal fun MainActivity.wgIncludePackages(base: String): List<String> = scopedPackages(base)
 
 internal fun MainActivity.scopedPackages(base: String?): List<String> {
-    // Build the allow-list from the same persisted favorites used by the Games tab.
-    // Read it AFTER loadApps(), because that call may auto-favorite newly detected games.
-    loadApps()
     val set = LinkedHashSet<String>()
-    // Favorites are deliberately added first so they are never omitted just because Android
-    // did not classify an app as a game (many launchers/games do not set CATEGORY_GAME).
-    set.addAll(favoriteSet())
-    // Keep automatic game discovery as a convenience in addition to explicit favorites.
     for (a in loadApps()) if (a.isGame) set.add(a.pkg)
+    set.addAll(favoriteSet())
     for (k in prefs.all.keys) {
         if (k.startsWith("prof_")) {
             val pkg = k.removePrefix("prof_")
@@ -445,30 +383,26 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
         }
     }
     val out = ArrayList<String>()
-    for (pkg in set) {
-        if (pkg.isBlank() || pkg == packageName) continue
+    for (p in set) {
         try {
-            packageManager.getApplicationInfo(pkg, 0)
-            out.add(pkg)
+            packageManager.getApplicationInfo(p, 0)
+            out.add(p)
         } catch (_: Exception) {
-            // Ignore stale favorites for apps that have been uninstalled.
         }
     }
     return out
 }
 
 internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
-    // Preserve the user's WireGuard profile exactly: do not rewrite AllowedIPs, MTU, DNS,
-    // endpoints, or PersistentKeepalive. The only app-side addition is Android's per-app
-    // allow-list so selected games/favorites use this VPN.
+    if (!wgScopeGames(base)) return text
     val pkgs = wgIncludePackages(base)
+    // Games-only mode must never fall back to a whole-phone tunnel.
     if (pkgs.isEmpty()) return null
     val out = ArrayList<String>()
     var inserted = false
     for (line in text.split("\n")) {
         val t = line.trim()
         val low = t.lowercase()
-        // Replace any old app-scope directives with the current favorites/game list.
         if (low.startsWith("includedapplications") || low.startsWith("excludedapplications")) continue
         out.add(line)
         if (!inserted && t.equals("[Interface]", ignoreCase = true)) {
@@ -477,72 +411,6 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
         }
     }
     return if (inserted) out.joinToString("\n") else null
-}
-
-// A game-only tunnel has to carry all traffic of the selected apps. A peer whose AllowedIPs lists only
-// a few addresses leaves the game servers and the DNS server outside the tunnel, so the game loses its
-// network right after it starts even though the tunnel shows as connected. Single-peer configs only.
-internal fun wgEnsureFullRoute(text: String): String {
-    val lines = text.split("\n")
-    var peers = 0
-    var v6 = false
-    for (ln in lines) {
-        val t = ln.trim().lowercase()
-        if (t == "[peer]") peers++
-        if (t.startsWith("address") && t.contains(":")) v6 = true
-    }
-    if (peers != 1) return text
-    val full = if (v6) "AllowedIPs = 0.0.0.0/0, ::/0" else "AllowedIPs = 0.0.0.0/0"
-    val out = ArrayList<String>()
-    var inPeer = false
-    var seen = false
-    for (ln in lines) {
-        val t = ln.trim()
-        if (t.startsWith("[")) {
-            if (inPeer && !seen) out.add(full)
-            inPeer = t.equals("[Peer]", ignoreCase = true)
-            seen = false
-            out.add(ln)
-            continue
-        }
-        if (inPeer && t.lowercase().startsWith("allowedips")) {
-            seen = true
-            val v = t.substringAfter("=", "")
-            if (!v.contains("0.0.0.0/0")) {
-                out.add(full)
-                continue
-            }
-        }
-        out.add(ln)
-    }
-    if (inPeer && !seen) out.add(full)
-    return out.joinToString("\n")
-}
-
-// Mobile NATs drop idle UDP mappings; a peer without PersistentKeepalive then stops receiving.
-internal fun wgEnsureKeepalive(text: String): String {
-    val src = text.split("\n")
-    val needs = ArrayList<Boolean>()
-    var cur = -1
-    for (ln in src) {
-        val t = ln.trim().lowercase()
-        if (t == "[peer]") {
-            cur++
-            needs.add(true)
-        } else if (cur >= 0 && t.startsWith("persistentkeepalive")) {
-            needs[cur] = false
-        }
-    }
-    val out = ArrayList<String>()
-    var idx = -1
-    for (ln in src) {
-        out.add(ln)
-        if (ln.trim().equals("[Peer]", ignoreCase = true)) {
-            idx++
-            if (needs[idx]) out.add("PersistentKeepalive = 25")
-        }
-    }
-    return out.joinToString("\n")
 }
 
 
@@ -556,14 +424,11 @@ internal fun parseRepo(raw: String): String? {
 }
 
 
-// With an active subscription the server's DNS list (free + premium) is tried first.
-// V2Gaming / WireGuard account servers are not merged here: they are downloaded into the
-// "اشتراک ویژه" tab only (see Subscription.kt). An expired code gets an HTTP error and the
-// free GitHub list is used.
+// With an active subscription code the server's list (free + premium) is tried first;
+// an expired or invalid code gets an HTTP error there and the free GitHub list is used.
 internal fun MainActivity.listUrls(file: String): List<String> {
     val token = prefs.getString("subCode", "") ?: ""
     val base = remoteUrls(ghRepo(), file)
-    if (file != "dns.json") return base
     if (token.isEmpty() || !prefs.getBoolean("subActive", false)) return base
     return listOf(SUB_API + "?a=list&f=" + file + "&t=" + android.net.Uri.encode(token)) + base
 }

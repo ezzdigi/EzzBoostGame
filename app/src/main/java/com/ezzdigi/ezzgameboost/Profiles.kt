@@ -162,7 +162,7 @@ internal fun MainActivity.editProfile(item: AppItem, after: () -> Unit) {
                     ) { dns = it }
                     1 -> pick(
                         Tr.t("وایرگارد"),
-                        listOf(Tr.t("بدون وایرگارد")) + listCfg("wg").map { it.removeSuffix(".conf") }.filter { !subWgNameSet().contains(it) },
+                        listOf(Tr.t("بدون وایرگارد")) + listCfg("wg").map { it.removeSuffix(".conf") },
                         wg
                     ) { wg = it }
                     2 -> {
@@ -237,7 +237,7 @@ internal fun MainActivity.launchWithProfile(pkg: String, p: GameProfile) {
             connectWg(wgBase)
             return
         }
-    } else if (p.dns.isNotEmpty() && !WgState.up && !V2VpnService.running) {
+    } else if (p.dns.isNotEmpty()) {
         val pr = dnsProviders.firstOrNull { it.name == p.dns }
         if (pr != null && !(DnsVpnService.running && DnsVpnService.activeName == pr.name)) {
             pendingLaunch = pkg
