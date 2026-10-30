@@ -520,7 +520,7 @@ internal fun MainActivity.v2Status(): String {
 }
 
 internal fun MainActivity.connectV2(item: V2Item) {
-    if (WgState.up || WgState.wanted || AwgState.up || AwgState.wanted || wgBusy) {
+    if (WgState.up || WgState.wanted || wgBusy) {
         toast("برای جلوگیری از قطع Pro Gaming، ابتدا آن را دستی قطع کن؛ سپس EzzGaming را وصل کن.")
         return
     }

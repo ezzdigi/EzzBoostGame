@@ -317,13 +317,7 @@ internal fun MainActivity.importWg(text: String, wantedName: String, onDone: () 
     runBg {
         var err = ""
         try {
-            if (isAmneziaWgConfig(text)) {
-                org.amnezia.awg.config.Config.parse(
-                    ByteArrayInputStream(text.toByteArray(Charsets.UTF_8))
-                )
-            } else {
-                Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-            }
+            Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
         } catch (e: Throwable) {
             err = (e.message ?: e.javaClass.simpleName).take(120)
         }
@@ -366,7 +360,7 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
 
 internal fun MainActivity.testWg(base: String) {
     if (wgBusy) return
-    if (WgState.up || AwgState.up || V2VpnService.running || V2VpnService.busy) {
+    if (WgState.up || V2VpnService.running || V2VpnService.busy) {
         wgTestRes[base] = "⚠️ اول اتصال فعلی (وایرگارد یا V2Ray) را قطع کن، بعد تست کن."
         vpnRender?.invoke()
         return
@@ -462,6 +456,17 @@ internal fun MainActivity.runWgTest(base: String) {
     }
 }
 
+// AmneziaWG configs carry obfuscation keys (Jc, Jmin, S1, H1, I1 ...) that the standard
+// WireGuard library cannot parse.
+internal fun isAwgConfig(text: String): Boolean {
+    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5")
+    for (ln in text.lines()) {
+        val k = ln.substringBefore('=').trim().lowercase()
+        if (ln.contains('=') && keys.contains(k)) return true
+    }
+    return false
+}
+
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
 
 internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: () -> Unit) {
@@ -492,21 +497,14 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     val url = o.optString("url")
                     if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
                     if (!text.contains("[Interface]")) continue
-                    if (isAmneziaWgConfig(text)) {
+                    if (isAwgConfig(text)) {
                         awg++
-                        try {
-                            org.amnezia.awg.config.Config.parse(
-                                ByteArrayInputStream(text.toByteArray(Charsets.UTF_8))
-                            )
-                        } catch (_: Throwable) {
-                            continue
-                        }
-                    } else {
-                        try {
-                            Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-                        } catch (_: Throwable) {
-                            continue
-                        }
+                        continue
+                    }
+                    try {
+                        Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                    } catch (_: Throwable) {
+                        continue
                     }
                     val base = cleanName(nm, "wg")
                     // never overwrite an account server with a free one of the same name
@@ -611,23 +609,15 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                     failed++
                     continue
                 }
-                if (isAmneziaWgConfig(text)) {
+                if (isAwgConfig(text)) {
                     awgN++
-                    try {
-                        org.amnezia.awg.config.Config.parse(
-                            ByteArrayInputStream(text.toByteArray(Charsets.UTF_8))
-                        )
-                    } catch (_: Throwable) {
-                        failed++
-                        continue
-                    }
-                } else {
-                    try {
-                        Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-                    } catch (_: Throwable) {
-                        failed++
-                        continue
-                    }
+                    continue
+                }
+                try {
+                    Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                } catch (_: Throwable) {
+                    failed++
+                    continue
                 }
                 val nm = if (files.size == 1 && wantedName.isNotBlank()) wantedName else f.first
                 writeCfg("wg", uniqueFile("wg", cleanName(nm, "wg"), ".conf"), text)
@@ -785,20 +775,6 @@ internal fun MainActivity.doConnectWg(base: String) {
         toast("کانفیگ پیدا نشد.")
         return
     }
-    if (isAmneziaWgConfig(text)) {
-        if (V2VpnService.running || V2VpnService.busy) {
-            toast("برای اتصال AmneziaWG ابتدا EzzGaming را قطع کن.")
-            return
-        }
-        if (WgState.up || WgState.wanted || AwgState.up || AwgState.wanted) {
-            disconnectWg()
-        }
-        wgBusy = true
-        toast("در حال اتصال AmneziaWG به " + base + "…")
-        vpnRefresh?.invoke()
-        connectAmneziaWg(base, text)
-        return
-    }
     wgBusy = true
     toast(Tr.t("در حال اتصال به") + " " + base + "…")
     vpnRefresh?.invoke()
@@ -883,10 +859,6 @@ internal fun MainActivity.doConnectWg(base: String) {
 }
 
 internal fun MainActivity.disconnectWg() {
-    if (AwgState.up || AwgState.wanted) {
-        disconnectAmneziaWg()
-        return
-    }
     if (wgBusy) return
     WgState.wanted = false
     wgBusy = true
@@ -967,8 +939,8 @@ internal fun MainActivity.buildVpn() {
 
     var wKey = ""
     fun renderW(force: Boolean) {
-        val up = WgState.up || AwgState.up
-        val act = if (AwgState.up) AwgState.activeName else WgState.activeName
+        val up = WgState.up
+        val act = WgState.activeName
         wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
         wStatus.setTextColor(if (up) good else white)
         val acct = subWgNameSet()

@@ -179,7 +179,6 @@ internal fun MainActivity.removeSubConfig() {
 internal fun MainActivity.removeSubItems() {
     try {
         if (WgState.up && subWgNameSet().contains(WgState.activeName)) disconnectWg()
-        if (AwgState.up && subWgNameSet().contains(AwgState.activeName)) disconnectAmneziaWg()
         val ids = subV2Items().map { it.raw.hashCode().toString() }
         if (V2VpnService.running && ids.contains(V2VpnService.activeId)) V2VpnService.requestStop(this)
     } catch (_: Throwable) {
@@ -273,21 +272,13 @@ private fun MainActivity.parseWgEntries(body: String): List<Pair<String, String>
             // otherwise keep it unchanged so connecting shows what is wrong with it.
             var use = text
             try {
-                if (isAmneziaWgConfig(text)) {
-                    org.amnezia.awg.config.Config.parse(
-                        ByteArrayInputStream(text.toByteArray(Charsets.UTF_8))
-                    )
-                } else {
-                    Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-                }
+                Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
             } catch (_: Throwable) {
-                if (!isAmneziaWgConfig(text)) {
-                    val cleaned = wgSanitize(text)
-                    try {
-                        Config.parse(ByteArrayInputStream(cleaned.toByteArray(Charsets.UTF_8)))
-                        use = cleaned
-                    } catch (_: Throwable) {
-                    }
+                val cleaned = wgSanitize(text)
+                try {
+                    Config.parse(ByteArrayInputStream(cleaned.toByteArray(Charsets.UTF_8)))
+                    use = cleaned
+                } catch (_: Throwable) {
                 }
             }
             out.add(Pair(nm, use))
@@ -505,16 +496,7 @@ internal fun MainActivity.buildSubscription() {
     aRow.addView(bRefresh, a1)
     aRow.addView(bOut, a2)
     hCard.addView(aRow, vlp(4, 6))
-    val buyRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-    val buy = button("🛒 خرید اشتراک", true) {
-        openUrl(SUB_BUY_URL + "?action=buy")
-    }
-    val renew = button("🔄 تمدید اکانت", false) {
-        openUrl(SUB_BUY_URL + "?action=renew&user=" + Uri.encode(prefs.getString("subUser", "") ?: ""))
-    }
-    buyRow.addView(buy, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginEnd = dp(4) })
-    buyRow.addView(renew, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(4) })
-    hCard.addView(buyRow, vlp(0, 0))
+    hCard.addView(button("🛒 تمدید / دریافت اکانت", false) { openUrl(SUB_BUY_URL) }, vlp(0, 0))
     content.addView(hCard, vlp(0, 4))
 
     vpnRefresh = { paintHead() }
@@ -590,7 +572,7 @@ internal fun MainActivity.buildSubWg() {
 
     var wKey = ""
     fun renderW(force: Boolean) {
-        val up = WgState.up || AwgState.up
+        val up = WgState.up
         val act = WgState.activeName
         wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
         wStatus.setTextColor(if (up) good else white)
@@ -632,14 +614,7 @@ private fun MainActivity.buildSubLogin() {
         },
         vlp(0, 6)
     )
-    val buy = button("🛒 خرید اشتراک", true) { openUrl(SUB_BUY_URL + "?action=buy") }
-    val renew = button("🔄 تمدید اکانت", false) {
-        toast("برای تمدید ابتدا وارد حساب شو.")
-    }
-    val payRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-    payRow.addView(buy, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginEnd = dp(4) })
-    payRow.addView(renew, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(4) })
-    sCard.addView(payRow, vlp(0, 0))
+    sCard.addView(button("🛒 دریافت اکانت", false) { openUrl(SUB_BUY_URL) }, vlp(0, 0))
     content.addView(sCard, vlp(0, 4))
 }
 
@@ -690,7 +665,7 @@ private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
 // so the user can add any other app here; it is then included in WireGuard and V2Gaming tunnels.
 
 private fun MainActivity.subWgRow(base: String): LinearLayout {
-    val isActive = (WgState.up && WgState.activeName == base) || (AwgState.up && AwgState.activeName == base)
+    val isActive = WgState.up && WgState.activeName == base
     val row = LinearLayout(this)
     row.orientation = LinearLayout.HORIZONTAL
     row.gravity = android.view.Gravity.CENTER_VERTICAL
