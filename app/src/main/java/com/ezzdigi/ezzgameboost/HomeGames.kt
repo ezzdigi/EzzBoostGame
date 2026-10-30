@@ -103,6 +103,7 @@ internal fun MainActivity.buildHome() {
     val heroSub = label("", 12.5f, muted)
     hero.addView(heroSub, vlp(4, 0))
     content.addView(hero, vlp(4, 4))
+    addUpdateBanner()
 
     section("LIVE STATS")
     val gCard = card(8)
@@ -453,4 +454,4 @@ internal fun MainActivity.doLaunch(pkg: String) {
     } catch (_: Exception) {
         toast("اجرای این برنامه ممکن نیست.")
     }
-}}
+}
