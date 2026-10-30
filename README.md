@@ -45,6 +45,8 @@ Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PA
 
 - Accounts now give each user separate WireGuard and V2Ray configs from the pool; logout/expiry also restores the free V2Ray/DNS lists. See `README_FA.md` in the `ezzsub` package for the full hosting + domain guide and `tools/gen_wg_configs.py` for bulk WireGuard configs.
 
-- DNS tab now has sub-tabs (DNS / Private DNS (DoT) / PING); only the selected DNS is shown, the others are under a collapsible "سایر DNSها" row. The Gaming Server tab is subscription-only: after login the account's WireGuard and V2Ray servers (connect / disconnect / test) appear under the login card; there is no free import, free list or public source any more (only the DNS list keeps a free source).
+- WireGuard connect now runs a quick tunnel check first (handshake + one request) and shows the result in the row; the row also lists the games that go through the tunnel. Peers without PersistentKeepalive get 25 s added. DNS tab has sub-tabs (DNS / Private DNS (DoT) / PING) with the other DNS servers collapsed. Server addresses are hidden in V2 rows and error texts.
 
-- The subscription ("اشتراک ویژه") has its own WireGuard and V2Ray lists (VIP WG n / VIP V2 n) kept apart from the free lists; free lists (GitHub, public sources, own imports) are unchanged. Server addresses are never shown in the app, and VLESS links without TLS/Reality (refused by the Xray core) get a clear message instead of the raw core error.
+- WireGuard connect no longer runs a pre-check tunnel (it could race with the real tunnel and drop it); the manual test now waits for the VPN service to shut down. V2Gaming shows short Persian errors. `v2ray.json` has a `sources` array (barry-far trojan/ss/vmess). The update check tries `SUB_BASE/update.json` first (see ezzsub/update.json), then GitHub.
+
+- WireGuard now runs a small foreground service (WgKeepService, notification "EzzGameBOOST WireGuard") while the tunnel is up, so the system does not kill the process when a heavy game starts (V2Ray and DNS already did this). It stops itself when the tunnel goes down.
