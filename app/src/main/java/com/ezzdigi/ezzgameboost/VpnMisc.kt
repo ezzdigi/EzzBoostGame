@@ -317,7 +317,7 @@ internal fun MainActivity.importWg(text: String, wantedName: String, onDone: () 
     runBg {
         var err = ""
         try {
-            Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+            WgEngine.validate(text)
         } catch (e: Throwable) {
             err = (e.message ?: e.javaClass.simpleName).take(120)
         }
@@ -336,12 +336,6 @@ internal fun MainActivity.importWg(text: String, wantedName: String, onDone: () 
 
 // ----- WireGuard config test ----------------------------------------------
 
-class WgTestTun : Tunnel {
-    override fun getName(): String = "ezztest"
-    override fun onStateChange(newState: Tunnel.State) {
-    }
-}
-
 internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): String? {
     val out = ArrayList<String>()
     var inserted = false
@@ -355,7 +349,7 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
             inserted = true
         }
     }
-    return if (inserted) wgEnsureKeepalive(wgEnsureFullRoute(out.joinToString("\n"))) else null
+    return if (inserted) out.joinToString("\n") else null
 }
 
 internal fun MainActivity.testWg(base: String) {
@@ -388,16 +382,16 @@ internal fun MainActivity.testWg(base: String) {
 // brings it down again. Returns a one-line result. Call from a background thread.
 internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): String {
     var result = ""
-    val tun = WgTestTun()
+    var sess: WgSession? = null
     var up = false
     try {
         val scoped = wgScopeToPackages(text, listOf(packageName))
         if (scoped == null) {
             result = "❌ کانفیگ ساختار معتبر ندارد."
         } else {
-            val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-            val be = wgBackendGet()
-            be.setState(tun, Tunnel.State.UP, cfg)
+            val s2 = WgSession(this, "ezztest", isAwgConfig(scoped), false)
+            sess = s2
+            s2.up(scoped)
             up = true
             Thread.sleep(600)
             var ms = -1L
@@ -412,6 +406,8 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): Stri
             }
             result = if (ms >= 0) {
                 "✅ وصل است"
+            } else if (sess != null && sess.latestHandshake() > 0L) {
+                "✅ وصل است (هندشیک انجام شد)"
             } else {
                 "❌ وصل نیست (سرور جواب نمی‌دهد)"
             }
@@ -421,7 +417,7 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): Stri
     }
     if (up) {
         try {
-            wgBackendGet().setState(tun, Tunnel.State.DOWN, null)
+            sess?.down()
         } catch (_: Throwable) {
         }
         // give the VPN service time to shut down so it cannot tear down the next tunnel
@@ -459,7 +455,7 @@ internal fun MainActivity.runWgTest(base: String) {
 // AmneziaWG configs carry obfuscation keys (Jc, Jmin, S1, H1, I1 ...) that the standard
 // WireGuard library cannot parse.
 internal fun isAwgConfig(text: String): Boolean {
-    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5")
+    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime")
     for (ln in text.lines()) {
         val k = ln.substringBefore('=').trim().lowercase()
         if (ln.contains('=') && keys.contains(k)) return true
@@ -482,7 +478,6 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
             if (b != null) lastHttpErr = "فایل JSON نیست"
         }
         var added = 0
-        var awg = 0
         var err = ""
         val listed = ArrayList<String>()
         if (body == null) {
@@ -497,12 +492,8 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     val url = o.optString("url")
                     if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
                     if (!text.contains("[Interface]")) continue
-                    if (isAwgConfig(text)) {
-                        awg++
-                        continue
-                    }
                     try {
-                        Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                        WgEngine.validate(text)
                     } catch (_: Throwable) {
                         continue
                     }
@@ -519,11 +510,7 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                 err = "لیست سرورها معتبر نیست."
             }
             if (added == 0 && err.isEmpty()) {
-                err = if (awg > 0) {
-                    awg.toString() + " کانفیگ از نوع AmneziaWG است (دارای Jc/S1/H1) و این نسخه فقط WireGuard استاندارد را پشتیبانی می‌کند."
-                } else {
-                    "سرور گیمینگ معتبری پیدا نشد."
-                }
+                err = "سرور گیمینگ معتبری پیدا نشد."
             }
         }
         ui {
@@ -601,7 +588,6 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                 files.add(Pair(raw.substringAfterLast('/').substringBefore('?'), raw))
             }
             var failed = 0
-            var awgN = 0
             for (f in files) {
                 if (listCfg("wg").size >= 20) break
                 val text = httpGet(f.second, 10000, 262144)
@@ -609,12 +595,8 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                     failed++
                     continue
                 }
-                if (isAwgConfig(text)) {
-                    awgN++
-                    continue
-                }
                 try {
-                    Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                    WgEngine.validate(text)
                 } catch (_: Throwable) {
                     failed++
                     continue
@@ -624,9 +606,7 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                 added++
             }
             if (added == 0 && err.isEmpty()) {
-                err = if (awgN > 0) {
-                    "کانفیگ از نوع AmneziaWG است و این نسخه فقط WireGuard استاندارد را پشتیبانی می‌کند."
-                } else if (failed > 0) {
+                err = if (failed > 0) {
                     "کانفیگ معتبر وایرگارد پیدا نشد."
                 } else {
                     "دریافت از GitHub ناموفق بود."
@@ -703,23 +683,10 @@ internal fun MainActivity.testDnsAddrs(addrs: List<Pair<String, String>>, onDone
 
 // True once the server has answered the handshake. PersistentKeepalive makes the tunnel start one
 // right away, so no handshake within a few seconds means wrong endpoint/key or a closed UDP port.
-internal fun wgLatestHandshake(be: GoBackend, tun: Tunnel): Long {
-    var best = 0L
-    try {
-        val st = be.getStatistics(tun)
-        for (k in st.peers()) {
-            val ps = st.peer(k)
-            if (ps != null && ps.latestHandshakeEpochMillis() > best) best = ps.latestHandshakeEpochMillis()
-        }
-    } catch (_: Throwable) {
-    }
-    return best
-}
-
-internal fun waitWgHandshake(be: GoBackend, tun: Tunnel, timeoutMs: Long): Boolean {
+internal fun waitWgHandshake(sess: WgSession, timeoutMs: Long): Boolean {
     val end = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < end) {
-        if (wgLatestHandshake(be, tun) > 0L) return true
+        if (sess.latestHandshake() > 0L) return true
         try {
             Thread.sleep(500)
         } catch (_: Throwable) {
@@ -736,15 +703,6 @@ internal fun wgHealthInfo(): String =
     } else {
         ""
     }
-
-internal fun MainActivity.wgBackendGet(): GoBackend {
-    var b = wgBackend
-    if (b == null) {
-        b = GoBackend(applicationContext)
-        wgBackend = b
-    }
-    return b
-}
 
 internal fun MainActivity.connectWg(base: String) {
     if (V2VpnService.running || V2VpnService.busy) {
@@ -792,50 +750,39 @@ internal fun MainActivity.doConnectWg(base: String) {
             if (scoped == null) {
                 noGames = true
             } else {
-                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-                val be = wgBackendGet()
                 val old = wgTunnel
                 if (old != null) {
                     try {
-                        be.setState(old, Tunnel.State.DOWN, null)
+                        old.down()
                     } catch (_: Throwable) {
                     }
                 }
-                val tun = WgTun(base)
-                be.setState(tun, Tunnel.State.UP, cfg)
-                if (!waitWgHandshake(be, tun, 9000L)) {
-                    // Do not show "connected" for a tunnel that carries nothing.
-                    try {
-                        be.setState(tun, Tunnel.State.DOWN, null)
-                    } catch (_: Throwable) {
-                    }
-                    wgTunnel = null
-                    WgState.up = false
-                    WgState.activeName = ""
-                    noReply = true
-                } else {
-                    wgTunnel = tun
-                    WgState.activeName = base
-                    WgState.up = true
-                    WgState.baseName = base
-                    WgState.cfgText = scoped
-                    WgState.upSince = System.currentTimeMillis()
-                    WgState.attempts = 0
-                    WgState.reconnects = 0
-                    WgState.lastDrop = ""
-                    WgState.wanted = true
-                    // keep the process alive (foreground) while the tunnel is up
-                    try {
-                        startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
-                    } catch (_: Throwable) {
-                    }
-                    try {
-                        val pk = wgIncludePackages(base)
-                        val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
-                        wgAppsInfo[base] = if (labels.isEmpty()) "" else labels.take(4).joinToString("، ") + (if (labels.size > 4) " +" + (labels.size - 4) else "")
-                    } catch (_: Throwable) {
-                    }
+                val sess = WgSession(this, base, isAwgConfig(scoped))
+                sess.up(scoped)
+                wgTunnel = sess
+                WgState.activeName = base
+                WgState.up = true
+                WgState.baseName = base
+                WgState.cfgText = scoped
+                WgState.upSince = System.currentTimeMillis()
+                WgState.attempts = 0
+                WgState.reconnects = 0
+                WgState.lastDrop = ""
+                WgState.wanted = true
+                // keep the process alive (foreground) while the tunnel is up
+                try {
+                    startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
+                } catch (_: Throwable) {
                 }
+                try {
+                    val pk = wgIncludePackages(base)
+                    val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
+                    wgAppsInfo[base] = if (labels.isEmpty()) "" else labels.take(4).joinToString("، ") + (if (labels.size > 4) " +" + (labels.size - 4) else "")
+                } catch (_: Throwable) {
+                }
+                // The config is never rejected for a missing handshake: without PersistentKeepalive the
+                // handshake only happens once traffic flows. This is just a hint.
+                noReply = !waitWgHandshake(sess, 9000L)
             }
         } catch (e: Throwable) {
             err = (e.message ?: e.javaClass.simpleName).take(160)
@@ -844,8 +791,8 @@ internal fun MainActivity.doConnectWg(base: String) {
             wgBusy = false
             if (noGames) {
                 toast(Tr.t("بازی‌ای پیدا نشد. یک بازی نصب کن یا آن را در تب بازی‌ها علاقه‌مند کن."))
-            } else if (noReply) {
-                toast(Tr.t("سرور وایرگارد جواب نداد (Endpoint یا کلید اشتباه، یا پورت UDP بسته). این کانفیگ را عوض کن."))
+            } else if (err.isEmpty() && noReply) {
+                toast(Tr.t("متصل شد؛ هنوز هندشیکی انجام نشده (بعد از شروع بازی دوباره چک می‌شود)"))
             } else if (err.isEmpty()) {
                 toast(Tr.t("متصل شد"))
             } else {
@@ -864,8 +811,7 @@ internal fun MainActivity.disconnectWg() {
     wgBusy = true
     runBg {
         try {
-            val t = wgTunnel
-            if (t != null) wgBackendGet().setState(t, Tunnel.State.DOWN, null)
+            wgTunnel?.down()
         } catch (_: Throwable) {
         }
         WgState.up = false

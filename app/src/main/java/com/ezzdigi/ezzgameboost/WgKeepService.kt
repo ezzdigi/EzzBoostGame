@@ -51,8 +51,11 @@ class WgKeepService : Service() {
         // starting EzzGaming while Pro Gaming is active; if another VPN takes the slot,
         // keep the user's Pro Gaming intent so the watchdog can recover after it is stopped.
         if (DnsVpnService.running || V2VpnService.running) return
-        val be = WgState.backend ?: return
-        val tun = WgState.tunnel ?: return
+        val sess = WgState.tunnel ?: return
+        // Without PersistentKeepalive a quiet tunnel legitimately has no fresh handshake, so the
+        // config is never judged "dead" for that; the watchdog only revives a tunnel the system tore
+        // down, or (with a keepalive set) one whose server stopped answering.
+        val hasKeepalive = WgState.cfgText.lines().any { it.trim().lowercase().startsWith("persistentkeepalive") }
         val now = System.currentTimeMillis()
         var reason = ""
         if (!WgState.up) {
@@ -60,12 +63,12 @@ class WgKeepService : Service() {
             if (downTicks >= 2) reason = "تونل از سمت سیستم قطع شد"
         } else {
             downTicks = 0
-            val hs = wgLatestHandshake(be, tun)
+            val hs = sess.latestHandshake()
             if (hs > 0L) {
                 WgState.attempts = 0
-                // with PersistentKeepalive the handshake is renewed about every 1404000000000000 minutes while the server answers
-                if (now - hs > 210000L) reason = "سرور جواب نمی‌داد (هندشیک قدیمی)"
-            } else if (now - WgState.upSince > 25000L) {
+                // with PersistentKeepalive the handshake is renewed about every 2 minutes while the server answers
+                if (hasKeepalive && now - hs > 210000L) reason = "سرور جواب نمی‌داد (هندشیک قدیمی)"
+            } else if (hasKeepalive && now - WgState.upSince > 25000L) {
                 reason = "سرور جواب نمی‌داد (بدون هندشیک)"
             }
         }
@@ -75,20 +78,19 @@ class WgKeepService : Service() {
             WgState.lastDrop = reason + " • تلاش مجدد متوقف شد"
             return
         }
-        reconnect(be, tun, reason)
+        reconnect(sess, reason)
     }
 
-    private fun reconnect(be: GoBackend, tun: WgTun, reason: String) {
+    private fun reconnect(sess: WgSession, reason: String) {
         WgState.reconnecting = true
         WgState.attempts++
         try {
-            val cfg = Config.parse(ByteArrayInputStream(WgState.cfgText.toByteArray(Charsets.UTF_8)))
             if (!WgState.wanted) return
             try {
-                be.setState(tun, Tunnel.State.DOWN, null)
+                sess.down()
             } catch (_: Throwable) {
             }
-            be.setState(tun, Tunnel.State.UP, cfg)
+            sess.up(WgState.cfgText)
             WgState.activeName = WgState.baseName
             WgState.up = true
             WgState.upSince = System.currentTimeMillis()

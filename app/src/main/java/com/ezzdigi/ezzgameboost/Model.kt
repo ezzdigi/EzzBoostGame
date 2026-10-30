@@ -229,15 +229,6 @@ object DnsList {
     fun all(ctx: Context): List<DnsProvider> = merged(ctx) + custom(ctx)
 }
 
-class WgTun(private val tunnelName: String) : Tunnel {
-    override fun getName(): String = tunnelName
-
-    override fun onStateChange(newState: Tunnel.State) {
-        WgState.up = newState == Tunnel.State.UP
-        if (!WgState.up) WgState.activeName = ""
-    }
-}
-
 // Names of the games that go through the active WireGuard tunnel (shown in the row).
 val wgAppsInfo = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -251,10 +242,7 @@ object WgState {
     // Process-wide (not tied to the activity) so the tunnel can be watched and revived while a game
     // runs and the activity has been destroyed.
     @Volatile
-    var backend: GoBackend? = null
-
-    @Volatile
-    var tunnel: WgTun? = null
+    var tunnel: WgSession? = null
 
     // The user wants the tunnel up (set on connect, cleared on disconnect).
     @Volatile

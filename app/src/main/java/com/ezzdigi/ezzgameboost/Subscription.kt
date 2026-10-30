@@ -228,7 +228,10 @@ internal fun MainActivity.fetchSubStatus(token: String): SubStatus {
 private fun wgSanitize(text: String): String {
     val known = setOf(
         "privatekey", "publickey", "presharedkey", "address", "dns", "mtu", "listenport",
-        "endpoint", "allowedips", "persistentkeepalive"
+        "endpoint", "allowedips", "persistentkeepalive",
+        // AmneziaWG obfuscation keys
+        "jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4",
+        "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime"
     )
     val out = ArrayList<String>()
     var first = true
@@ -272,11 +275,11 @@ private fun MainActivity.parseWgEntries(body: String): List<Pair<String, String>
             // otherwise keep it unchanged so connecting shows what is wrong with it.
             var use = text
             try {
-                Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                WgEngine.validate(text)
             } catch (_: Throwable) {
                 val cleaned = wgSanitize(text)
                 try {
-                    Config.parse(ByteArrayInputStream(cleaned.toByteArray(Charsets.UTF_8)))
+                    WgEngine.validate(cleaned)
                     use = cleaned
                 } catch (_: Throwable) {
                 }

@@ -223,6 +223,7 @@ object Tr {
         Pair("کانفیگ وایرگارد در کلیپ\u200cبورد پیدا نشد", "No WireGuard config found on the clipboard"),
         Pair("نام کانفیگ (اختیاری)", "Config name (optional)"),
         Pair("خطای وایرگارد:", "WireGuard error:"),
+        Pair("متصل شد؛ هنوز هندشیکی انجام نشده (بعد از شروع بازی دوباره چک می‌شود)", "Connected; no handshake yet (it happens once traffic flows)"),
         Pair("وایرگارد قطع شد", "WireGuard disconnected"),
         Pair("کانفیگ ذخیره شد", "Config saved"),
         Pair("کانفیگ اضافه شد", "configs added"),
