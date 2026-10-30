@@ -68,6 +68,15 @@ android {
 // Without it the app still builds, and V2Ray direct connect is disabled.
 val xrayAarFile = file("libs/libv2ray.aar")
 
+// The AmneziaWG library pulls in androidx.core 1.17.0, which needs compileSdk 36 and AGP 8.9.1.
+// Keep the version this project already builds with (compileSdk 35, AGP 8.7.3).
+configurations.all {
+    resolutionStrategy {
+        force("androidx.core:core:1.15.0")
+        force("androidx.core:core-ktx:1.15.0")
+    }
+}
+
 dependencies {
     implementation("com.wireguard.android:tunnel:1.0.20250531")
     implementation("com.zaneschepke:amneziawg-android:2.3.7")
