@@ -2,8 +2,12 @@
   "version": 1,
   "configs": [
     {
-      "name": "Pro Gaming 1",
-      "conf": "[Interface]\nPrivateKey = PRIVATE_KEY_HERE\nAddress = 10.0.0.2/32\nDNS = 1.1.1.1\nMTU = 1280\n\n[Peer]\nPublicKey = SERVER_PUBLIC_KEY_HERE\nEndpoint = 1.2.3.4:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25"
+      "name": "X-PRO 1",
+      "conf": "[Interface]\nAddress = 178.22.122.100/31\nDNS = 185.51.200.2, 10.202.10.102\nMTU = 1380\nPrivateKey = AJ78UyvNyen+If69v/toTbnPYIHHsdgUZ9jx0M2gxHs=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nEndpoint = ae1.vpnjantit.com:1024\nPublicKey = 3GNyI2xtm6UcQq+GNVqMq6ulokySRGGSng+UNzW+whM="
+    },
+    {
+      "name": "X-PRO 2",
+      "conf": "[Interface]\nAddress = 10.66.2.225/32\nDNS = 208.67.222.222, 208.67.220.220\nMTU = 1300\nPrivateKey = 2BQByzkWP959aZKKLiU2pAwEXTgFdlcJRGeZ0i5a+ng=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nEndpoint = ae1.vpnjantit.com:1024\nPersistentKeepalive = 11\nPreSharedKey = GOtWDEq1Hcu9zr4r7oUN/DyNjm04j2p4YQSKX6SZhIc=\nPublicKey = qhwUFEli/e2CTfTEx4A1c9GRQzDrkplDheUztaAPaS8="
     }
   ]
 }
