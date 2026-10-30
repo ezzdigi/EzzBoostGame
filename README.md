@@ -44,3 +44,9 @@ Optional own signing key: add repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PA
 - Accounts: the Gaming Server tab has a per-user login ("اشتراک ویژه"). Each user gets their own WireGuard (and optionally V2Ray) config from your hosting (PHP + MySQL). Set `SUB_BASE` in `Model.kt`. The server folder `ezzsub` is a separate download; do not commit it (or its config.php) to a public repo. The old Cloudflare Worker version was removed.
 
 - Accounts now give each user separate WireGuard and V2Ray configs from the pool; logout/expiry also restores the free V2Ray/DNS lists. See `README_FA.md` in the `ezzsub` package for the full hosting + domain guide and `tools/gen_wg_configs.py` for bulk WireGuard configs.
+
+- WireGuard connect now runs a quick tunnel check first (handshake + one request) and shows the result in the row; the row also lists the games that go through the tunnel. Peers without PersistentKeepalive get 25 s added. DNS tab has sub-tabs (DNS / Private DNS (DoT) / PING) with the other DNS servers collapsed. Server addresses are hidden in V2 rows and error texts.
+
+- WireGuard connect no longer runs a pre-check tunnel (it could race with the real tunnel and drop it); the manual test now waits for the VPN service to shut down. V2Gaming shows short Persian errors. `v2ray.json` has a `sources` array (barry-far trojan/ss/vmess). The update check tries `SUB_BASE/update.json` first (see ezzsub/update.json), then GitHub.
+
+- WireGuard now runs a small foreground service (WgKeepService, notification "EzzGameBOOST WireGuard") while the tunnel is up, so the system does not kill the process when a heavy game starts (V2Ray and DNS already did this). It stops itself when the tunnel goes down.
