@@ -107,7 +107,7 @@ internal fun MainActivity.shareApp() {
     i.type = "text/plain"
     i.putExtra(
         Intent.EXTRA_TEXT,
-        Tr.t("EzzGameBOOST؛ ابزار گیمینگ اندروید: بوست RAM، DNS گیمینگ و تست پینگ.")
+        Tr.t("EzzGameBOOST؛ پینگ پایین، ریجستر عالی و مناسب همه بازی‌های آنلاین.")
     )
     try {
         startActivity(Intent.createChooser(i, null))
@@ -169,16 +169,27 @@ internal fun MainActivity.showOnboarding() {
     lrp.topMargin = dp(14)
     col.addView(langRow, lrp)
 
-    val fc = card()
-    val feats = listOf(
-        "⚡ بوست RAM و پایش زنده‌ی گوشی",
-        "🌐 تغییر واقعی DNS با رادار گیم، الکترو، شکن، بگذر و شلتر",
-        "📡 تست پینگ، ذخیره‌ی سرورهای بازی و تاریخچه‌ی کیفیت شبکه",
-        "🎮 کتابخانه‌ی بازی‌ها با زمان بازی و اتصال خودکار DNS",
-        "🎛 پروفایل برای هر بازی: DNS یا وایرگارد مخصوص، پاک‌سازی RAM و اتصال خودکار"
+    val graffiti = GraffitiView(
+        this,
+        listOf(
+            Tr.t("نوسان پینگ پایین"),
+            Tr.t("ریجستر عالی"),
+            Tr.t("مناسب برای همه"),
+            Tr.t("بازی‌های آنلاین"),
+            Tr.t("لذت بازی"),
+            "EzzGameBoost"
+        ),
+        intArrayOf(
+            Color.rgb(0, 229, 255),
+            Color.rgb(255, 46, 147),
+            Color.rgb(255, 210, 31),
+            Color.rgb(255, 210, 31),
+            Color.rgb(57, 255, 20),
+            accent
+        ),
+        !Tr.en
     )
-    for (f in feats) fc.addView(label(f, 13.5f, white), vlp(0, 8))
-    col.addView(fc, vlp(18, 8))
+    col.addView(graffiti, vlp(18, 8))
     val priv = label(
         "حریم خصوصی: برای تغییر DNS یک VPN محلی ساخته می‌شود. فقط درخواست‌های DNS به سرور انتخابی تو می‌رود و هیچ داده‌ای برای ما ارسال نمی‌شود.",
         11.5f, muted
