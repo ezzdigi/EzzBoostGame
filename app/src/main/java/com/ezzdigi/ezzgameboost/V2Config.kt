@@ -309,46 +309,9 @@ private fun streamSettings(f: V2Full): JSONObject {
     return s
 }
 
-// Xray 26.7+ refuses VLESS / Trojan without TLS, Reality or VLESS-encryption when the server
-// address is public ("vless without TLS or other encryption is prohibited ..."). Such links
-// are plain TCP to the server anyway, so the app relays them: the outbound dials a local
-// 127.0.0.1 port (a private address, which the core accepts) and a "tunnel" inbound there
-// forwards the raw bytes to the real server through a freedom outbound. The server still
-// receives exactly the same VLESS / Trojan stream.
-private fun isPrivateHost(h: String): Boolean {
-    val x = h.trim().lowercase()
-    if (x == "localhost" || x.endsWith(".local") || x.endsWith(".lan")) return true
-    if (x.startsWith("10.") || x.startsWith("127.") || x.startsWith("192.168.") || x.startsWith("169.254.")) return true
-    if (x.startsWith("172.")) {
-        val sec = x.split(".").getOrNull(1)?.toIntOrNull() ?: return false
-        return sec in 16..31
-    }
-    return false
-}
-
-private fun freeLocalPort(): Int = try {
-    java.net.ServerSocket(0, 0, java.net.InetAddress.getByName("127.0.0.1")).use { it.localPort }
-} catch (_: Exception) {
-    30000 + java.util.Random().nextInt(20000)
-}
-
 // Returns the full Xray JSON. Throws IllegalArgumentException (Persian message) on problems.
 internal fun buildXrayConfig(raw: String, probePort: Int = 0): String {
-    val f0 = parseV2Full(raw) ?: throw IllegalArgumentException("لینک نامعتبر یا پشتیبانی‌نشده")
-    val secNone = (f0.params["security"] ?: "none").lowercase() == "none"
-    val needRelay = secNone && !isPrivateHost(f0.host) &&
-        ((f0.proto == "vless" && (f0.params["encryption"] ?: "").ifBlank { "none" } == "none") || f0.proto == "trojan")
-    val relayPort = if (needRelay) freeLocalPort() else 0
-    val dialHost = if (needRelay) "127.0.0.1" else f0.host
-    val dialPort = if (needRelay) relayPort else f0.port
-    // ws / httpupgrade / xhttp use the dial address as the Host header unless one is given
-    val f = if (needRelay && (f0.params["host"] ?: "").isBlank()) {
-        val pp = HashMap<String, String>(f0.params)
-        pp["host"] = f0.host
-        V2Full(f0.proto, f0.host, f0.port, f0.user, pp, f0.name)
-    } else {
-        f0
-    }
+    val f = parseV2Full(raw) ?: throw IllegalArgumentException("لینک نامعتبر یا پشتیبانی‌نشده")
     val p = f.params
     val ob = JSONObject()
     ob.put("tag", "proxy")
@@ -373,16 +336,16 @@ internal fun buildXrayConfig(raw: String, probePort: Int = 0): String {
             val flow = p["flow"] ?: ""
             if (flow.isNotBlank()) u.put("flow", flow)
             val vn = JSONObject()
-            vn.put("address", dialHost)
-            vn.put("port", dialPort)
+            vn.put("address", f.host)
+            vn.put("port", f.port)
             vn.put("users", JSONArray().put(u))
             ob.put("settings", JSONObject().put("vnext", JSONArray().put(vn)))
         }
         "trojan" -> {
             ob.put("protocol", "trojan")
             val sv = JSONObject()
-            sv.put("address", dialHost)
-            sv.put("port", dialPort)
+            sv.put("address", f.host)
+            sv.put("port", f.port)
             sv.put("password", f.user)
             ob.put("settings", JSONObject().put("servers", JSONArray().put(sv)))
         }
@@ -464,18 +427,9 @@ internal fun buildXrayConfig(raw: String, probePort: Int = 0): String {
     rule.put("type", "field")
     rule.put("ip", priv)
     rule.put("outboundTag", "direct")
-    val rules = JSONArray()
-    if (needRelay) {
-        val rr = JSONObject()
-        rr.put("type", "field")
-        rr.put("inboundTag", JSONArray().put("relay-in"))
-        rr.put("outboundTag", "direct")
-        rules.put(rr)
-    }
-    rules.put(rule)
     val routing = JSONObject()
     routing.put("domainStrategy", "AsIs")
-    routing.put("rules", rules)
+    routing.put("rules", JSONArray().put(rule))
 
     val root = JSONObject()
     root.put("log", JSONObject().put("loglevel", "warning"))
@@ -489,18 +443,6 @@ internal fun buildXrayConfig(raw: String, probePort: Int = 0): String {
         socks.put("port", probePort)
         socks.put("settings", JSONObject().put("auth", "noauth").put("udp", false))
         inbounds.put(socks)
-    }
-    if (needRelay) {
-        val rel = JSONObject()
-        rel.put("tag", "relay-in")
-        rel.put("protocol", "tunnel")
-        rel.put("listen", "127.0.0.1")
-        rel.put("port", relayPort)
-        rel.put(
-            "settings",
-            JSONObject().put("address", f0.host).put("port", f0.port).put("network", "tcp")
-        )
-        inbounds.put(rel)
     }
     root.put("inbounds", inbounds)
     root.put("outbounds", JSONArray().put(ob).put(direct).put(block))
