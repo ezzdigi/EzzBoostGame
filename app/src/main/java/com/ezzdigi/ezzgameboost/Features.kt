@@ -354,8 +354,7 @@ internal fun MainActivity.checkUpdate(manual: Boolean, onDone: ((String) -> Unit
         }
         ui {
             onDone?.invoke(msg)
-            refreshUpdateNotice()
-            if (msg == "new") homeRefresh?.invoke()
+            if (msg == "new" && tab == 5) refreshUpdateNotice()
         }
     }
 }
@@ -415,8 +414,6 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
     val set = LinkedHashSet<String>()
     for (a in loadApps()) if (a.isGame) set.add(a.pkg)
     set.addAll(favoriteSet())
-    // apps the user added by hand for the premium subscription tunnels (games the system does not flag as games)
-    set.addAll(prefs.getStringSet("scopeExtra", null) ?: emptySet<String>())
     for (k in prefs.all.keys) {
         if (k.startsWith("prof_")) {
             val pkg = k.removePrefix("prof_")

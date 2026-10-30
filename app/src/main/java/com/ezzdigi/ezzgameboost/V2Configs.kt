@@ -520,6 +520,10 @@ internal fun MainActivity.v2Status(): String {
 }
 
 internal fun MainActivity.connectV2(item: V2Item) {
+    if (WgState.up || WgState.wanted || wgBusy) {
+        toast("برای جلوگیری از قطع Pro Gaming، ابتدا آن را دستی قطع کن؛ سپس EzzGaming را وصل کن.")
+        return
+    }
     if (!XrayCore.available()) {
         toast(Tr.t("هسته‌ی Xray در این نسخه نیست. نسخه‌ی Release را نصب کن."))
         return

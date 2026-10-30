@@ -497,12 +497,6 @@ internal fun MainActivity.buildSubscription() {
     aRow.addView(bOut, a2)
     hCard.addView(aRow, vlp(4, 6))
     hCard.addView(button("🛒 تمدید / دریافت اکانت", false) { openUrl(SUB_BUY_URL) }, vlp(0, 0))
-    hCard.addView(
-        button("🎮 برنامه‌های بیشتر برای تونل (" + (prefs.getStringSet("scopeExtra", null)?.size ?: 0) + ")", false) {
-            pickTunnelApps { showTab(4) }
-        },
-        vlp(6, 0)
-    )
     content.addView(hCard, vlp(0, 4))
 
     vpnRefresh = { paintHead() }
@@ -669,31 +663,6 @@ private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
 
 // Games and favorites always go through the tunnels. Some games are not flagged as games by the system,
 // so the user can add any other app here; it is then included in WireGuard and V2Gaming tunnels.
-private fun MainActivity.pickTunnelApps(after: () -> Unit) {
-    val favs = favoriteSet()
-    val apps = loadApps().filter { !it.isGame && !favs.contains(it.pkg) }.sortedBy { it.label.lowercase() }
-    if (apps.isEmpty()) {
-        toast("همه‌ی برنامه‌ها از قبل (بازی یا علاقه‌مندی) داخل تونل‌اند.")
-        return
-    }
-    val cur = HashSet<String>(prefs.getStringSet("scopeExtra", null) ?: emptySet<String>())
-    val names = apps.map { it.label }.toTypedArray()
-    val checked = BooleanArray(apps.size) { cur.contains(apps[it].pkg) }
-    val b = android.app.AlertDialog.Builder(this)
-    b.setTitle("برنامه‌های بیشتر برای تونل")
-    b.setMultiChoiceItems(names, checked) { _, i, on -> checked[i] = on }
-    b.setPositiveButton("ذخیره") { _, _ ->
-        val keep = HashSet<String>(cur)
-        for (i in apps.indices) {
-            if (checked[i]) keep.add(apps[i].pkg) else keep.remove(apps[i].pkg)
-        }
-        prefs.edit().putStringSet("scopeExtra", keep).apply()
-        toast("ذخیره شد. برای اعمال، اتصال را قطع و دوباره وصل کن.")
-        after()
-    }
-    b.setNegativeButton("بستن", null)
-    b.show()
-}
 
 private fun MainActivity.subWgRow(base: String): LinearLayout {
     val isActive = WgState.up && WgState.activeName == base

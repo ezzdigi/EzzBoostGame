@@ -47,10 +47,10 @@ class WgKeepService : Service() {
 
     private fun tick() {
         if (!WgState.wanted || WgState.reconnecting) return
-        if (DnsVpnService.running || V2VpnService.running) {
-            WgState.wanted = false
-            return
-        }
+        // Android allows only one active VPN at a time. Normal app flows prevent
+        // starting EzzGaming while Pro Gaming is active; if another VPN takes the slot,
+        // keep the user's Pro Gaming intent so the watchdog can recover after it is stopped.
+        if (DnsVpnService.running || V2VpnService.running) return
         val be = WgState.backend ?: return
         val tun = WgState.tunnel ?: return
         val now = System.currentTimeMillis()

@@ -747,6 +747,10 @@ internal fun MainActivity.wgBackendGet(): GoBackend {
 }
 
 internal fun MainActivity.connectWg(base: String) {
+    if (V2VpnService.running || V2VpnService.busy) {
+        toast("برای جلوگیری از اختلال، ابتدا EzzGaming را دستی قطع کن؛ سپس Pro Gaming را وصل کن.")
+        return
+    }
     if (wgBusy) return
     pendingWg = base
     val prep = try {

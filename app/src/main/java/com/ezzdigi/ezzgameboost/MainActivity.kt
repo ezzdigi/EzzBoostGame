@@ -340,6 +340,10 @@ class MainActivity : Activity() {
         }
     }
 
+    internal fun refreshUpdateNotice() {
+        if (tab == 5 && !isFinishing && !isDestroyed) showTab(5)
+    }
+
     internal fun startMain() {
         buildShell()
         applyWindowToggles()
@@ -489,15 +493,7 @@ class MainActivity : Activity() {
             7 -> buildSubWg()
             else -> buildStats()
         }
-        addUpdateBanner()
         scroll.scrollTo(0, 0)
-    }
-
-    internal fun refreshUpdateNotice() {
-        if (!::content.isInitialized || !::scroll.isInitialized) return
-        val oldScrollY = scroll.scrollY
-        showTab(tab)
-        scroll.post { scroll.scrollTo(0, oldScrollY) }
     }
 
     // ----- helpers ---------------------------------------------------------

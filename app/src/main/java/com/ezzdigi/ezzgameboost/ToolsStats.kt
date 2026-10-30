@@ -112,6 +112,7 @@ internal fun MainActivity.applyWindowToggles() {
 // ----- STATS ------------------------------------------------------------
 
 internal fun MainActivity.buildStats() {
+    addUpdateBanner()
     section("آموزش و راهنمای استفاده")
     val guide = card()
     guide.addView(label("۱) ورود و انتخاب بازی", 14f, white, true), vlp(0, 6))
