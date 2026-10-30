@@ -81,6 +81,10 @@
             </intent-filter>
         </service>
         <service
+            android:name=".WgKeepService"
+            android:exported="false"
+            android:foregroundServiceType="systemExempted" />
+        <service
             android:name=".DnsTileService"
             android:exported="true"
             android:icon="@drawable/ic_tile"
