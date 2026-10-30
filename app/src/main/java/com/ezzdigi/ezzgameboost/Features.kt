@@ -433,23 +433,12 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
 }
 
 internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
-    if (!wgScopeGames(base)) return text
-    val pkgs = wgIncludePackages(base)
-    // Games-only mode must never fall back to a whole-phone tunnel.
-    if (pkgs.isEmpty()) return null
-    val out = ArrayList<String>()
-    var inserted = false
-    for (line in text.split("\n")) {
-        val t = line.trim()
-        val low = t.lowercase()
-        if (low.startsWith("includedapplications") || low.startsWith("excludedapplications")) continue
-        out.add(line)
-        if (!inserted && t.equals("[Interface]", ignoreCase = true)) {
-            out.add("IncludedApplications = " + pkgs.joinToString(", "))
-            inserted = true
-        }
-    }
-    return if (inserted) wgEnsureKeepalive(wgEnsureFullRoute(out.joinToString("\n"))) else null
+    // Pro Gaming: accept the imported WireGuard .conf as-is.
+    // Do not inject IncludedApplications or rewrite Endpoint/AllowedIPs.
+    // WireGuard's own parser/backend validates the configuration at connect time.
+    @Suppress("UNUSED_VARIABLE")
+    val ignoredBase = base
+    return text
 }
 
 // A game-only tunnel has to carry all traffic of the selected apps. A peer whose AllowedIPs lists only
