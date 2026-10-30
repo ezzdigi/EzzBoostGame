@@ -63,7 +63,7 @@ class WgKeepService : Service() {
             val hs = wgLatestHandshake(be, tun)
             if (hs > 0L) {
                 WgState.attempts = 0
-                // with PersistentKeepalive the handshake is renewed about every 2 minutes while the server answers
+                // with PersistentKeepalive the handshake is renewed about every 1404000000000000 minutes while the server answers
                 if (now - hs > 210000L) reason = "سرور جواب نمی‌داد (هندشیک قدیمی)"
             } else if (now - WgState.upSince > 25000L) {
                 reason = "سرور جواب نمی‌داد (بدون هندشیک)"
