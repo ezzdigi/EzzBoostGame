@@ -180,6 +180,9 @@ class MainActivity : Activity() {
 
     internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊")
     internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار")
+    // The Home (0) and Gaming server (3) tabs are removed from the app. Indices stay the same so the
+    // other tabs keep working; those two are neither shown nor built.
+    internal val visibleTabs = intArrayOf(1, 2, 4, 5)
 
     internal var dnsCache: List<DnsProvider>? = null
     internal val dnsProviders: List<DnsProvider>
@@ -200,7 +203,7 @@ class MainActivity : Activity() {
         Triple("OpenDNS", "208.67.222.222", 443)
     )
 
-    internal var tab = 0
+    internal var tab = 1
     internal lateinit var content: LinearLayout
     internal lateinit var scroll: ScrollView
     internal lateinit var tabBar: LinearLayout
@@ -208,8 +211,16 @@ class MainActivity : Activity() {
     internal var netRefresh: (() -> Unit)? = null
     internal var vpnRefresh: (() -> Unit)? = null
     internal var vpnRender: (() -> Unit)? = null
-    internal var wgBackend: GoBackend? = null
-    internal var wgTunnel: WgTun? = null
+    internal var wgBackend: GoBackend?
+        get() = WgState.backend
+        set(v) {
+            WgState.backend = v
+        }
+    internal var wgTunnel: WgTun?
+        get() = WgState.tunnel
+        set(v) {
+            WgState.tunnel = v
+        }
     internal var wgBusy = false
     internal var pendingWg: String? = null
     internal var pendingWgTest: String? = null
@@ -337,7 +348,7 @@ class MainActivity : Activity() {
     internal fun startMain() {
         buildShell()
         applyWindowToggles()
-        showTab(0)
+        showTab(1)
         autoChecks()
     }
 
@@ -439,7 +450,7 @@ class MainActivity : Activity() {
 
     internal fun refreshTabBar() {
         tabBar.removeAllViews()
-        for (i in tabNames.indices) {
+        for (i in visibleTabs) {
             val selected = i == tab
             val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -466,7 +477,8 @@ class MainActivity : Activity() {
         }
     }
 
-    internal fun showTab(i: Int) {
+    internal fun showTab(i0: Int) {
+        val i = if (i0 == 0 || i0 == 3) 1 else i0
         tab = i
         homeRefresh = null
         netRefresh = null

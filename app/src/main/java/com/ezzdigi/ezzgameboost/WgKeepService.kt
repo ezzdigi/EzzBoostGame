@@ -47,10 +47,8 @@ class WgKeepService : Service() {
 
     private fun tick() {
         if (!WgState.wanted || WgState.reconnecting) return
-        // Do not silently clear WgState.wanted because a stale service flag is still true.
-        // Connection handover is coordinated before starting each gaming VPN.
         if (DnsVpnService.running || V2VpnService.running) {
-            WgState.lastDrop = "سرویس VPN دیگری فعال است؛ اتصال وایرگارد جایگزین نشده"
+            WgState.wanted = false
             return
         }
         val be = WgState.backend ?: return
@@ -62,11 +60,14 @@ class WgKeepService : Service() {
             if (downTicks >= 2) reason = "تونل از سمت سیستم قطع شد"
         } else {
             downTicks = 0
-            // A stale/missing handshake is NOT enough evidence that the tunnel is down.
-            // Do not cycle DOWN/UP from the watchdog: that interrupts live-game sessions.
-            // Only an explicit backend-down state is handled by the branch above.
             val hs = wgLatestHandshake(be, tun)
-            if (hs > 0L) WgState.attempts = 0
+            if (hs > 0L) {
+                WgState.attempts = 0
+                // with PersistentKeepalive the handshake is renewed about every 2 minutes while the server answers
+                if (now - hs > 210000L) reason = "سرور جواب نمی‌داد (هندشیک قدیمی)"
+            } else if (now - WgState.upSince > 25000L) {
+                reason = "سرور جواب نمی‌داد (بدون هندشیک)"
+            }
         }
         if (reason.isEmpty()) return
         if (WgState.attempts >= 4) {
@@ -116,7 +117,7 @@ class WgKeepService : Service() {
         downChecks = 0
         downTicks = 0
         h.postDelayed(watcher, 6000)
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun goForeground(name: String) {

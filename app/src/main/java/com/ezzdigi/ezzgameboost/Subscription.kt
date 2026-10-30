@@ -224,6 +224,39 @@ internal fun MainActivity.fetchSubStatus(token: String): SubStatus {
     }
 }
 
+// Drops comments, blank lines and keys the WireGuard library does not know; fixes spacing around "=".
+private fun wgSanitize(text: String): String {
+    val known = setOf(
+        "privatekey", "publickey", "presharedkey", "address", "dns", "mtu", "listenport",
+        "endpoint", "allowedips", "persistentkeepalive"
+    )
+    val out = ArrayList<String>()
+    var first = true
+    for (ln in text.replace("\r", "").split("\n")) {
+        val t = ln.trim()
+        if (t.isEmpty() || t.startsWith("#") || t.startsWith(";")) continue
+        if (t.startsWith("[")) {
+            val h = t.trim('[', ']', ' ').lowercase()
+            if (h == "interface" || h == "peer") {
+                if (!first) out.add("")
+                first = false
+                out.add(if (h == "interface") "[Interface]" else "[Peer]")
+            }
+            continue
+        }
+        val i = t.indexOf('=')
+        if (i <= 0) continue
+        val k = t.substring(0, i).trim()
+        var v = t.substring(i + 1).trim()
+        if (v.isEmpty() || !known.contains(k.lowercase())) continue
+        if (k.lowercase() == "dns" || k.lowercase() == "address" || k.lowercase() == "allowedips") {
+            v = v.split(",").joinToString(",") { it.trim() }
+        }
+        out.add(k + " = " + v)
+    }
+    return out.joinToString("\n")
+}
+
 private fun MainActivity.parseWgEntries(body: String): List<Pair<String, String>> {
     val out = ArrayList<Pair<String, String>>()
     try {
@@ -234,14 +267,21 @@ private fun MainActivity.parseWgEntries(body: String): List<Pair<String, String>
             var text = o.optString("conf").replace("\\n", "\n")
             val url = o.optString("url")
             if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
-            if (!text.contains("[Interface]")) continue
-            if (isAwgConfig(text)) continue
+            if (text.isBlank()) continue
+            // Accept every config the account has. If it does not parse as is, try a cleaned copy;
+            // otherwise keep it unchanged so connecting shows what is wrong with it.
+            var use = text
             try {
                 Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
             } catch (_: Throwable) {
-                continue
+                val cleaned = wgSanitize(text)
+                try {
+                    Config.parse(ByteArrayInputStream(cleaned.toByteArray(Charsets.UTF_8)))
+                    use = cleaned
+                } catch (_: Throwable) {
+                }
             }
-            out.add(Pair(nm, text))
+            out.add(Pair(nm, use))
         }
     } catch (_: Throwable) {
     }
@@ -465,6 +505,12 @@ internal fun MainActivity.buildSubscription() {
     aRow.addView(bOut, a2)
     hCard.addView(aRow, vlp(4, 6))
     hCard.addView(button("🛒 تمدید / دریافت اکانت", false) { openUrl(SUB_BUY_URL) }, vlp(0, 0))
+    hCard.addView(
+        button("🎮 برنامه‌های بیشتر برای تونل (" + (prefs.getStringSet("scopeExtra", null)?.size ?: 0) + ")", false) {
+            pickTunnelApps { showTab(4) }
+        },
+        vlp(6, 0)
+    )
     content.addView(hCard, vlp(0, 4))
 
     // ---------------- V2Gaming
@@ -588,7 +634,7 @@ private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
             runBg {
                 val ms = tcpPing(item.host, item.port, 3000)
                 ui {
-                    resLbl.text = if (ms >= 0) "✅ $ms ms" else "✕ " + Tr.t("پاسخ نداد")
+                    resLbl.text = if (ms >= 0) "✅ " + Tr.t("وصل است") else "❌ " + Tr.t("وصل نیست")
                 }
             }
         }
@@ -611,6 +657,34 @@ private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
     return box
 }
 
+// Games and favorites always go through the tunnels. Some games are not flagged as games by the system,
+// so the user can add any other app here; it is then included in WireGuard and V2Gaming tunnels.
+private fun MainActivity.pickTunnelApps(after: () -> Unit) {
+    val favs = favoriteSet()
+    val apps = loadApps().filter { !it.isGame && !favs.contains(it.pkg) }.sortedBy { it.label.lowercase() }
+    if (apps.isEmpty()) {
+        toast("همه‌ی برنامه‌ها از قبل (بازی یا علاقه‌مندی) داخل تونل‌اند.")
+        return
+    }
+    val cur = HashSet<String>(prefs.getStringSet("scopeExtra", null) ?: emptySet<String>())
+    val names = apps.map { it.label }.toTypedArray()
+    val checked = BooleanArray(apps.size) { cur.contains(apps[it].pkg) }
+    val b = android.app.AlertDialog.Builder(this)
+    b.setTitle("برنامه‌های بیشتر برای تونل")
+    b.setMultiChoiceItems(names, checked) { _, i, on -> checked[i] = on }
+    b.setPositiveButton("ذخیره") { _, _ ->
+        val keep = HashSet<String>(cur)
+        for (i in apps.indices) {
+            if (checked[i]) keep.add(apps[i].pkg) else keep.remove(apps[i].pkg)
+        }
+        prefs.edit().putStringSet("scopeExtra", keep).apply()
+        toast("ذخیره شد. برای اعمال، اتصال را قطع و دوباره وصل کن.")
+        after()
+    }
+    b.setNegativeButton("بستن", null)
+    b.show()
+}
+
 private fun MainActivity.subWgRow(base: String): LinearLayout {
     val isActive = WgState.up && WgState.activeName == base
     val row = LinearLayout(this)
@@ -621,6 +695,8 @@ private fun MainActivity.subWgRow(base: String): LinearLayout {
     val col = LinearLayout(this)
     col.orientation = LinearLayout.VERTICAL
     col.addView(label(if (isActive) "$base  ✓" else base, 13.5f, white, true, false))
+    val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
+    if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
     val tr = wgTestRes[base] ?: ""
     if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
     row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
