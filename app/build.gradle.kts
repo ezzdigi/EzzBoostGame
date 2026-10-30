@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.ezzdigi.ezzgameboost"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.ezzdigi.ezzgameboost"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 35
         // CI passes -PappVersion / -PappVersionCode when a GitHub Release is published,
         // so the app version always matches the release tag.
         versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 4
@@ -70,7 +70,6 @@ val xrayAarFile = file("libs/libv2ray.aar")
 
 dependencies {
     implementation("com.wireguard.android:tunnel:1.0.20250531")
-    implementation("com.zaneschepke:amneziawg-android:2.3.7")
     if (xrayAarFile.exists()) {
         implementation(files(xrayAarFile))
     }
