@@ -72,6 +72,20 @@ configurations.configureEach {
     }
 }
 
+// The AmneziaWG library also pulls kotlin-stdlib 2.2.x, which the Kotlin 2.0.21 compiler cannot read.
+// Compile against stdlib 2.0.21 only; the APK itself still packs the newer runtime stdlib.
+configurations.configureEach {
+    if (name.endsWith("CompileClasspath")) {
+        resolutionStrategy {
+            force(
+                "org.jetbrains.kotlin:kotlin-stdlib:2.0.21",
+                "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21",
+                "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21"
+            )
+        }
+    }
+}
+
 // Xray core (libv2ray.aar) is downloaded by the GitHub workflow into app/libs.
 // Without it the app still builds, and V2Ray direct connect is disabled.
 val xrayAarFile = file("libs/libv2ray.aar")
