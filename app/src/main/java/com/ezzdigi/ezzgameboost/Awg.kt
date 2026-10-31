@@ -18,6 +18,7 @@ class AwgTun(private val tunnelName: String) : AwgTunnel {
     override fun getName(): String = tunnelName
 
     override fun isIpv4ResolutionPreferred(): Boolean = true
+    override fun isMetered(): Boolean = false
 
     override fun onStateChange(newState: AwgTunnel.State) {
         WgState.up = newState == AwgTunnel.State.UP
@@ -28,6 +29,7 @@ class AwgTun(private val tunnelName: String) : AwgTunnel {
 class AwgTestTun : AwgTunnel {
     override fun getName(): String = "ezztest"
     override fun isIpv4ResolutionPreferred(): Boolean = true
+    override fun isMetered(): Boolean = false
     override fun onStateChange(newState: AwgTunnel.State) {
     }
 }
