@@ -869,7 +869,7 @@ internal fun MainActivity.doConnectWg(base: String) {
         var isAwg = false
         try {
             val scoped = try {
-                wgScopedConfig(base, text)
+                wgScopedConfig(base, text)?.let { c -> wgApplyDns(c, xproIps()) }
             } catch (_: Throwable) {
                 null
             }
