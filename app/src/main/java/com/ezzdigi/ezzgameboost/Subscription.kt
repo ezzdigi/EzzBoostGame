@@ -17,7 +17,7 @@ private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 // The account lives on the subscription server (SUB_API). After a login the app keeps
 // a token and downloads that account's servers:
 //   - V2Gaming links   -> prefs "subV2"  (lines "name<TAB>link")
-//   - WireGuard configs (from GitHub wireguard.json) -> the normal "wg" config folder, names remembered in "subWgNames"
+//   - WireGuard configs (from the subscription server / panel) -> the normal "wg" config folder, names remembered in "subWgNames"
 // Both are shown only in the "اشتراک ویژه" tab and are removed on logout / expiry.
 
 class SubStatus(
@@ -371,19 +371,9 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
                 }
 
                 // WireGuard Gaming
-                // WireGuard list comes from the GitHub repo's wireguard.json (shared by all users);
-                // the subscription server is only a fallback when GitHub is unreachable.
-                var bodyWg: String? = null
-                for (u in remoteUrls(ghRepo(), "wireguard.json")) {
-                    val b = httpGet(u, 10000, 1500000)
-                    if (b != null && b.trimStart().startsWith("{")) {
-                        bodyWg = b
-                        break
-                    }
-                }
-                if (bodyWg == null) {
-                    bodyWg = httpGet(SUB_API + "?a=list&f=wireguard.json&t=" + Uri.encode(token), 10000, 1500000)
-                }
+                // The list comes only from the subscription server (the admin panel), per account.
+                // GitHub is not used here; if the server is unreachable the last synced configs stay.
+                val bodyWg: String? = httpGet(SUB_API + "?a=list&f=wireguard.json&t=" + Uri.encode(token), 10000, 1500000)
                 if (bodyWg != null && bodyWg.trimStart().startsWith("{")) {
                     val entries = parseWgEntries(bodyWg)
                     if (subToken() == token) {
