@@ -407,7 +407,7 @@ class MainActivity : Activity() {
         titleCol.addView(titleView)
         header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
         val ver = TextView(this).apply {
-            text = "v2.1"
+            text = "v2.2.1"
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(accent)
