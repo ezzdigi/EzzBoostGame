@@ -178,8 +178,8 @@ object Tr {
         "مناسب برای همه" to "Made for all",
         "بازی‌های آنلاین" to "online games",
         "لذت بازی" to "Enjoy the game",
-        "EzzGameBOOST؛ پینگ پایین، ریجستر عالی و مناسب همه بازی‌های آنلاین." to
-            "EzzGameBOOST: low ping, excellent hit registration, built for all online games.",
+        "بهترین پینگ، بهترین ریجستری، تجربه‌ی بهترین بازی" to "Best ping, best hit registration, the best gaming experience",
+        "دانلود:" to "Download:",
         "💡 «فقط بازی‌ها» وایرگارد را فقط برای بازی‌ها و علاقه‌مندی‌های تو فعال می‌کند؛ بقیه‌ی برنامه‌ها مستقیم می‌روند. با زدن روی حالت، تغییر می‌کند." to
             "💡 “Games only” routes only your games and favorites through WireGuard; other apps go direct. Tap the mode to switch."
     )
