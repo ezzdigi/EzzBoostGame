@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "configs": [
+    {
+      "name": "JET SERVER AL",
+      "conf": "[Interface]\nPrivateKey = KAVX2SFNuxmbDXs337aGvkC/9C+41w9zrIIhG4h0jl8=\nAddress = 100.64.41.44/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.245.40:51820\nAllowedIPs = 0.0.0.0/0\n"
+    },
+    {
+      "name": "JET SERVER AR",
+      "conf": "[Interface]\nPrivateKey = SOYLEsyPzgxeO9HjVHLBfzGYo28urXiPUsSYaEaM03Y=\nAddress = 100.64.23.166/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.248.32:51820\nAllowedIPs = 0.0.0.0/0\n"
+    },
+    {
+      "name": "JET SERVER BE",
+      "conf": "[Interface]\nPrivateKey = qLc79pVskNMFinJ1OudypvwLyJKI1IsmDgxi2qHTI0g=\nAddress = 100.64.69.101/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.240.80:51820\nAllowedIPs = 0.0.0.0/0\n"
+    },
+    {
+      "name": "JET SERVER BG",
+      "conf": "[Interface]\nPrivateKey = ILX3L3crrdtApy69KR2yHUTF0QMsg3tkEvpKU450Yn8=\nAddress = 100.64.21.126/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.248.192:51820\nAllowedIPs = 0.0.0.0/0\n"
+    },
+    {
+      "name": "JET SERVER TR",
+      "conf": "[Interface]\nPrivateKey = 0AqbC2DOb1IK3l0hmCnFq6x1h9gR9ihonYkUVW4oMk0=\nAddress = 100.64.32.150/32\nDNS = 198.18.0.1,198.18.0.2\nJc = 4\nJmin = 40\nJmax = 70\nS1 = 0\nS2 = 0\nS3 = 0\nS4 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n\n[Peer]\nPublicKey = KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=\nEndpoint = 91.148.248.80:51820\nAllowedIPs = 0.0.0.0/0\n"
+    }
+  ]
+}
