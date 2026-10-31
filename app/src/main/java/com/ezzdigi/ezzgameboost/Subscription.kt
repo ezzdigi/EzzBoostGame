@@ -208,7 +208,7 @@ internal fun MainActivity.subWgList(): List<String> {
 internal fun MainActivity.removeSubConfig() {
     try {
         for (n in subWgNameSet()) deleteCfg("wg", "$n.conf")
-        prefs.edit().remove("subWgNames").remove("subV2").remove("subDns").apply()
+        prefs.edit().remove("subWgNames").remove("subWgGh").remove("subV2").remove("subDns").apply()
     } catch (_: Throwable) {
     }
 }
@@ -374,28 +374,53 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
                 }
 
                 // WireGuard Gaming
-                // The list comes only from the subscription server (the admin panel), per account.
-                // GitHub is not used here; if the server is unreachable the last synced configs stay.
+                // Two sources: the subscription server (admin panel, per account) and GitHub
+                // wireguard-pro.json (same format as wireguard.json, shared by every account).
+                // If one source is unreachable, its last synced configs stay.
                 val bodyWg: String? = httpGet(SUB_API + "?a=list&f=wireguard.json&t=" + Uri.encode(token), 10000, 1500000)
-                if (bodyWg != null && bodyWg.trimStart().startsWith("{")) {
-                    val entries = parseWgEntries(bodyWg)
+                val panelEntries: List<Pair<String, String>>? =
+                    if (bodyWg != null && bodyWg.trimStart().startsWith("{")) parseWgEntries(bodyWg) else null
+                var ghEntries: List<Pair<String, String>>? = null
+                for (u in remoteUrls(ghRepo(), "wireguard-pro.json")) {
+                    val b = httpGet(u, 8000, 1500000)
+                    if (b != null && b.trimStart().startsWith("{")) {
+                        ghEntries = parseWgEntries(b)
+                        break
+                    }
+                }
+                if (panelEntries != null || ghEntries != null) {
                     if (subToken() == token) {
+                        val oldSet = subWgNameSet()
+                        val oldGh: Set<String> = prefs.getStringSet("subWgGh", null) ?: emptySet<String>()
                         val listed = ArrayList<String>()
-                        for (e in entries) {
-                            val base0 = cleanName(e.first, "wg")
-                            var b = base0
-                            var i = 2
-                            while (listed.contains(b)) {
-                                b = base0.take(12) + "_" + i
-                                i++
-                            }
-                            listed.add(b)
-                            writeCfg("wg", "$b.conf", e.second)
+                        val ghNames = ArrayList<String>()
+                        // a source that failed keeps its previous names
+                        if (panelEntries == null) for (n in oldSet) if (!oldGh.contains(n)) listed.add(n)
+                        if (ghEntries == null) for (n in oldGh) if (oldSet.contains(n) && !listed.contains(n)) {
+                            listed.add(n)
+                            ghNames.add(n)
                         }
-                        for (n in subWgNameSet()) {
+                        fun addAll(list: List<Pair<String, String>>, fromGh: Boolean) {
+                            for (e in list) {
+                                val base0 = cleanName(e.first, "wg")
+                                var b = base0
+                                var i = 2
+                                while (listed.contains(b)) {
+                                    b = base0.take(12) + "_" + i
+                                    i++
+                                }
+                                listed.add(b)
+                                if (fromGh) ghNames.add(b)
+                                writeCfg("wg", "$b.conf", e.second)
+                            }
+                        }
+                        if (panelEntries != null) addAll(panelEntries, false)
+                        if (ghEntries != null) addAll(ghEntries, true)
+                        for (n in oldSet) {
                             if (!listed.contains(n)) deleteCfg("wg", "$n.conf")
                         }
-                        prefs.edit().putStringSet("subWgNames", HashSet<String>(listed)).apply()
+                        prefs.edit().putStringSet("subWgNames", HashSet<String>(listed))
+                            .putStringSet("subWgGh", HashSet<String>(ghNames)).apply()
                     }
                 } else if (bodyWg == null && msg.isEmpty()) {
                     msg = "سرور اشتراک در دسترس نیست (" + lastHttpErr + ")"
