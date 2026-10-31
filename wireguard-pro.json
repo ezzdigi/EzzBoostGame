@@ -1,13 +1,1 @@
-{
-  "version": 1,
-  "configs": [
-    {
-      "name": "JET SERVER 1",
-      "conf": "[Interface]\nPrivateKey = QIaJVAcP1UyVr8uZPG0oeL6wH9JiCE48CLLH9RcjSFg=\nAddress = 172.16.0.2/32, 2606:4700:110:88b5:52d6:eabf:2414:750f/128\nDNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001\nMTU = 1280\nJc = 3\nJmin = 1\nJmax = 3\nS1 = 0\nS2 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\nI1 = <r 2><b 0x0100000100000000000003777777056170706c6503636f6d0000010001>\nI2 = <r 2><b 0x0100000100000000000003777777056170706c6503636f6d00001c0001>\n\n[Peer]\nPublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = 8.6.112.224:5279\n"
-    },
-    {
-      "name": "JET SERVER 2",
-      "conf": "[Interface]\nPrivateKey = QIaJVAcP1UyVr8uZPG0oeL6wH9JiCE48CLLH9RcjSFg=\nAddress = 172.16.0.2/32, 2606:4700:110:88b5:52d6:eabf:2414:750f/128\nDNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001\nMTU = 1280\nJc = 3\nJmin = 1\nJmax = 3\nS1 = 0\nS2 = 0\nH1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\nI1 = <r 2><b 0x0100000100000000000003777777056170706c6503636f6d0000010001>\nI2 = <r 2><b 0x0100000100000000000003777777056170706c6503636f6d00001c0001>\n\n[Peer]\nPublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = 8.6.112.224:5279\n"
-    }
-  ]
-}
+x
