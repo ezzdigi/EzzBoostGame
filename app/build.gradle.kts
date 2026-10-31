@@ -70,6 +70,8 @@ val xrayAarFile = file("libs/libv2ray.aar")
 
 dependencies {
     implementation("com.wireguard.android:tunnel:1.0.20250531")
+    // AmneziaWG backend (obfuscated WireGuard) for Pro Gaming configs that carry Jc/S1/H1... keys.
+    implementation("com.zaneschepke:amneziawg-android:2.3.7")
     if (xrayAarFile.exists()) {
         implementation(files(xrayAarFile))
     }
