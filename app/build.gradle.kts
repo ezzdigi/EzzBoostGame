@@ -64,6 +64,14 @@ android {
     }
 }
 
+// amneziawg-android pulls androidx.core 1.17.0, which needs compileSdk 36 and AGP 8.9.1+.
+// Pin it to 1.15.0 so the project keeps building with compileSdk 35 / AGP 8.7.3.
+configurations.configureEach {
+    resolutionStrategy {
+        force("androidx.core:core:1.15.0", "androidx.core:core-ktx:1.15.0")
+    }
+}
+
 // Xray core (libv2ray.aar) is downloaded by the GitHub workflow into app/libs.
 // Without it the app still builds, and V2Ray direct connect is disabled.
 val xrayAarFile = file("libs/libv2ray.aar")
