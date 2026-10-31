@@ -102,12 +102,18 @@ internal fun MainActivity.openUrl(url: String) {
     }
 }
 
+private const val APP_APK_URL =
+    "https://github.com/ezzdigi/EzzBoostGame/releases/download/V2.2.0/EzzGameBOOST-V2.2.0.apk"
+
 internal fun MainActivity.shareApp() {
     val i = Intent(Intent.ACTION_SEND)
     i.type = "text/plain"
     i.putExtra(
         Intent.EXTRA_TEXT,
-        Tr.t("EzzGameBOOST؛ پینگ پایین، ریجستر عالی و مناسب همه بازی‌های آنلاین.")
+        "EzzGameBOOST 🎮\n" +
+            Tr.t("بهترین پینگ، بهترین ریجستری، تجربه‌ی بهترین بازی") + " ⚡\n\n" +
+            Tr.t("دانلود:") + "\n" +
+            APP_APK_URL
     )
     try {
         startActivity(Intent.createChooser(i, null))
