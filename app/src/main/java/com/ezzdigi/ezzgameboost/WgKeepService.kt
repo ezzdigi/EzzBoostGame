@@ -114,7 +114,7 @@ class WgKeepService : Service() {
         WgState.reconnecting = true
         WgState.attempts++
         try {
-            val cfg = Config.parse(ByteArrayInputStream(WgState.cfgText.toByteArray(Charsets.UTF_8)))
+            val cfg = Config.parse(ByteArrayInputStream(wgStripAwgKeys(WgState.cfgText).toByteArray(Charsets.UTF_8)))
             if (!WgState.wanted) return
             try {
                 be.setState(tun, Tunnel.State.DOWN, null)

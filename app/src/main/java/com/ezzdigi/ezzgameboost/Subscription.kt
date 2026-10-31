@@ -788,7 +788,7 @@ private fun MainActivity.subWgRow(base: String): LinearLayout {
     row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
     val col = LinearLayout(this)
     col.orientation = LinearLayout.VERTICAL
-    col.addView(label((if (isActive) "$base  ✓" else base) + (if (wgIsAwgBase(base)) "  🛡 AWG" else ""), 13.5f, white, true, false))
+    col.addView(label((if (isActive) "$base  ✓" else base), 13.5f, white, true, false))
     val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
     if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
     val tr = wgTestRes[base] ?: ""

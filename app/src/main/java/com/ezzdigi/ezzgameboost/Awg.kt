@@ -150,7 +150,7 @@ internal fun wgParseCheck(text: String) {
     if (isAwgConfig(text)) {
         AwgEngine.parse(text)
     } else {
-        com.wireguard.config.Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+        com.wireguard.config.Config.parse(ByteArrayInputStream(wgStripAwgKeys(text).toByteArray(Charsets.UTF_8)))
     }
 }
 

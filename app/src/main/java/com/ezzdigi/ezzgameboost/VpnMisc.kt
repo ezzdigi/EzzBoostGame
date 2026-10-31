@@ -432,7 +432,7 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): Stri
                 be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
                 stop = { be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null) }
             } else {
-                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                val cfg = Config.parse(ByteArrayInputStream(wgStripAwgKeys(scoped).toByteArray(Charsets.UTF_8)))
                 val be = wgBackendGet()
                 val tun = WgTestTun()
                 be.setState(tun, Tunnel.State.UP, cfg)
@@ -498,13 +498,40 @@ internal fun MainActivity.runWgTest(base: String) {
 
 // AmneziaWG configs carry obfuscation keys (Jc, Jmin, S1, H1, I1 ...) that the standard
 // WireGuard library cannot parse; they run on the AmneziaWG backend (Awg.kt).
+internal val AWG_KEYS = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime")
+
+// A config only needs the AmneziaWG engine when its obfuscation really changes the wire format:
+// non-default S1..S4 / H1..H4, or I1..I5 / J1..J3 / Itime. Jc/Jmin/Jmax are client-side junk packets
+// that a plain WireGuard server simply ignores, and S=0 with H1..H4 = 1..4 is the standard WireGuard
+// header, so such configs run on the normal WireGuard engine (with those keys stripped).
 internal fun isAwgConfig(text: String): Boolean {
-    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime")
     for (ln in text.lines()) {
+        if (!ln.contains('=')) continue
         val k = ln.substringBefore('=').trim().lowercase()
-        if (ln.contains('=') && keys.contains(k)) return true
+        if (!AWG_KEYS.contains(k)) continue
+        val v = ln.substringAfter('=').trim()
+        when (k) {
+            "jc", "jmin", "jmax" -> {}
+            "s1", "s2", "s3", "s4" -> if (v.isNotEmpty() && v != "0") return true
+            "h1" -> if (v.isNotEmpty() && v != "1") return true
+            "h2" -> if (v.isNotEmpty() && v != "2") return true
+            "h3" -> if (v.isNotEmpty() && v != "3") return true
+            "h4" -> if (v.isNotEmpty() && v != "4") return true
+            else -> if (v.isNotEmpty()) return true
+        }
     }
     return false
+}
+
+// Removes the AmneziaWG-only keys so the standard WireGuard parser accepts the config.
+internal fun wgStripAwgKeys(text: String): String {
+    val out = ArrayList<String>()
+    for (ln in text.split("\n")) {
+        val k = ln.substringBefore('=').trim().lowercase()
+        if (ln.contains('=') && AWG_KEYS.contains(k)) continue
+        out.add(ln)
+    }
+    return out.joinToString("\n")
 }
 
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
@@ -847,7 +874,7 @@ internal fun MainActivity.doConnectWg(base: String) {
                         AwgEngine.tunnel = null
                     }
                 } else {
-                    val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                    val cfg = Config.parse(ByteArrayInputStream(wgStripAwgKeys(scoped).toByteArray(Charsets.UTF_8)))
                     val be = wgBackendGet()
                     val tun = WgTun(base)
                     be.setState(tun, Tunnel.State.UP, cfg)
@@ -1021,7 +1048,7 @@ internal fun MainActivity.buildVpn() {
             row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
-            col.addView(label((if (isActive) "$base  ✓" else base) + (if (wgIsAwgBase(base)) "  🛡 AWG" else "") + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
+            col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
             val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
             if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
             val tr = wgTestRes[base] ?: ""
