@@ -191,6 +191,42 @@ internal fun MainActivity.subDnsList(): List<DnsProvider> {
     return out
 }
 
+// X-PRO DNS chosen by the user. It is also applied inside the WireGuard / V2Ray game tunnel,
+// because Android allows only one VPN at a time (the DNS-only VPN would replace the tunnel).
+internal fun MainActivity.xproSelName(): String = prefs.getString("xproSel", "") ?: ""
+
+internal fun MainActivity.xproIps(): List<String> =
+    (prefs.getString("xproIps", "") ?: "").split(",").map { it.trim() }
+        .filter { it.isNotEmpty() && Regex("^[0-9a-fA-F:.]+$").matches(it) }
+
+internal fun MainActivity.xproSelect(pr: DnsProvider?) {
+    if (pr == null) {
+        prefs.edit().remove("xproSel").remove("xproIps").apply()
+    } else {
+        val ips = listOf(pr.primary, pr.secondary, pr.tertiary, pr.quaternary).filter { it.isNotBlank() }
+        prefs.edit().putString("xproSel", pr.name).putString("xproIps", ips.joinToString(",")).apply()
+    }
+}
+
+// Replaces (or adds) the DNS line of the [Interface] section.
+internal fun wgApplyDns(text: String, ips: List<String>): String {
+    if (ips.isEmpty()) return text
+    val out = ArrayList<String>()
+    var inIface = false
+    for (ln in text.split("\n")) {
+        val t = ln.trim()
+        if (t.startsWith("[")) {
+            inIface = t.equals("[Interface]", ignoreCase = true)
+            out.add(ln)
+            if (inIface) out.add("DNS = " + ips.joinToString(", "))
+            continue
+        }
+        if (inIface && t.lowercase().replace(" ", "").startsWith("dns=")) continue
+        out.add(ln)
+    }
+    return out.joinToString("\n")
+}
+
 internal fun MainActivity.subWgNameSet(): Set<String> =
     prefs.getStringSet("subWgNames", null) ?: emptySet<String>()
 
@@ -208,7 +244,7 @@ internal fun MainActivity.subWgList(): List<String> {
 internal fun MainActivity.removeSubConfig() {
     try {
         for (n in subWgNameSet()) deleteCfg("wg", "$n.conf")
-        prefs.edit().remove("subWgNames").remove("subWgGh").remove("subV2").remove("subDns").apply()
+        prefs.edit().remove("subWgNames").remove("subWgGh").remove("subV2").remove("subDns").remove("xproSel").remove("xproIps").apply()
     } catch (_: Throwable) {
     }
 }
@@ -664,7 +700,8 @@ internal fun MainActivity.buildSubWg() {
         val items = subDnsList()
         val run = DnsVpnService.running
         val act = DnsVpnService.activeName
-        val k = items.joinToString(",") { it.name } + "|$run|$act|" + dnsRes.toString()
+        val xsel = if (WgState.up || V2VpnService.running) xproSelName() else ""
+        val k = items.joinToString(",") { it.name } + "|$run|$act|$xsel|" + dnsRes.toString()
         if (!force && k == dKey) return
         dKey = k
         dList.removeAllViews()
@@ -674,7 +711,7 @@ internal fun MainActivity.buildSubWg() {
         }
         for (pr in items) {
             dList.addView(
-                subDnsRow(pr, run && act == pr.name, dnsRes[pr.name] ?: "") { r ->
+                subDnsRow(pr, (run && act == pr.name) || xsel == pr.name, dnsRes[pr.name] ?: "") { r ->
                     dnsRes[pr.name] = r
                     renderD(true)
                 },
@@ -842,7 +879,20 @@ private fun MainActivity.subDnsRow(
     )
     row.addView(
         smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
-            if (isActive) stopDns() else connectDns(pr)
+            val tunnelUp = WgState.up || V2VpnService.running
+            if (isActive) {
+                xproSelect(null)
+                if (DnsVpnService.running) stopDns()
+                if (tunnelUp) toast("DNS پیش‌فرض برگشت؛ سرور را یک‌بار قطع و وصل کن.")
+            } else {
+                xproSelect(pr)
+                if (tunnelUp) {
+                    // a second VPN would replace the running game tunnel: apply the DNS inside it instead
+                    toast("DNS ${pr.name} انتخاب شد؛ سرور را یک‌بار قطع و وصل کن تا داخل تونل اعمال شود.")
+                } else {
+                    connectDns(pr)
+                }
+            }
             handler.postDelayed({ vpnRender?.invoke() }, 1200)
         }
     )
