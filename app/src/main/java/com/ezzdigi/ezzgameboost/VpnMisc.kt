@@ -190,7 +190,7 @@ internal fun MainActivity.showOnboarding() {
             Tr.t("ریجستر عالی"),
             Tr.t("مناسب برای همه"),
             Tr.t("بازی‌های آنلاین"),
-            Tr.t("لذت بازی"),
+            Tr.t(" لذت بازی با"),
             "EzzGameBoost"
         ),
         intArrayOf(
@@ -205,7 +205,7 @@ internal fun MainActivity.showOnboarding() {
     )
     col.addView(graffiti, vlp(18, 8))
     val priv = label(
-        "حریم خصوصی: برای تغییر DNS یک VPN محلی ساخته می‌شود. فقط درخواست‌های DNS به سرور انتخابی تو می‌رود و هیچ داده‌ای برای ما ارسال نمی‌شود.",
+        " برای بهبود بازیهای آنلاین تلاش میکنه تجربه بازی بهتری داشته باشید EzzGameBoost تیم سازنده: .",
         11.5f, muted
     )
     priv.gravity = Gravity.CENTER
