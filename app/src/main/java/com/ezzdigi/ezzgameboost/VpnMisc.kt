@@ -542,11 +542,9 @@ internal fun hasAwgKeys(text: String): Boolean {
     return false
 }
 
-// Engines to try, in order. A config with only default-valued keys is wire-compatible with plain
-// WireGuard, so it goes there first; if that gets no answer (some ISPs block the plain WireGuard
-// handshake) the AmneziaWG engine, which sends the Jc junk packets first, is tried as a fallback.
-internal fun wgEngineOrder(text: String): List<Boolean> =
-    if (isAwgConfig(text)) listOf(true) else if (hasAwgKeys(text)) listOf(false, true) else listOf(false)
+// One engine per config. Using both native Go engines (WireGuard and AmneziaWG) back to back in the
+// same process can crash it (exit reason 5 = native crash), so there is no automatic fallback.
+internal fun wgEngineOrder(text: String): List<Boolean> = listOf(isAwgConfig(text))
 
 // Removes the AmneziaWG-only keys so the standard WireGuard parser accepts the config.
 internal fun wgStripAwgKeys(text: String): String {
