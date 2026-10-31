@@ -52,18 +52,37 @@ object AwgEngine {
         return b
     }
 
-    // Different releases of the library expose GoBackend(Context) or GoBackend(Context, handler).
+    // Newer releases of the library call handler.runPreUp()/runPostUp()/... on the handler passed to
+    // GoBackend(Context, handler) without a null check, so passing null crashes with
+    // "Attempt to invoke interface method ... TunnelActionHandler.runPreUp(...) on a null object reference".
+    // We give it a real no-op handler (built reflectively so it matches whatever methods this version has).
+    private fun noopHandler(type: Class<*>): Any =
+        java.lang.reflect.Proxy.newProxyInstance(type.classLoader, arrayOf(type)) { proxy, method, args ->
+            when (method.name) {
+                "hashCode" -> System.identityHashCode(proxy)
+                "equals" -> proxy === args?.getOrNull(0)
+                "toString" -> "NoopTunnelActionHandler"
+                else -> when (method.returnType) {
+                    java.lang.Boolean.TYPE -> false
+                    java.lang.Integer.TYPE -> 0
+                    java.lang.Long.TYPE -> 0L
+                    java.lang.Void.TYPE -> null
+                    else -> null
+                }
+            }
+        }
+
     private fun create(ctx: Context): AwgGoBackend {
         val cls = AwgGoBackend::class.java
+        for (c in cls.constructors) {
+            val p = c.parameterTypes
+            if (p.size == 2 && p[0] == Context::class.java && p[1].isInterface) {
+                return c.newInstance(ctx, noopHandler(p[1])) as AwgGoBackend
+            }
+        }
         try {
             return cls.getConstructor(Context::class.java).newInstance(ctx)
         } catch (_: NoSuchMethodException) {
-        }
-        for (c in cls.constructors) {
-            val p = c.parameterTypes
-            if (p.size == 2 && p[0] == Context::class.java) {
-                return c.newInstance(ctx, null) as AwgGoBackend
-            }
         }
         throw IllegalStateException("AmneziaWG backend constructor not found")
     }
