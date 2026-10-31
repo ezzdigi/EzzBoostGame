@@ -441,7 +441,8 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
     // the imported .conf file on disk remains untouched.
     @Suppress("UNUSED_VARIABLE")
     val ignoredBase = base
-    if (isAwgConfig(text)) return null // Requires AmneziaWG backend, not standard WG.
+    // AmneziaWG configs (Jc/S1/H1... keys) take the same normalization; they run on the AmneziaWG
+    // backend (Awg.kt), and the obfuscation keys are left exactly as the server gave them.
     val normalized = wgEnsureKeepalive(wgEnsureFullRoute(text))
     return normalized
 }

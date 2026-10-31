@@ -348,7 +348,7 @@ internal fun MainActivity.importWg(text: String, wantedName: String, onDone: () 
     runBg {
         var err = ""
         try {
-            Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+            wgParseCheck(text)
         } catch (e: Throwable) {
             err = (e.message ?: e.javaClass.simpleName).take(120)
         }
@@ -419,18 +419,26 @@ internal fun MainActivity.testWg(base: String) {
 // brings it down again. Returns a one-line result. Call from a background thread.
 internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): String {
     var result = ""
-    val tun = WgTestTun()
-    var up = false
+    var stop: (() -> Unit)? = null
     try {
         val scoped = wgScopeToPackages(text, listOf(packageName))
         if (scoped == null) {
             result = "❌ کانفیگ ساختار معتبر ندارد."
         } else {
-            val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-            val be = wgBackendGet()
-            be.setState(tun, Tunnel.State.UP, cfg)
-            up = true
-            Thread.sleep(600)
+            if (isAwgConfig(scoped)) {
+                val cfg = AwgEngine.parse(scoped)
+                val be = AwgEngine.backend(applicationContext)
+                val tun = AwgTestTun()
+                be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
+                stop = { be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null) }
+            } else {
+                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                val be = wgBackendGet()
+                val tun = WgTestTun()
+                be.setState(tun, Tunnel.State.UP, cfg)
+                stop = { be.setState(tun, Tunnel.State.DOWN, null) }
+            }
+            Thread.sleep(if (isAwgConfig(scoped)) 1200 else 600)
             var ms = -1L
             val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
             for (u in urls) {
@@ -450,9 +458,10 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): Stri
     } catch (e: Throwable) {
         result = "❌ " + hideAddr((e.message ?: e.javaClass.simpleName).take(120))
     }
-    if (up) {
+    val st = stop
+    if (st != null) {
         try {
-            wgBackendGet().setState(tun, Tunnel.State.DOWN, null)
+            st()
         } catch (_: Throwable) {
         }
         // give the VPN service time to shut down so it cannot tear down the next tunnel
@@ -488,9 +497,9 @@ internal fun MainActivity.runWgTest(base: String) {
 }
 
 // AmneziaWG configs carry obfuscation keys (Jc, Jmin, S1, H1, I1 ...) that the standard
-// WireGuard library cannot parse.
+// WireGuard library cannot parse; they run on the AmneziaWG backend (Awg.kt).
 internal fun isAwgConfig(text: String): Boolean {
-    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5")
+    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime")
     for (ln in text.lines()) {
         val k = ln.substringBefore('=').trim().lowercase()
         if (ln.contains('=') && keys.contains(k)) return true
@@ -528,13 +537,10 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     val url = o.optString("url")
                     if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
                     if (!text.contains("[Interface]")) continue
-                    if (isAwgConfig(text)) {
-                        awg++
-                        continue
-                    }
                     try {
-                        Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                        wgParseCheck(text)
                     } catch (_: Throwable) {
+                        if (isAwgConfig(text)) awg++
                         continue
                     }
                     val base = cleanName(nm, "wg")
@@ -551,7 +557,7 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
             }
             if (added == 0 && err.isEmpty()) {
                 err = if (awg > 0) {
-                    awg.toString() + " کانفیگ از نوع AmneziaWG است (دارای Jc/S1/H1) و این نسخه فقط WireGuard استاندارد را پشتیبانی می‌کند."
+                    awg.toString() + " کانفیگ AmneziaWG پیدا شد ولی پارامترهای آن (Jc/S1/H1/…) معتبر نبود."
                 } else {
                     "سرور گیمینگ معتبری پیدا نشد."
                 }
@@ -640,14 +646,10 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
                     failed++
                     continue
                 }
-                if (isAwgConfig(text)) {
-                    awgN++
-                    continue
-                }
                 try {
-                    Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+                    wgParseCheck(text)
                 } catch (_: Throwable) {
-                    failed++
+                    if (isAwgConfig(text)) awgN++ else failed++
                     continue
                 }
                 val nm = if (files.size == 1 && wantedName.isNotBlank()) wantedName else f.first
@@ -656,7 +658,7 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
             }
             if (added == 0 && err.isEmpty()) {
                 err = if (awgN > 0) {
-                    "کانفیگ از نوع AmneziaWG است و این نسخه فقط WireGuard استاندارد را پشتیبانی می‌کند."
+                    "کانفیگ AmneziaWG پیدا شد ولی پارامترهای آن (Jc/S1/H1/…) معتبر نبود."
                 } else if (failed > 0) {
                     "کانفیگ معتبر وایرگارد پیدا نشد."
                 } else {
@@ -814,6 +816,7 @@ internal fun MainActivity.doConnectWg(base: String) {
         var err = ""
         var noGames = false
         var noReply = false
+        var isAwg = false
         try {
             val scoped = try {
                 wgScopedConfig(base, text)
@@ -823,29 +826,52 @@ internal fun MainActivity.doConnectWg(base: String) {
             if (scoped == null) {
                 noGames = true
             } else {
-                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-                val be = wgBackendGet()
-                val old = wgTunnel
-                if (old != null) {
-                    try {
-                        be.setState(old, Tunnel.State.DOWN, null)
-                    } catch (_: Throwable) {
+                isAwg = isAwgConfig(scoped)
+                // Only one tunnel at a time, whichever engine it runs on.
+                wgStopCurrent()
+                var replied: Boolean
+                if (isAwg) {
+                    val cfg = AwgEngine.parse(scoped)
+                    val be = AwgEngine.backend(applicationContext)
+                    val tun = AwgTun(base)
+                    be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
+                    // Junk packets make the first handshake a little slower than plain WireGuard.
+                    replied = awgWaitHandshake(be, tun, 12000L)
+                    if (replied) {
+                        AwgEngine.tunnel = tun
+                    } else {
+                        try {
+                            be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null)
+                        } catch (_: Throwable) {
+                        }
+                        AwgEngine.tunnel = null
+                    }
+                } else {
+                    val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                    val be = wgBackendGet()
+                    val tun = WgTun(base)
+                    be.setState(tun, Tunnel.State.UP, cfg)
+                    replied = waitWgHandshake(be, tun, 9000L)
+                    if (replied) {
+                        wgTunnel = tun
+                    } else {
+                        try {
+                            be.setState(tun, Tunnel.State.DOWN, null)
+                        } catch (_: Throwable) {
+                        }
+                        wgTunnel = null
                     }
                 }
-                val tun = WgTun(base)
-                be.setState(tun, Tunnel.State.UP, cfg)
-                if (!waitWgHandshake(be, tun, 9000L)) {
+                if (!replied) {
                     // Do not show "connected" for a tunnel that carries nothing.
-                    try {
-                        be.setState(tun, Tunnel.State.DOWN, null)
-                    } catch (_: Throwable) {
-                    }
-                    wgTunnel = null
                     WgState.up = false
                     WgState.activeName = ""
+                    WgState.awg = false
                     noReply = true
                 } else {
-                    wgTunnel = tun
+                    // the other engine holds no tunnel any more
+                    if (isAwg) wgTunnel = null else AwgEngine.tunnel = null
+                    WgState.awg = isAwg
                     WgState.activeName = base
                     WgState.up = true
                     WgState.baseName = base
@@ -876,11 +902,15 @@ internal fun MainActivity.doConnectWg(base: String) {
             if (noGames) {
                 toast(Tr.t("بازی‌ای پیدا نشد. یک بازی نصب کن یا آن را در تب بازی‌ها علاقه‌مند کن."))
             } else if (noReply) {
-                toast(Tr.t("سرور وایرگارد جواب نداد (Endpoint یا کلید اشتباه، یا پورت UDP بسته). این کانفیگ را عوض کن."))
+                if (isAwg) {
+                    toast(Tr.t("سرور AmneziaWG جواب نداد (Endpoint یا کلید اشتباه، پورت UDP بسته، یا پارامترهای Jc/S1/H1 با سرور یکی نیست). این کانفیگ را عوض کن."))
+                } else {
+                    toast(Tr.t("سرور وایرگارد جواب نداد (Endpoint یا کلید اشتباه، یا پورت UDP بسته). این کانفیگ را عوض کن."))
+                }
             } else if (err.isEmpty()) {
                 toast(Tr.t("متصل شد"))
             } else {
-                toast(Tr.t("خطای وایرگارد:") + " " + hideAddr(err))
+                toast(Tr.t(if (isAwg) "خطای AmneziaWG:" else "خطای وایرگارد:") + " " + hideAddr(err))
             }
             vpnRefresh?.invoke()
             homeRefresh?.invoke()
@@ -894,13 +924,10 @@ internal fun MainActivity.disconnectWg() {
     WgState.wanted = false
     wgBusy = true
     runBg {
-        try {
-            val t = wgTunnel
-            if (t != null) wgBackendGet().setState(t, Tunnel.State.DOWN, null)
-        } catch (_: Throwable) {
-        }
+        wgStopCurrent()
         WgState.up = false
         WgState.activeName = ""
+        WgState.awg = false
         try {
             stopService(Intent(this, WgKeepService::class.java))
         } catch (_: Throwable) {
@@ -994,7 +1021,7 @@ internal fun MainActivity.buildVpn() {
             row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
-            col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
+            col.addView(label((if (isActive) "$base  ✓" else base) + (if (wgIsAwgBase(base)) "  🛡 AWG" else "") + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
             val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
             if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
             val tr = wgTestRes[base] ?: ""

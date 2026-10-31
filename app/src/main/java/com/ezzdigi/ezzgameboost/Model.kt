@@ -280,4 +280,8 @@ object WgState {
 
     @Volatile
     var lastDrop = ""
+
+    // The running tunnel uses the AmneziaWG backend (see Awg.kt) instead of the standard one.
+    @Volatile
+    var awg = false
 }

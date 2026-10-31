@@ -51,8 +51,16 @@ class WgKeepService : Service() {
         // starting EzzGaming while Pro Gaming is active; if another VPN takes the slot,
         // keep the user's Pro Gaming intent so the watchdog can recover after it is stopped.
         if (DnsVpnService.running || V2VpnService.running) return
-        val be = WgState.backend ?: return
-        val tun = WgState.tunnel ?: return
+        val awg = WgState.awg
+        val be = WgState.backend
+        val tun = WgState.tunnel
+        val abe = AwgEngine.backend
+        val atun = AwgEngine.tunnel
+        if (awg) {
+            if (abe == null || atun == null) return
+        } else {
+            if (be == null || tun == null) return
+        }
         val now = System.currentTimeMillis()
         var reason = ""
         if (!WgState.up) {
@@ -60,7 +68,7 @@ class WgKeepService : Service() {
             if (downTicks >= 2) reason = "تونل از سمت سیستم قطع شد"
         } else {
             downTicks = 0
-            val hs = wgLatestHandshake(be, tun)
+            val hs = if (awg) awgLatestHandshake(abe!!, atun!!) else wgLatestHandshake(be!!, tun!!)
             if (hs > 0L) {
                 WgState.attempts = 0
                 // with PersistentKeepalive the handshake is renewed about every 1404000000000000 minutes while the server answers
@@ -75,7 +83,31 @@ class WgKeepService : Service() {
             WgState.lastDrop = reason + " • تلاش مجدد متوقف شد"
             return
         }
-        reconnect(be, tun, reason)
+        if (awg) reconnectAwg(abe!!, atun!!, reason) else reconnect(be!!, tun!!, reason)
+    }
+
+    private fun reconnectAwg(be: org.amnezia.awg.backend.GoBackend, tun: AwgTun, reason: String) {
+        WgState.reconnecting = true
+        WgState.attempts++
+        try {
+            val cfg = AwgEngine.parse(WgState.cfgText)
+            if (!WgState.wanted) return
+            try {
+                be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null)
+            } catch (_: Throwable) {
+            }
+            be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
+            WgState.activeName = WgState.baseName
+            WgState.up = true
+            WgState.upSince = System.currentTimeMillis()
+            WgState.reconnects++
+            WgState.lastDrop = reason
+        } catch (e: Throwable) {
+            WgState.lastDrop = reason + " • " + (e.message ?: e.javaClass.simpleName).take(60)
+        } finally {
+            WgState.reconnecting = false
+            downTicks = 0
+        }
     }
 
     private fun reconnect(be: GoBackend, tun: WgTun, reason: String) {
@@ -130,7 +162,7 @@ class WgKeepService : Service() {
                 this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
             )
             val n = Notification.Builder(this, "ezz_wg")
-                .setContentTitle("EzzGameBOOST WireGuard")
+                .setContentTitle(if (WgState.awg) "EzzGameBOOST AmneziaWG" else "EzzGameBOOST WireGuard")
                 .setContentText("متصل: $name")
                 .setSmallIcon(android.R.drawable.ic_lock_lock)
                 .setContentIntent(pi)
