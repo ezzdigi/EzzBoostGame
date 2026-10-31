@@ -125,7 +125,7 @@ object Tr {
         "در حال به‌روزرسانی…" to "Updating…",
         "به‌روز شد ✅" to "Updated ✅",
         "هنوز کانفیگی نیست." to "No configs yet.",
-        "🛒 تمدید / دریافت اکانت" to "🛒 Renew / get an account",
+        "🛒 تمدید / خرید اشتراک" to "🛒 Renew / get an account",
         "همگام‌سازی ناموفق بود." to "Sync failed.",
         "🌐 به‌روزرسانی لیست DNS آنلاین" to "🌐 Update online DNS list",
         "📋 کلیپ‌بورد" to "📋 Clipboard",
