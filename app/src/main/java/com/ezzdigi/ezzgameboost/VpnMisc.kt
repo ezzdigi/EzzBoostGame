@@ -139,16 +139,30 @@ internal fun MainActivity.showOnboarding() {
     col.gravity = Gravity.CENTER_HORIZONTAL
     col.setPadding(dp(24), dp(28), dp(24), dp(24))
 
-    col.addView(LogoView(this, accent, panel), LinearLayout.LayoutParams(dp(104), dp(104)))
-    val nameView = TextView(this)
-    val sb = SpannableStringBuilder("EzzGameBOOST")
-    sb.setSpan(ForegroundColorSpan(accent), 7, 12, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-    nameView.text = sb
-    nameView.textSize = 26f
-    nameView.typeface = Typeface.DEFAULT_BOLD
-    nameView.setTextColor(white)
-    nameView.gravity = Gravity.CENTER
-    col.addView(nameView, vlp(14, 2))
+    val logoImg = android.widget.ImageView(this)
+    logoImg.setImageResource(R.drawable.ezz_logo)
+    logoImg.adjustViewBounds = true
+    logoImg.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+    logoImg.alpha = 0f
+    logoImg.scaleX = 0.7f
+    logoImg.scaleY = 0.7f
+    col.addView(logoImg, LinearLayout.LayoutParams(MATCH, WRAP))
+    val floatAnim = android.animation.ObjectAnimator.ofFloat(logoImg, "translationY", 0f, -dp(8).toFloat()).apply {
+        duration = 1800
+        repeatCount = android.animation.ValueAnimator.INFINITE
+        repeatMode = android.animation.ValueAnimator.REVERSE
+        interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+    }
+    logoImg.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) {}
+        override fun onViewDetachedFromWindow(v: View) {
+            floatAnim.cancel()
+        }
+    })
+    logoImg.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(700)
+        .setInterpolator(android.view.animation.OvershootInterpolator(1.4f))
+        .withEndAction { floatAnim.start() }
+        .start()
     col.addView(label("", 8f, muted), vlp(0, 6))
 
     val langRow = LinearLayout(this)

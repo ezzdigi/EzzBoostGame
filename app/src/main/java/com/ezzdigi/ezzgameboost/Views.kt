@@ -435,20 +435,23 @@ class LogoView(ctx: Context, private val ringColor: Int, private val bgColor: In
     }
 }
 
-/** Animated graffiti-style gaming slogan: spray reveal, neon glow, dripping paint. Tap to replay. */
+/** Animated graffiti-style gaming slogan: 3D extrusion, neon glow, shine sweep, glitch, spray reveal and drips. Tap to replay. */
 class GraffitiView(
     ctx: Context,
     private val lines: List<String>,
     private val colors: IntArray,
     private val rtl: Boolean
 ) : View(ctx) {
+    private val face: Typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
     private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        typeface = face
         textAlign = Paint.Align.CENTER
+        textSkewX = -0.22f
     }
     private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        typeface = face
         textAlign = Paint.Align.CENTER
+        textSkewX = -0.22f
         style = Paint.Style.STROKE
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
@@ -461,7 +464,7 @@ class GraffitiView(
     private val dotA = Array(lines.size) { FloatArray(30) { rnd.nextFloat() } }
     private val dotB = Array(lines.size) { FloatArray(30) { rnd.nextFloat() } }
     private var t = 0f
-    private var pulse = 0f
+    private var loop = 0f
     private var intro: ValueAnimator? = null
     private var idle: ValueAnimator? = null
 
@@ -475,7 +478,19 @@ class GraffitiView(
         val r = Color.red(c)
         val g = Color.green(c)
         val b = Color.blue(c)
-        return Color.rgb(r + ((255 - r) * 0.65f).toInt(), g + ((255 - g) * 0.65f).toInt(), b + ((255 - b) * 0.65f).toInt())
+        return Color.rgb(r + ((255 - r) * 0.6f).toInt(), g + ((255 - g) * 0.6f).toInt(), b + ((255 - b) * 0.6f).toInt())
+    }
+
+    private fun darken(c: Int, f: Float): Int =
+        Color.rgb((Color.red(c) * f).toInt(), (Color.green(c) * f).toInt(), (Color.blue(c) * f).toInt())
+
+    // Letter spacing only for Latin text; it would break Persian letter joining.
+    private fun setup(i: Int, size: Float) {
+        val ls = if (lines[i].all { it.code < 128 }) 0.05f else 0f
+        fillP.textSize = size
+        strokeP.textSize = size
+        fillP.letterSpacing = ls
+        strokeP.letterSpacing = ls
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -483,12 +498,12 @@ class GraffitiView(
         var h = 0f
         for (i in lines.indices) {
             val big = i == lines.size - 1
-            var s = w * (if (big) 0.17f else 0.12f)
-            fillP.textSize = s
-            val limit = w * 0.84f
+            var s = w * (if (big) 0.17f else 0.125f)
+            setup(i, s)
+            val limit = w * 0.82f
             while (fillP.measureText(lines[i]) > limit && s > 10f) {
                 s *= 0.94f
-                fillP.textSize = s
+                setup(i, s)
             }
             sizes[i] = s
             h += s * 1.5f
@@ -502,11 +517,11 @@ class GraffitiView(
         replay()
         idle?.cancel()
         idle = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 1400
+            duration = 2800
+            interpolator = LinearInterpolator()
             repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
             addUpdateListener {
-                pulse = it.animatedValue as Float
+                loop = it.animatedValue as Float
                 invalidate()
             }
             start()
@@ -546,36 +561,76 @@ class GraffitiView(
     private fun drawLine(c: Canvas, i: Int, cx: Float, base: Float, size: Float, local: Float) {
         val text = lines[i]
         val col = colors[i % colors.size]
-        fillP.textSize = size
-        strokeP.textSize = size
+        setup(i, size)
         val tw = fillP.measureText(text)
         val left = cx - tw / 2f - size * 0.3f
         val right = cx + tw / 2f + size * 0.3f
         val cw = right - left
         val edge = if (rtl) right - cw * local else left + cw * local
-        val top = base - size * 1.2f
-        val bottom = base + size * 0.5f
+        val top = base - size * 1.25f
+        val bottom = base + size * 0.6f
+        val pulse = 0.5f + 0.5f * Math.sin(loop * 2.0 * Math.PI).toFloat()
+        val shine = ((loop - 0.1f - i * 0.05f) / 0.5f).coerceIn(0f, 1f)
+        val glitch = if (loop > 0.9f && loop < 0.95f) (if (loop < 0.925f) 1f else -1f) else 0f
+        val ex = size * 0.012f
+        val ey = size * 0.02f
 
         c.save()
         c.rotate(if (i % 2 == 0) -2f else 2f, cx, base - size * 0.3f)
+        c.scale(0.9f + 0.1f * local, 0.9f + 0.1f * local, cx, base)
 
         c.save()
         if (rtl) c.clipRect(edge, top, right, bottom) else c.clipRect(left, top, edge, bottom)
+
         // neon glow
-        strokeP.strokeWidth = size * 0.34f
-        strokeP.color = alpha(col, (45 + pulse * 70).toInt())
+        strokeP.shader = null
+        strokeP.strokeWidth = size * 0.42f
+        strokeP.color = alpha(col, (40 + pulse * 70).toInt())
         c.drawText(text, cx, base, strokeP)
-        // dark outline
-        strokeP.strokeWidth = size * 0.16f
-        strokeP.color = Color.rgb(11, 11, 18)
-        c.drawText(text, cx, base, strokeP)
-        // block shadow
+
+        // back outline of the 3D extrusion
+        strokeP.strokeWidth = size * 0.17f
+        strokeP.color = Color.rgb(8, 8, 14)
+        c.drawText(text, cx + ex * 6, base + ey * 6, strokeP)
+
+        // extrusion layers
         fillP.shader = null
-        fillP.color = Color.BLACK
-        c.drawText(text, cx + size * 0.05f, base + size * 0.07f, fillP)
-        // paint fill
-        fillP.shader = LinearGradient(0f, base - size * 0.9f, 0f, base + size * 0.1f, lighten(col), col, Shader.TileMode.CLAMP)
+        fillP.color = darken(col, 0.38f)
+        for (d in 6 downTo 1) c.drawText(text, cx + ex * d, base + ey * d, fillP)
+
+        // front outline
+        c.drawText(text, cx, base, strokeP)
+
+        // glitch ghosts (RGB split)
+        if (glitch != 0f) {
+            fillP.color = alpha(Color.rgb(0, 229, 255), 170)
+            c.drawText(text, cx - size * 0.05f * glitch, base, fillP)
+            fillP.color = alpha(Color.rgb(255, 46, 147), 170)
+            c.drawText(text, cx + size * 0.05f * glitch, base, fillP)
+        }
+
+        // face: light top to base colour to deeper bottom
+        fillP.color = Color.WHITE
+        fillP.shader = LinearGradient(
+            0f, base - size * 0.9f, 0f, base + size * 0.1f,
+            intArrayOf(lighten(col), col, darken(col, 0.8f)), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP
+        )
         c.drawText(text, cx, base, fillP)
+
+        // rim light
+        strokeP.strokeWidth = size * 0.018f
+        strokeP.color = alpha(Color.WHITE, 120)
+        c.drawText(text, cx - size * 0.008f, base - size * 0.012f, strokeP)
+
+        // shine sweep (diagonal highlight)
+        if (shine > 0f && shine < 1f) {
+            val x0 = left - size * 1.5f + (cw + size * 3f) * shine
+            fillP.shader = LinearGradient(
+                x0, base - size * 0.9f, x0 + size * 1.1f, base + size * 0.1f,
+                intArrayOf(0x00FFFFFF, 0xDDFFFFFF.toInt(), 0x00FFFFFF), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP
+            )
+            c.drawText(text, cx, base, fillP)
+        }
         fillP.shader = null
         c.restore()
 
@@ -593,14 +648,15 @@ class GraffitiView(
         // dripping paint
         val grow = ((t - i * 0.17f - 0.3f) / 0.4f).coerceIn(0f, 1f)
         if (grow > 0f) {
+            strokeP.shader = null
             strokeP.color = col
             strokeP.strokeWidth = size * 0.07f
             dotP.color = col
             dotP.alpha = 255
             for (k in 0 until 3) {
                 val x = left + cw * dripX[i][k]
-                val y0 = base + size * 0.05f
-                val len = size * 0.9f * dripL[i][k] * grow
+                val y0 = base + size * 0.14f
+                val len = size * 0.8f * dripL[i][k] * grow
                 c.drawLine(x, y0, x, y0 + len, strokeP)
                 c.drawCircle(x, y0 + len, size * 0.055f, dotP)
             }

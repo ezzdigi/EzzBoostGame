@@ -269,7 +269,8 @@ class MainActivity : Activity() {
         val idx = prefs.getInt("accent", 0)
         accent = accents[idx.coerceIn(0, accents.size - 1)]
         applyPalette(resolveLight())
-        if (!prefs.getBoolean("onboarded", false)) {
+        // Welcome screen with the logo shows on every fresh launch (not on rotation / process restore).
+        if (savedInstanceState == null) {
             showOnboarding()
         } else {
             startMain()
