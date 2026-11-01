@@ -284,4 +284,8 @@ object WgState {
     // The running tunnel uses the AmneziaWG backend (see Awg.kt) instead of the standard one.
     @Volatile
     var awg = false
+
+    // DNS-only tunnel (no Endpoint, or AllowedIPs = 0.0.0.0/32): up means connected, no handshake needed.
+    @Volatile
+    var dnsOnly = false
 }
