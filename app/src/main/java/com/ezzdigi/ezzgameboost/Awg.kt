@@ -145,6 +145,26 @@ internal fun awgWaitHandshake(be: AwgGoBackend, tun: AwgTunnel, timeoutMs: Long)
     return false
 }
 
+// Removes AmneziaWG-only keys (Jc, Jmin, Jmax, S1..S4, H1..H4, I1..I5, ...) from the [Interface] section so the
+// standard WireGuard parser accepts the rest. A config without such keys is returned unchanged.
+internal fun wgStripAwgKeys(text: String): String {
+    val awgKeys = setOf(
+        "jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4",
+        "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime"
+    )
+    var changed = false
+    val out = ArrayList<String>()
+    for (ln in text.split("\n")) {
+        val k = ln.substringBefore('=').trim().lowercase()
+        if (ln.contains('=') && awgKeys.contains(k)) {
+            changed = true
+            continue
+        }
+        out.add(ln)
+    }
+    return if (changed) out.joinToString("\n") else text
+}
+
 // Validates a config with the engine that will actually run it. Throws when it is invalid.
 internal fun wgParseCheck(text: String) {
     if (isAwgConfig(text)) {
