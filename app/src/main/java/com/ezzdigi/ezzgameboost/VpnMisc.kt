@@ -386,7 +386,9 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
             inserted = true
         }
     }
-    return if (inserted) wgEnsureKeepalive(wgEnsureFullRoute(out.joinToString("\n"))) else null
+    if (!inserted) return null
+    val joined = out.joinToString("\n")
+    return if (wgIsDnsOnly(joined)) wgDnsOnlyConfig(joined) else wgEnsureKeepalive(wgEnsureFullRoute(joined))
 }
 
 internal fun MainActivity.testWg(base: String) {
@@ -420,50 +422,49 @@ internal fun MainActivity.testWg(base: String) {
 internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): String {
     var result = ""
     var stop: (() -> Unit)? = null
+    var waitHs: ((Long) -> Boolean)? = null
     try {
         val scoped = wgScopeToPackages(text, listOf(packageName))
         if (scoped == null) {
             result = "❌ کانفیگ ساختار معتبر ندارد."
         } else {
+            if (isAwgConfig(scoped)) {
+                val cfg = AwgEngine.parse(scoped)
+                val be = AwgEngine.backend(applicationContext)
+                val tun = AwgTestTun()
+                be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
+                stop = { be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null) }
+                waitHs = { ms -> awgWaitHandshake(be, tun, ms) }
+            } else {
+                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                val be = wgBackendGet()
+                val tun = WgTestTun()
+                be.setState(tun, Tunnel.State.UP, cfg)
+                stop = { be.setState(tun, Tunnel.State.DOWN, null) }
+                waitHs = { ms -> waitWgHandshake(be, tun, ms) }
+            }
+            // First tell apart "server never answered" from "tunnel is up but carries nothing".
+            // A DNS-only config has no server: it passes as soon as the tunnel is up.
+            val dnsOnly = wgIsDnsOnly(scoped)
+            val hsOk = dnsOnly || (waitHs?.invoke(if (isAwgConfig(scoped)) 12000L else 9000L) ?: false)
             var ms = -1L
             val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
-            val order = wgEngineOrder(scoped)
-            for ((idx, useAwg) in order.withIndex()) {
-                if (useAwg) {
-                    val cfg = AwgEngine.parse(scoped)
-                    val be = AwgEngine.backend(applicationContext)
-                    val tun = AwgTestTun()
-                    be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
-                    stop = { be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null) }
-                } else {
-                    val cfg = Config.parse(ByteArrayInputStream(wgStripAwgKeys(scoped).toByteArray(Charsets.UTF_8)))
-                    val be = wgBackendGet()
-                    val tun = WgTestTun()
-                    be.setState(tun, Tunnel.State.UP, cfg)
-                    stop = { be.setState(tun, Tunnel.State.DOWN, null) }
+            for (u in (if (dnsOnly) emptyList() else urls)) {
+                val t0 = System.currentTimeMillis()
+                val b = httpGet(u, if (fast) 4000 else 6000, 4000)
+                if (b != null) {
+                    ms = System.currentTimeMillis() - t0
+                    break
                 }
-                Thread.sleep(if (useAwg) 1200 else 600)
-                for (u in urls) {
-                    val t0 = System.currentTimeMillis()
-                    val b = httpGet(u, if (fast) 4000 else 6000, 4000)
-                    if (b != null) {
-                        ms = System.currentTimeMillis() - t0
-                        break
-                    }
-                }
-                if (ms >= 0 || idx == order.size - 1) break
-                // plain engine got no answer: shut it down and try the AmneziaWG engine
-                try {
-                    stop?.invoke()
-                } catch (_: Throwable) {
-                }
-                stop = null
-                Thread.sleep(2000)
             }
-            result = if (ms >= 0) {
+            result = if (dnsOnly) {
+                "✅ وصل است (تونل DNS)"
+            } else if (!hsOk) {
+                "❌ سرور جواب نمی‌دهد (هندشیک نشد: Endpoint، کلید یا پورت UDP را چک کن)"
+            } else if (ms >= 0) {
                 "✅ وصل است"
             } else {
-                "❌ وصل نیست (سرور جواب نمی‌دهد)"
+                "⚠️ تونل برقرار شد ولی اینترنت از آن رد نمی‌شود (DNS یا فیلتر سرور)"
             }
         }
     } catch (e: Throwable) {
@@ -509,52 +510,13 @@ internal fun MainActivity.runWgTest(base: String) {
 
 // AmneziaWG configs carry obfuscation keys (Jc, Jmin, S1, H1, I1 ...) that the standard
 // WireGuard library cannot parse; they run on the AmneziaWG backend (Awg.kt).
-internal val AWG_KEYS = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime")
-
-// A config only needs the AmneziaWG engine when its obfuscation really changes the wire format:
-// non-default S1..S4 / H1..H4, or I1..I5 / J1..J3 / Itime. Jc/Jmin/Jmax are client-side junk packets
-// that a plain WireGuard server simply ignores, and S=0 with H1..H4 = 1..4 is the standard WireGuard
-// header, so such configs run on the normal WireGuard engine (with those keys stripped).
 internal fun isAwgConfig(text: String): Boolean {
+    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime")
     for (ln in text.lines()) {
-        if (!ln.contains('=')) continue
         val k = ln.substringBefore('=').trim().lowercase()
-        if (!AWG_KEYS.contains(k)) continue
-        val v = ln.substringAfter('=').trim()
-        when (k) {
-            "jc", "jmin", "jmax" -> {}
-            "s1", "s2", "s3", "s4" -> if (v.isNotEmpty() && v != "0") return true
-            "h1" -> if (v.isNotEmpty() && v != "1") return true
-            "h2" -> if (v.isNotEmpty() && v != "2") return true
-            "h3" -> if (v.isNotEmpty() && v != "3") return true
-            "h4" -> if (v.isNotEmpty() && v != "4") return true
-            else -> if (v.isNotEmpty()) return true
-        }
+        if (ln.contains('=') && keys.contains(k)) return true
     }
     return false
-}
-
-// True when the config carries any AmneziaWG key at all (even default-valued ones).
-internal fun hasAwgKeys(text: String): Boolean {
-    for (ln in text.lines()) {
-        if (ln.contains('=') && AWG_KEYS.contains(ln.substringBefore('=').trim().lowercase())) return true
-    }
-    return false
-}
-
-// One engine per config. Using both native Go engines (WireGuard and AmneziaWG) back to back in the
-// same process can crash it (exit reason 5 = native crash), so there is no automatic fallback.
-internal fun wgEngineOrder(text: String): List<Boolean> = listOf(isAwgConfig(text))
-
-// Removes the AmneziaWG-only keys so the standard WireGuard parser accepts the config.
-internal fun wgStripAwgKeys(text: String): String {
-    val out = ArrayList<String>()
-    for (ln in text.split("\n")) {
-        val k = ln.substringBefore('=').trim().lowercase()
-        if (ln.contains('=') && AWG_KEYS.contains(k)) continue
-        out.add(ln)
-    }
-    return out.joinToString("\n")
 }
 
 // ----- Default online gaming-server list (wireguard.json in the repo) -----
@@ -867,66 +829,65 @@ internal fun MainActivity.doConnectWg(base: String) {
         var noGames = false
         var noReply = false
         var isAwg = false
+        var dnsOnly = false
         try {
             val scoped = try {
-                wgScopedConfig(base, text)?.let { c -> wgApplyDns(c, xproIps()) }
+                wgScopedConfig(base, text)
             } catch (_: Throwable) {
                 null
             }
             if (scoped == null) {
                 noGames = true
             } else {
+                isAwg = isAwgConfig(scoped)
+                dnsOnly = wgIsDnsOnly(scoped)
                 // Only one tunnel at a time, whichever engine it runs on.
-                var replied = false
-                val order = wgEngineOrder(scoped)
-                for ((idx, useAwg) in order.withIndex()) {
-                    isAwg = useAwg
-                    wgStopCurrent()
-                    if (idx > 0) Thread.sleep(1500)
-                    if (isAwg) {
-                        val cfg = AwgEngine.parse(scoped)
-                        val be = AwgEngine.backend(applicationContext)
-                        val tun = AwgTun(base)
-                        be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
-                        // Junk packets make the first handshake a little slower than plain WireGuard.
-                        replied = awgWaitHandshake(be, tun, 12000L)
-                        if (replied) {
-                            AwgEngine.tunnel = tun
-                        } else {
-                            try {
-                                be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null)
-                            } catch (_: Throwable) {
-                            }
-                            AwgEngine.tunnel = null
-                        }
+                wgStopCurrent()
+                var replied: Boolean
+                if (isAwg) {
+                    val cfg = AwgEngine.parse(scoped)
+                    val be = AwgEngine.backend(applicationContext)
+                    val tun = AwgTun(base)
+                    be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
+                    // Junk packets make the first handshake a little slower than plain WireGuard.
+                    replied = dnsOnly || awgWaitHandshake(be, tun, 12000L)
+                    if (replied) {
+                        AwgEngine.tunnel = tun
                     } else {
-                        val cfg = Config.parse(ByteArrayInputStream(wgStripAwgKeys(scoped).toByteArray(Charsets.UTF_8)))
-                        val be = wgBackendGet()
-                        val tun = WgTun(base)
-                        be.setState(tun, Tunnel.State.UP, cfg)
-                        replied = waitWgHandshake(be, tun, 9000L)
-                        if (replied) {
-                            wgTunnel = tun
-                        } else {
-                            try {
-                                be.setState(tun, Tunnel.State.DOWN, null)
-                            } catch (_: Throwable) {
-                            }
-                            wgTunnel = null
+                        try {
+                            be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null)
+                        } catch (_: Throwable) {
                         }
+                        AwgEngine.tunnel = null
                     }
-                    if (replied) break
+                } else {
+                    val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                    val be = wgBackendGet()
+                    val tun = WgTun(base)
+                    be.setState(tun, Tunnel.State.UP, cfg)
+                    replied = dnsOnly || waitWgHandshake(be, tun, 9000L)
+                    if (replied) {
+                        wgTunnel = tun
+                    } else {
+                        try {
+                            be.setState(tun, Tunnel.State.DOWN, null)
+                        } catch (_: Throwable) {
+                        }
+                        wgTunnel = null
+                    }
                 }
                 if (!replied) {
                     // Do not show "connected" for a tunnel that carries nothing.
                     WgState.up = false
                     WgState.activeName = ""
                     WgState.awg = false
+                    WgState.dnsOnly = false
                     noReply = true
                 } else {
                     // the other engine holds no tunnel any more
                     if (isAwg) wgTunnel = null else AwgEngine.tunnel = null
                     WgState.awg = isAwg
+                    WgState.dnsOnly = dnsOnly
                     WgState.activeName = base
                     WgState.up = true
                     WgState.baseName = base
@@ -983,6 +944,7 @@ internal fun MainActivity.disconnectWg() {
         WgState.up = false
         WgState.activeName = ""
         WgState.awg = false
+        WgState.dnsOnly = false
         try {
             stopService(Intent(this, WgKeepService::class.java))
         } catch (_: Throwable) {
@@ -1076,7 +1038,7 @@ internal fun MainActivity.buildVpn() {
             row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
-            col.addView(label((if (isActive) "$base  ✓" else base) + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
+            col.addView(label((if (isActive) "$base  ✓" else base) + (if (wgIsAwgBase(base)) "  🛡 AWG" else "") + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
             val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
             if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
             val tr = wgTestRes[base] ?: ""
