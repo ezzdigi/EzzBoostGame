@@ -14,7 +14,7 @@ android {
         // CI passes -PappVersion / -PappVersionCode when a GitHub Release is published,
         // so the app version always matches the release tag.
         versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 4
-        versionName = (project.findProperty("appVersion") as String?) ?: "2.2.0"
+        versionName = (project.findProperty("appVersion") as String?) ?: "2.2.1"
         // Keep the APK small: modern phones only.
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
