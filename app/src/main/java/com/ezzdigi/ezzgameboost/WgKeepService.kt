@@ -68,6 +68,8 @@ class WgKeepService : Service() {
             if (downTicks >= 2) reason = "تونل از سمت سیستم قطع شد"
         } else {
             downTicks = 0
+            // a DNS-only tunnel has no server, so there is no handshake to watch
+            if (WgState.dnsOnly) return
             val hs = if (awg) awgLatestHandshake(abe!!, atun!!) else wgLatestHandshake(be!!, tun!!)
             if (hs > 0L) {
                 WgState.attempts = 0
@@ -114,7 +116,7 @@ class WgKeepService : Service() {
         WgState.reconnecting = true
         WgState.attempts++
         try {
-            val cfg = Config.parse(ByteArrayInputStream(wgStripAwgKeys(WgState.cfgText).toByteArray(Charsets.UTF_8)))
+            val cfg = Config.parse(ByteArrayInputStream(WgState.cfgText.toByteArray(Charsets.UTF_8)))
             if (!WgState.wanted) return
             try {
                 be.setState(tun, Tunnel.State.DOWN, null)
