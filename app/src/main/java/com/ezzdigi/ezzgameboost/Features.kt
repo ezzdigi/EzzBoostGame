@@ -443,8 +443,44 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
     val ignoredBase = base
     // AmneziaWG configs (Jc/S1/H1... keys) take the same normalization; they run on the AmneziaWG
     // backend (Awg.kt), and the obfuscation keys are left exactly as the server gave them.
+    if (wgIsDnsOnly(text)) return wgDnsOnlyConfig(text)
     val normalized = wgEnsureKeepalive(wgEnsureFullRoute(text))
     return normalized
+}
+
+// A config used only to set the phone's DNS (e.g. a DNS-provider .conf): its peer has no Endpoint, or its
+// AllowedIPs is the placeholder 0.0.0.0/32. There is no server to reach, so such a tunnel counts as connected
+// as soon as it is up, and its routes must stay as written (forcing 0.0.0.0/0 would cut the internet).
+internal fun wgIsDnsOnly(text: String): Boolean {
+    var peers = 0
+    var hasEndpoint = false
+    var allowed = ""
+    var inPeer = false
+    for (ln in text.split("\n")) {
+        val t = ln.trim()
+        val low = t.lowercase()
+        if (low.startsWith("[")) {
+            inPeer = low == "[peer]"
+            if (inPeer) peers++
+            continue
+        }
+        if (!inPeer) continue
+        if (low.startsWith("endpoint")) hasEndpoint = true
+        if (low.startsWith("allowedips")) allowed = t.substringAfter("=", "").replace(" ", "")
+    }
+    if (peers != 1) return false
+    return !hasEndpoint || allowed == "0.0.0.0/32"
+}
+
+// Runtime copy of a DNS-only config: no Endpoint (nothing to resolve or handshake with) and no keepalive.
+internal fun wgDnsOnlyConfig(text: String): String {
+    val out = ArrayList<String>()
+    for (ln in text.split("\n")) {
+        val low = ln.trim().lowercase()
+        if (low.startsWith("endpoint") || low.startsWith("persistentkeepalive")) continue
+        out.add(ln)
+    }
+    return out.joinToString("\n")
 }
 
 // A game-only tunnel has to carry all traffic of the selected apps. A peer whose AllowedIPs lists only
