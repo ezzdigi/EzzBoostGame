@@ -444,8 +444,12 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
     // AmneziaWG configs (Jc/S1/H1... keys) take the same normalization; they run on the AmneziaWG
     // backend (Awg.kt), and the obfuscation keys are left exactly as the server gave them.
     if (wgIsDnsOnly(text)) return wgDnsOnlyConfig(text)
-    val normalized = wgEnsureKeepalive(wgEnsureFullRoute(text))
-    return normalized
+    // Games only: the tunnel carries just the installed games and the favorited apps (plus apps whose
+    // profile uses this config), everything else on the phone keeps using the normal connection.
+    // With no game to include, null makes the caller show "no game found" instead of tunnelling nothing.
+    val pkgs = scopedPackages(base)
+    if (pkgs.isEmpty()) return null
+    return wgScopeToPackages(text, pkgs)
 }
 
 // A config used only to set the phone's DNS (e.g. a DNS-provider .conf): its peer has no Endpoint, or its
