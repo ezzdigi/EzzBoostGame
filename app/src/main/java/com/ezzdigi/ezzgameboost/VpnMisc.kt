@@ -209,13 +209,28 @@ internal fun MainActivity.showOnboarding() {
         ),
         !Tr.en
     )
-    col.addView(graffiti, vlp(18, 8))
     val priv = label(
         " برای بهبود بازیهای آنلاین تلاش میکنه تجربه بازی بهتری داشته باشید EzzGameBoost تیم سازنده: .",
         11.5f, muted
     )
     priv.gravity = Gravity.CENTER
-    col.addView(priv, vlp(0, 14))
+    // The welcome text sits in a frosted-glass card: translucent gradient fill + thin light edge.
+    val lightTheme = resolveLight()
+    val glass = LinearLayout(this)
+    glass.orientation = LinearLayout.VERTICAL
+    glass.gravity = Gravity.CENTER_HORIZONTAL
+    val glassBg = android.graphics.drawable.GradientDrawable(
+        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+        if (lightTheme) intArrayOf(Color.argb(190, 255, 255, 255), Color.argb(100, 255, 255, 255))
+        else intArrayOf(Color.argb(64, 255, 255, 255), Color.argb(20, 255, 255, 255))
+    )
+    glassBg.cornerRadius = dp(22).toFloat()
+    glassBg.setStroke(dp(1), if (lightTheme) Color.argb(60, 0, 0, 0) else Color.argb(80, 255, 255, 255))
+    glass.background = glassBg
+    glass.setPadding(dp(14), dp(6), dp(14), dp(14))
+    glass.addView(graffiti, LinearLayout.LayoutParams(MATCH, WRAP))
+    glass.addView(priv, vlp(8, 0))
+    col.addView(glass, vlp(18, 14))
     col.addView(button("شروع") {
         prefs.edit().putBoolean("onboarded", true).apply()
         startMain()
@@ -458,7 +473,7 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): Stri
                 }
             }
             result = if (dnsOnly) {
-                "✅ وصل است (تونل DNS)"
+                "✅ وصل است"
             } else if (!hsOk) {
                 "❌ سرور جواب نمی‌دهد (هندشیک نشد: Endpoint، کلید یا پورت UDP را چک کن)"
             } else if (ms >= 0) {
