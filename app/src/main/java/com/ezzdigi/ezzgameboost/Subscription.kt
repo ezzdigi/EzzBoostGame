@@ -12,6 +12,9 @@ import org.json.JSONObject
 private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 
+// Telegram support link for the buy / renew buttons (kept here so this file builds on its own).
+private const val SUPPORT_TG_URL = "https://t.me/ezzgameTM"
+
 // ----- Premium subscription (per-user account) --------------------------------
 //
 // The account lives on the subscription server (SUB_API). After a login the app keeps
@@ -614,7 +617,7 @@ internal fun MainActivity.buildSubscription() {
     aRow.addView(bRefresh, a1)
     aRow.addView(bOut, a2)
     hCard.addView(aRow, vlp(4, 6))
-    hCard.addView(button("🛒 تمدید / دریافت اکانت", false) { openUrl(SUB_SUPPORT_URL) }, vlp(0, 0))
+    hCard.addView(button("🛒 تمدید / دریافت اکانت", false) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
     content.addView(hCard, vlp(0, 4))
 
     vpnRefresh = { paintHead() }
@@ -857,7 +860,7 @@ private fun MainActivity.buildSubLogin() {
     )
     rule.addView(label("برای پرداخت به پشتیبانی تلگرام پیام بدهید.", 12.5f, white, true), vlp(0, 0))
     pCard.addView(rule, vlp(0, 12))
-    pCard.addView(button("پیام به پشتیبانی تلگرام", true) { openUrl(SUB_SUPPORT_URL) }, vlp(0, 0))
+    pCard.addView(button("پیام به پشتیبانی تلگرام", true) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
     content.addView(pCard, vlp(0, 4))
 }
 
