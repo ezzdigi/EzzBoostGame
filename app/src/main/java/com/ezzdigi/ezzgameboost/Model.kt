@@ -100,6 +100,8 @@ var uiLight = false
 const val SUB_BASE = "https://ezzgame.ir/ezzsub"
 const val SUB_API = SUB_BASE + "/api.php"
 const val SUB_BUY_URL = SUB_BASE + "/"
+// Telegram support link used by the buy / renew buttons. Put your support username here.
+const val SUB_SUPPORT_URL = "https://t.me/ezzgameTM"
 
 // Public text lists (one link per line) that are pulled into V2Gaming automatically.
 // A GitHub "blob" link is converted to the raw file. More can be added in v2ray.json
