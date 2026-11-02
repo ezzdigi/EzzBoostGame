@@ -614,7 +614,7 @@ internal fun MainActivity.buildSubscription() {
     aRow.addView(bRefresh, a1)
     aRow.addView(bOut, a2)
     hCard.addView(aRow, vlp(4, 6))
-    hCard.addView(button("🛒 تمدید / دریافت اکانت", false) { openUrl(SUB_BUY_URL) }, vlp(0, 0))
+    hCard.addView(button("🛒 تمدید / دریافت اکانت", false) { openUrl(SUB_SUPPORT_URL) }, vlp(0, 0))
     content.addView(hCard, vlp(0, 4))
 
     vpnRefresh = { paintHead() }
@@ -745,9 +745,75 @@ internal fun MainActivity.buildSubWg() {
     renderD(true)
 }
 
+// EzzGameBoost brand title: Ezz = blue, Game = orange, Boost = red, with a neon bar under it.
+private fun MainActivity.subBrandHeader(): LinearLayout {
+    val blue = android.graphics.Color.rgb(47, 123, 255)
+    val orange = android.graphics.Color.rgb(255, 138, 31)
+    val red = android.graphics.Color.rgb(255, 59, 59)
+    val sp = android.text.SpannableString("EzzGameBoost")
+    sp.setSpan(android.text.style.ForegroundColorSpan(blue), 0, 3, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    sp.setSpan(android.text.style.ForegroundColorSpan(orange), 3, 7, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    sp.setSpan(android.text.style.ForegroundColorSpan(red), 7, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    val box = LinearLayout(this)
+    box.orientation = LinearLayout.VERTICAL
+    box.gravity = android.view.Gravity.CENTER_HORIZONTAL
+    val t = android.widget.TextView(this)
+    t.text = sp
+    t.textSize = 36f
+    t.gravity = android.view.Gravity.CENTER
+    t.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL)
+    t.letterSpacing = 0.05f
+    t.setShadowLayer(dp(6).toFloat(), 0f, dp(3).toFloat(), android.graphics.Color.argb(170, 0, 0, 0))
+    box.addView(t, LinearLayout.LayoutParams(WRAP, WRAP))
+    val bar = View(this)
+    val g = android.graphics.drawable.GradientDrawable(
+        android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+        intArrayOf(blue, orange, red)
+    )
+    g.cornerRadius = dp(3).toFloat()
+    bar.background = g
+    box.addView(bar, LinearLayout.LayoutParams(dp(210), dp(4)))
+    return box
+}
+
+private fun MainActivity.subGlass(pad: Int = 14): LinearLayout {
+    val c = card(pad)
+    val d = if (uiLight) rounded(android.graphics.Color.argb(215, 255, 255, 255), 18, stroke)
+    else android.graphics.drawable.GradientDrawable(
+        android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+        intArrayOf(android.graphics.Color.argb(52, 255, 255, 255), android.graphics.Color.argb(14, 255, 255, 255))
+    ).also {
+        it.cornerRadius = dp(18).toFloat()
+        it.setStroke(dp(1), android.graphics.Color.argb(60, 255, 255, 255))
+    }
+    c.background = d
+    c.elevation = dp(8).toFloat()
+    return c
+}
+
+private fun MainActivity.subPlanRow(name: String, days: String, price: String): LinearLayout {
+    val r = LinearLayout(this)
+    r.orientation = LinearLayout.HORIZONTAL
+    r.gravity = android.view.Gravity.CENTER_VERTICAL
+    r.setPadding(dp(14), dp(11), dp(14), dp(11))
+    r.background = rounded(accentAlpha(28), 14, accentAlpha(90))
+    r.elevation = dp(4).toFloat()
+    val l = LinearLayout(this)
+    l.orientation = LinearLayout.VERTICAL
+    l.addView(label(name, 14f, white, true))
+    l.addView(label(days, 12f, muted))
+    r.addView(l, LinearLayout.LayoutParams(0, WRAP, 1f))
+    r.addView(label(price, 15f, white, true, false))
+    return r
+}
+
 private fun MainActivity.buildSubLogin() {
-    section("اشتراک ویژه")
-    val sCard = card()
+    content.addView(subBrandHeader(), vlp(16, 6))
+    val hi = label("سلام 👋🏻 با نام کاربری و رمزی که از پشتیبانی گرفتی وارد شو.", 13f, muted, false)
+    hi.gravity = android.view.Gravity.CENTER
+    content.addView(hi, vlp(0, 12))
+
+    val sCard = subGlass()
     sCard.addView(label("وارد حساب نشده‌ای", 13f, muted, true), vlp(0, 6))
     val uIn = input("نام کاربری")
     uIn.textDirection = View.TEXT_DIRECTION_LTR
@@ -764,10 +830,35 @@ private fun MainActivity.buildSubLogin() {
                 if (tab == 4) showTab(4)
             }
         },
+        vlp(0, 0)
+    )
+    content.addView(sCard, vlp(0, 12))
+
+    // ---- Plans + rules + support
+    section("اشتراک ویژه")
+    val pCard = subGlass()
+    pCard.addView(label("پینگ پایین‌تر و اتصال پایدار برای بازی‌ها", 13f, muted), vlp(0, 8))
+    for (line in arrayOf(
+        "✓ کانفیگ اختصاصی و خصوصی برای هر کاربر",
+        "✓ مخصوص بازی: بازی را از داخل برنامه انتخاب کن",
+        "✓ کاهش لگ و پینگ پایدار",
+        "✓ پشتیبانی سریع در تلگرام"
+    )) pCard.addView(label(line, 13f, white), vlp(0, 2))
+    pCard.addView(subPlanRow("اشتراک ۱ ماهه", "۳۰ روز", "۲۴۵,۰۰۰ تومان"), vlp(12, 8))
+    pCard.addView(subPlanRow("اشتراک ۲ ماهه", "۶۰ روز", "۴۵۰,۰۰۰ تومان"), vlp(0, 8))
+    pCard.addView(subPlanRow("اشتراک ۳ ماهه", "۹۰ روز", "۶۹۰,۰۰۰ تومان"), vlp(0, 12))
+    val rule = LinearLayout(this)
+    rule.orientation = LinearLayout.VERTICAL
+    rule.setPadding(dp(12), dp(10), dp(12), dp(10))
+    rule.background = rounded(panel2, 12, stroke)
+    rule.addView(
+        label("سرویس گیمینگ رایگان و اختصاصی فقط مخصوص بازی است و به هیچ عنوان برای وب‌گردی، اینستاگرام، تلگرام، یوتیوب و موارد دیگر قابل استفاده نیست.", 12f, muted),
         vlp(0, 6)
     )
-    sCard.addView(button("🛒 دریافت اکانت", false) { openUrl(SUB_BUY_URL) }, vlp(0, 0))
-    content.addView(sCard, vlp(0, 4))
+    rule.addView(label("برای پرداخت به پشتیبانی تلگرام پیام بدهید.", 12.5f, white, true), vlp(0, 0))
+    pCard.addView(rule, vlp(0, 12))
+    pCard.addView(button("پیام به پشتیبانی تلگرام", true) { openUrl(SUB_SUPPORT_URL) }, vlp(0, 0))
+    content.addView(pCard, vlp(0, 4))
 }
 
 private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
