@@ -16,6 +16,14 @@
     {
       "name": "Ezz V.I.P 2",
       "conf": "[Interface]\nAddress = 46.209.123.98/32\nDNS = 46.209.123.98, 1.1.1.1\nMTU = 1200\nPrivateKey = 4OlEA6DLNh0+FJ2yP6EkF/QHgFtNwvltPqnZFeKrYlw=\n\n[Peer]\nAllowedIPs = 154.94.99.56/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+    },
+    {
+      "name": "Ezz-Pro",
+      "conf": "[Interface]\nAddress = 172.104.185.69/32\nDNS = 172.104.185.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+    },
+    {
+      "name": "Ezz-Pro1",
+      "conf": "[Interface]\nAddress = 164.90.187.31/32\nDNS = 164.90.187.31, 1.1.1.1\nMTU = 1200\nPrivateKey = IOsVMlvCEEF17OoT+sAWWlpS1J6So3N57yE2vP6oO0o=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
     }
   ]
 }
