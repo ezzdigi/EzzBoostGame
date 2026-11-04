@@ -19,11 +19,11 @@
     },
     {
       "name": "Ezz-Pro",
-      "conf": "[Interface]\nPrivateKey = bcD0qj5Djp18HS2nfmHbg12xtVbEHqtUIL2ZxmUdjg0=\nAddress = 8.245.24.73/32, 5f00::f900:a605:7c92/32\nDNS = 8.8.8.8, 1.1.1.1, 1a1f::3789:5cee:da85, 1a1f::3789:b2dc:2a8d\nMTU = 1300\nListenPort = 17600\n\n[Peer]\nPublicKey = ljizHABvty/yXGj0wRKRN5VGwV2nrD4u5t7S3KhUuHs=\nAllowedIPs = 8.2.246.241/32, 8.248.1.122/32, 8.209.152.216/32, 8.170.211.19/32, 8.131.224.144/32, 8.254.41.8/32, 8.107.87.57/32, 8.228.75.187/32, 8.14.129.142/32, 8.20.59.57/32\nEndpoint = 202.67.26.201:17600\nPersistentKeepalive = 1"
+      "conf": "[Interface]\nPrivateKey = bcD0qj5Djp18HS2nfmHbg12xtVbEHqtUIL2ZxmUdjg0=\nAddress = 8.245.24.73/32, 5f00::f900:a605:7c92/32\nDNS = 8.8.8.8, 1.1.1.1, 1a1f::3789:5cee:da85, 1a1f::3789:b2dc:2a8d\nMTU = 1300\nListenPort = 17600\n\n[Peer]\nPublicKey = ljizHABvty/yXGj0wRKRN5VGwV2nrD4u5t7S3KhUuHs=\nAllowedIPs = 8.2.246.241/32, 8.248.1.122/32, 8.209.152.216/32, 8.170.211.19/32, 8.131.224.144/32, 8.254.41.8/32, 8.107.87.57/32, 8.228.75.187/32, 8.14.129.142/32, 8.20.59.57/32\nEndpoint = 202.67.26.201:17600=n"
     },
     {
       "name": "Ezz-Pro1",
-      "conf": "[Interface]\nPrivateKey = bcD0qj5Djp18HS2nfmHbg12xtVbEHqtUIL2ZxmUdjg0=\nAddress = 8.247.181.147/32, 5f00::f900:e22d:5405/32\nDNS = 8.8.8.8, 1.1.1.1, 1a1f::3789:44df:0acf, 1a1f::3789:0c98:445a\nMTU = 1300\nListenPort = 2975\n\n[Peer]\nPublicKey = ljizHABvty/yXGj0wRKRN5VGwV2nrD4u5t7S3KhUuHs=\nAllowedIPs = 8.3.194.176/32, 8.236.141.211/32, 8.123.197.30/32, 8.206.165.145/32, 8.177.88.46/32, 8.212.105.18/32, 8.200.225.150/32, 8.69.119.122/32, 8.112.42.5/32, 8.253.162.0/32\nEndpoint = 226.72.173.89:2975\nPersistentKeepalive = 1"
+      "conf": "[Interface]\nPrivateKey = bcD0qj5Djp18HS2nfmHbg12xtVbEHqtUIL2ZxmUdjg0=\nAddress = 8.247.181.147/32, 5f00::f900:e22d:5405/32\nDNS = 8.8.8.8, 1.1.1.1, 1a1f::3789:44df:0acf, 1a1f::3789:0c98:445a\nMTU = 1300\nListenPort = 2975\n\n[Peer]\nPublicKey = ljizHABvty/yXGj0wRKRN5VGwV2nrD4u5t7S3KhUuHs=\nAllowedIPs = 8.3.194.176/32, 8.236.141.211/32, 8.123.197.30/32, 8.206.165.145/32, 8.177.88.46/32, 8.212.105.18/32, 8.200.225.150/32, 8.69.119.122/32, 8.112.42.5/32, 8.253.162.0/32\nEndpoint = 226.72.173.89:2975=n"
     }
   ]
 }
