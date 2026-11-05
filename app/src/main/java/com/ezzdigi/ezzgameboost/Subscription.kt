@@ -840,7 +840,7 @@ internal fun MainActivity.buildSubWg() {
             wList.addView(label("هنوز کانفیگی نیست.", 12.5f, muted))
             return
         }
-        val groups = listOf("ProGaming" to "🎮 Pro Gaming", "EzzViP" to "⚡ EzzViP")
+        val groups = listOf("Gaming" to "🎮 Gaming", "EzzViP" to "⚡ EzzViP")
         for ((group, title) in groups) {
             val groupNames = names.filter { subWgGroup(it) == group }
             if (groupNames.isEmpty()) continue
@@ -1042,7 +1042,11 @@ private fun MainActivity.subWgDisplayName(base: String): String {
 }
 
 private fun MainActivity.subWgGroup(base: String): String {
-    return try { JSONObject(prefs.getString("subWgMeta", "{}") ?: "{}").optJSONObject(base)?.optString("group", "") ?: "" } catch (_: Throwable) { "" }
+    return try {
+        val raw = JSONObject(prefs.getString("subWgMeta", "{}") ?: "{}")
+            .optJSONObject(base)?.optString("group", "") ?: ""
+        if (raw.equals("ProGaming", true)) "Gaming" else raw
+    } catch (_: Throwable) { "" }
 }
 
 private fun MainActivity.subWgRow(base: String, displayName: String = ""): LinearLayout {
