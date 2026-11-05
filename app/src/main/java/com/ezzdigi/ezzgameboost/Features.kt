@@ -359,6 +359,36 @@ internal fun MainActivity.checkUpdate(manual: Boolean, onDone: ((String) -> Unit
     }
 }
 
+internal fun MainActivity.showUpdateDialogIfNeeded() {
+    val tag = prefs.getString("updTag", "") ?: ""
+    if (tag.isEmpty() || !isNewerVersion(tag, currentVersion())) return
+    if (prefs.getString("updPromptedTag", "") == tag) return
+    prefs.edit().putString("updPromptedTag", tag).apply()
+    val notes = prefs.getString("updNotes", "")?.trim().orEmpty()
+    val message = buildString {
+        append("نسخه فعلی: ")
+        append(currentVersion())
+        append("\\nنسخه جدید: ")
+        append(tag)
+        append("\\n\\n")
+        append(if (notes.isNotEmpty()) notes else "نسخه جدید EzzGameBOOST آماده است. برای دریافت آخرین امکانات و اصلاحات، برنامه را به‌روزرسانی کنید.")
+    }
+    try {
+        AlertDialog.Builder(this)
+            .setTitle("🆕 آپدیت جدید منتشر شد")
+            .setMessage(message)
+            .setPositiveButton("به‌روزرسانی") { _, _ ->
+                val url = prefs.getString("updUrl", RELEASES_PAGE) ?: RELEASES_PAGE
+                openUrl(url)
+            }
+            .setNegativeButton("بعداً", null)
+            .setCancelable(true)
+            .show()
+    } catch (_: Exception) {
+        prefs.edit().remove("updPromptedTag").apply()
+    }
+}
+
 internal fun MainActivity.addUpdateBanner() {
     val tag = prefs.getString("updTag", "") ?: ""
     if (tag.isEmpty() || !isNewerVersion(tag, currentVersion())) return
