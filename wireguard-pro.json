@@ -2,38 +2,38 @@
   "version": 1,
   "configs": [
     {
-      "name": "W-JET",
+      "name": "AE",
       "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 5.217.74.141, 8.8.4.4\nMTU = 1419\nPrivateKey = UNYPFv8HesRgSECdsvS+Cx4nXZJFLbfnYaHw6CfKjWk=\n\n[Peer]\nEndpoint = 8.6.112.127:1018\nPersistentKeepalive = 25\nPreSharedKey = 3UoGt3hqpogrKlIr6t8ieJ5y+sjJpDRGLLk1O2mjWYo=\nPublicKey = Ge84cG2Pn8eMFJaEh5HNevRfeCIECqj5C1CLjwChNUg=\n",
       "group": "EzzViP",
-      "displayName": "Ezz 1"
+      "displayName": "AE"
     },
     {
-      "name": "W-JET 2",
-      "conf": "[Interface]\nAddress = 10.66.2.225/32\nDNS = 208.67.222.222, 208.67.220.220\nMTU = 1300\nPrivateKey = 2BQByzkWP959aZKKLiU2pAwEXTgFdlcJRGeZ0i5a+ng=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nPersistentKeepalive = 11\nPreSharedKey = GOtWDEq1Hcu9zr4r7oUN/DyNjm04j2p4YQSKX6SZhIc=\nPublicKey = qhwUFEli/e2CTfTEx4A1c9GRQzDrkplDheUztaAPaS8=\n",
+      "name": "IR",
+      "conf": "[Interface]\nAddress = 172.16.0.2/32\nDNS = 1.1.1.1, 1.0.0.1\nPrivateKey = UGJ4WGEXehxUV3+Pwp5wGqpTaXqgFD4Iu7aFPBlN0Wg=\n\n[Peer]\nAllowedIPs = 8.8.4.5/32\nEndpoint = 8.6.112.127:1018\nPersistentKeepalive = 25\nPublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\n",
       "group": "EzzViP",
-      "displayName": "Ezz 2"
+      "displayName": "IR"
     },
     {
-      "name": "Ezz V.I.P",
+      "name": "TR",
       "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 5.217.74.141, 8.8.4.4\nMTU = 1419\nPrivateKey = eGPdCOQO2tSpqvWdJj4/T9EZbnVYU8npgASQ6pcEC38=\n\n[Peer]\nEndpoint = 185.123.100.17:51820\nPersistentKeepalive = 25\nPreSharedKey = xN8qG5hJqzhpDAZUReVfWXFz8aoNKRUJTCPka3RAZgo=\nPublicKey = leZBI5PWBB1YIp1aZu/PnD4VSSMJsCjeLKwfq6tzGHU=\n",
       "group": "Gaming",
-      "displayName": "Pro VIP"
+      "displayName": "TR"
     },
     {
-      "name": "Ezz V.I.P 2",
-      "conf": "[Interface]\nAddress = 172.16.7.199/32\nDNS = 8.213.37.17, 8.8.4.4\nPrivateKey = IP7fegePjvOdwBXnazN019oTUI5abmTcqBEpsMb9cVo=\n\n[Peer]\nEndpoint = 185.253.73.166:51820\nPublicKey = BRc6g8NwVRput4d0ojbNIKUuGibomTxLDXH/ZWjyWiU=\n",
-      "group": "EzzViP",
-      "displayName": "Ezz"
-    },
-    {
-      "name": "Ezz-Pro",
+      "name": "IL",
       "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 8.8.4.4\nPrivateKey = qDdAg8mKndPV2/zq3KD8iEIv7lO7yHUDdlUKv1OytWE=\n\n[Peer]\nEndpoint = 185.253.73.166:51820\nPublicKey = NMVGehzaiKTwzkOSakULFcVQlIREduOJ2ufJTZDit2Y=\n",
+      "group": "EzzViP",
+      "displayName": "IL"
+    },
+    {
+      "name": "tr2",
+      "conf": "[Interface]\nAddress = 172.16.7.199/32\nDNS = 8.213.37.17, 8.8.4.4\nPrivateKey = IP7fegePjvOdwBXnazN019oTUI5abmTcqBEpsMb9cVo=\n\n[Peer]\nEndpoint = 185.253.73.166:51820\nPublicKey = BRc6g8NwVRput4d0ojbNIKUuGibomTxLDXH/ZWjyWiU=\n",
       "group": "Gaming",
-      "displayName": "Pro"
+      "displayName": "tr2"
     },
     {
       "name": "Ezz-Pro1",
-      "conf": "[Interface]\nAddress = 172.16.0.2/32\nDNS = 1.1.1.1, 1.0.0.1\nPrivateKey = UGJ4WGEXehxUV3+Pwp5wGqpTaXqgFD4Iu7aFPBlN0Wg=\n\n[Peer]\nAllowedIPs = 8.8.4.5/32\nEndpoint = 8.6.112.127:1018\nPersistentKeepalive = 25\nPublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\n",
+      "conf": "[Interface]\nAddress = 8.122.13.139/32, 5f00::f900:84d3:3bb9/32\nDNS = 8.8.8.8, 1.1.1.1, 1a1f::3789:7803:5975, 1a1f::3789:bfa9:6cc9\nListenPort = 52451\nMTU = 1300\nPrivateKey = bcD0qj5Djp18HS2nfmHbg12xtVbEHqtUIL2ZxmUdjg0=\n\n[Peer]\nAllowedIPs = 8.23.173.79/32, 8.163.86.172/32, 8.206.84.36/32, 8.161.50.16/32, 8.37.69.149/32, 8.219.89.140/32, 8.76.190.51/32, 8.248.234.50/32, 8.12.109.83/32, 8.8.63.5/32\nPersistentKeepalive = 1\nPublicKey = ljizHABvty/yXGj0wRKRN5VGwV2nrD4u5t7S3KhUuHs=\n",
       "group": "Gaming",
       "displayName": "Pro 1"
     }
