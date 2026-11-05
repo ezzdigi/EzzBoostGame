@@ -247,7 +247,7 @@ internal fun MainActivity.subWgList(): List<String> {
 internal fun MainActivity.removeSubConfig() {
     try {
         for (n in subWgNameSet()) deleteCfg("wg", "$n.conf")
-        prefs.edit().remove("subWgNames").remove("subWgGh").remove("subV2").remove("subDns").remove("xproSel").remove("xproIps").apply()
+        prefs.edit().remove("subWgNames").remove("subWgGh").remove("subWgMeta").remove("subV2").remove("subDns").remove("xproSel").remove("xproIps").apply()
     } catch (_: Throwable) {
     }
 }
@@ -338,8 +338,10 @@ private fun wgSanitize(text: String): String {
     return out.joinToString("\n")
 }
 
-private fun MainActivity.parseWgEntries(body: String): List<Pair<String, String>> {
-    val out = ArrayList<Pair<String, String>>()
+private data class SubWgEntry(val name: String, val conf: String, val group: String = "", val displayName: String = "")
+
+private fun MainActivity.parseWgEntries(body: String): List<SubWgEntry> {
+    val out = ArrayList<SubWgEntry>()
     try {
         val arr = JSONObject(body).getJSONArray("configs")
         for (i in 0 until arr.length()) {
@@ -349,8 +351,6 @@ private fun MainActivity.parseWgEntries(body: String): List<Pair<String, String>
             val url = o.optString("url")
             if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
             if (text.isBlank()) continue
-            // Accept every config the account has. If it does not parse as is, try a cleaned copy;
-            // otherwise keep it unchanged so connecting shows what is wrong with it.
             var use = text
             try {
                 wgParseCheck(text)
@@ -362,7 +362,7 @@ private fun MainActivity.parseWgEntries(body: String): List<Pair<String, String>
                 } catch (_: Throwable) {
                 }
             }
-            out.add(Pair(nm, use))
+            out.add(SubWgEntry(nm, use, o.optString("group").trim(), o.optString("displayName").trim()))
         }
     } catch (_: Throwable) {
     }
@@ -417,9 +417,9 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
                 // wireguard-pro.json (same format as wireguard.json, shared by every account).
                 // If one source is unreachable, its last synced configs stay.
                 val bodyWg: String? = httpGet(SUB_API + "?a=list&f=wireguard.json&t=" + Uri.encode(token), 10000, 1500000)
-                val panelEntries: List<Pair<String, String>>? =
+                val panelEntries: List<SubWgEntry>? =
                     if (bodyWg != null && bodyWg.trimStart().startsWith("{")) parseWgEntries(bodyWg) else null
-                var ghEntries: List<Pair<String, String>>? = null
+                var ghEntries: List<SubWgEntry>? = null
                 for (u in remoteUrls(ghRepo(), "wireguard-pro.json")) {
                     val b = httpGet(u, 8000, 1500000)
                     if (b != null && b.trimStart().startsWith("{")) {
@@ -439,9 +439,10 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
                             listed.add(n)
                             ghNames.add(n)
                         }
-                        fun addAll(list: List<Pair<String, String>>, fromGh: Boolean) {
+                        val meta = try { JSONObject(prefs.getString("subWgMeta", "{}") ?: "{}") } catch (_: Throwable) { JSONObject() }
+                        fun addAll(list: List<SubWgEntry>, fromGh: Boolean) {
                             for (e in list) {
-                                val base0 = cleanName(e.first, "wg")
+                                val base0 = cleanName(e.name, "wg")
                                 var b = base0
                                 var i = 2
                                 while (listed.contains(b)) {
@@ -450,11 +451,17 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
                                 }
                                 listed.add(b)
                                 if (fromGh) ghNames.add(b)
-                                writeCfg("wg", "$b.conf", e.second)
+                                writeCfg("wg", "$b.conf", e.conf)
+                                if (fromGh && (e.group.isNotEmpty() || e.displayName.isNotEmpty())) {
+                                    meta.put(b, JSONObject().put("group", e.group).put("displayName", e.displayName))
+                                }
                             }
                         }
                         if (panelEntries != null) addAll(panelEntries, false)
                         if (ghEntries != null) addAll(ghEntries, true)
+                        val keepMeta = JSONObject()
+                        for (n in listed) if (meta.has(n)) keepMeta.put(n, meta.optJSONObject(n) ?: JSONObject())
+                        prefs.edit().putString("subWgMeta", keepMeta.toString()).apply()
                         for (n in oldSet) {
                             if (!listed.contains(n)) deleteCfg("wg", "$n.conf")
                         }
@@ -833,7 +840,18 @@ internal fun MainActivity.buildSubWg() {
             wList.addView(label("هنوز کانفیگی نیست.", 12.5f, muted))
             return
         }
-        for (base in names) wList.addView(subWgRow(base), vlp(0, 6))
+        val groups = listOf("ProGaming", "EzzViP")
+        for (group in groups) {
+            val groupNames = names.filter { subWgGroup(it) == group }
+            if (groupNames.isEmpty()) continue
+            wList.addView(label(group, 14f, accent, true), vlp(8, 6))
+            for (base in groupNames) wList.addView(subWgRow(base, subWgDisplayName(base)), vlp(0, 6))
+        }
+        val ungrouped = names.filter { subWgGroup(it).isEmpty() }
+        if (ungrouped.isNotEmpty()) {
+            wList.addView(label("سایر", 14f, accent, true), vlp(8, 6))
+            for (base in ungrouped) wList.addView(subWgRow(base), vlp(0, 6))
+        }
     }
 
     vpnRefresh = { renderW(false); renderD(false) }
@@ -1004,7 +1022,15 @@ private fun MainActivity.subV2Row(item: V2Item): LinearLayout {
 // Games and favorites always go through the tunnels. Some games are not flagged as games by the system,
 // so the user can add any other app here; it is then included in WireGuard and V2Gaming tunnels.
 
-private fun MainActivity.subWgRow(base: String): LinearLayout {
+private fun MainActivity.subWgDisplayName(base: String): String {
+    return try { JSONObject(prefs.getString("subWgMeta", "{}") ?: "{}").optJSONObject(base)?.optString("displayName", "") ?: "" } catch (_: Throwable) { "" }
+}
+
+private fun MainActivity.subWgGroup(base: String): String {
+    return try { JSONObject(prefs.getString("subWgMeta", "{}") ?: "{}").optJSONObject(base)?.optString("group", "") ?: "" } catch (_: Throwable) { "" }
+}
+
+private fun MainActivity.subWgRow(base: String, displayName: String = ""): LinearLayout {
     val isActive = WgState.up && WgState.activeName == base
     val row = LinearLayout(this)
     row.orientation = LinearLayout.HORIZONTAL
@@ -1013,7 +1039,8 @@ private fun MainActivity.subWgRow(base: String): LinearLayout {
     row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
     val col = LinearLayout(this)
     col.orientation = LinearLayout.VERTICAL
-    col.addView(label((if (isActive) "$base  ✓" else base), 13.5f, white, true, false))
+    val title = displayName.ifBlank { base }
+    col.addView(label((if (isActive) "$title  ✓" else title), 13.5f, white, true, false))
     val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
     if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
     val tr = wgTestRes[base] ?: ""
