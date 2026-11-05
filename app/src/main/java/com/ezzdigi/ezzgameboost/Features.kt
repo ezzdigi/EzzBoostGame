@@ -364,14 +364,13 @@ internal fun MainActivity.showUpdateDialogIfNeeded() {
     if (tag.isEmpty() || !isNewerVersion(tag, currentVersion())) return
     if (prefs.getString("updPromptedTag", "") == tag) return
     prefs.edit().putString("updPromptedTag", tag).apply()
-    val notes = prefs.getString("updNotes", "")?.trim().orEmpty()
     val message = buildString {
         append("نسخه فعلی: ")
         append(currentVersion())
         append("\\nنسخه جدید: ")
         append(tag)
         append("\\n\\n")
-        append(if (notes.isNotEmpty()) notes else "نسخه جدید EzzGameBOOST آماده است. برای دریافت آخرین امکانات و اصلاحات، برنامه را به‌روزرسانی کنید.")
+        append("عملکرد بهتر سرور گیمینگ")
     }
     try {
         AlertDialog.Builder(this)
