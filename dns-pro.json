@@ -1,44 +1,88 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-11-05",
+  "note": "Location labels are editable metadata; actual server country has not been verified.",
+  "locations": [
+    {
+      "name": "Netherlands",
+      "providers": [
+        "X-PRO 1",
+        "X-PRO 2"
+      ]
+    },
+    {
+      "name": "Bulgaria",
+      "providers": [
+        "X-PRO 3",
+        "X-PRO 4"
+      ]
+    },
+    {
+      "name": "UAE",
+      "providers": [
+        "X-PRO 5",
+        "X-PRO 6"
+      ]
+    },
+    {
+      "name": "Turkey",
+      "providers": [
+        "X-PRO 7",
+        "X-PRO 8"
+      ]
+    },
+    {
+      "name": "Germany",
+      "providers": [
+        "X-PRO 9",
+        "X-PRO 10"
+      ]
+    }
+  ],
   "providers": [
     {
-      "name": "X-PRO 1",
+      "name": "Netherlands - X-PRO 1",
+      "location": "Netherlands",
       "servers": [
-        "81.90.158.110",    
+        "81.90.158.110",
         "81.90.158.111"
       ]
     },
     {
-      "name": "X-PRO 2",
+      "name": "Netherlands - X-PRO 2",
+      "location": "Netherlands",
       "servers": [
         "87.107.110.109",
         "87.107.110.110"
       ]
     },
     {
-      "name": "X-PRO 3",
+      "name": "Bulgaria - X-PRO 3",
+      "location": "Bulgaria",
       "servers": [
         "217.218.127.127",
         "217.218.155.155"
       ]
     },
     {
-      "name": "X-PRO 4",
+      "name": "Bulgaria - X-PRO 4",
+      "location": "Bulgaria",
       "servers": [
         "194.104.158.48",
         "194.104.158.78"
       ]
     },
     {
-      "name": "X-PRO 5",
+      "name": "UAE - X-PRO 5",
+      "location": "UAE",
       "servers": [
         "194.27.192.6",
         "194.27.192.5"
       ]
     },
     {
-      "name": "X-PRO 6",
+      "name": "UAE - X-PRO 6",
+      "location": "UAE",
       "servers": [
         "40.93.135.86",
         "94.101.180.48",
@@ -47,28 +91,32 @@
       ]
     },
     {
-      "name": "X-PRO 7",
+      "name": "Turkey - X-PRO 7",
+      "location": "Turkey",
       "servers": [
         "78.157.42.100",
         "45.90.33.120"
       ]
     },
     {
-      "name": "X-PRO 8",
+      "name": "Turkey - X-PRO 8",
+      "location": "Turkey",
       "servers": [
         "37.32.5.60",
         "37.32.5.61"
       ]
     },
     {
-      "name": "X-PRO 9",
+      "name": "Germany - X-PRO 9",
+      "location": "Germany",
       "servers": [
         "185.161.112.33",
         "185.161.112.34"
       ]
     },
     {
-      "name": "X-PRO 10",
+      "name": "Germany - X-PRO 10",
+      "location": "Germany",
       "servers": [
         "217.218.127.127",
         "217.218.155.155"
