@@ -689,7 +689,7 @@ internal fun MainActivity.buildSubWg() {
         return
     }
     section("Pro Gaming")
-    val wCard = card()
+    val wCard = subGlass(14)
     val wStatus = label("", 15f, white, true, false)
     wCard.addView(wStatus)
     val wList = LinearLayout(this)
