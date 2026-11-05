@@ -349,7 +349,11 @@ class MainActivity : Activity() {
         buildShell()
         applyWindowToggles()
         showTab(1)
-        checkUpdate(false) { refreshUpdateNotice() }
+        checkUpdate(false) { result ->
+            if (result == "new") showUpdateDialogIfNeeded()
+            refreshUpdateNotice()
+        }
+        showUpdateDialogIfNeeded()
         refreshUpdateNotice()
     }
 
