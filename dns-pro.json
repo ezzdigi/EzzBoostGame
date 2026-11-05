@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-11-05",
   "note": "Location labels are editable metadata; actual server country has not been verified.",
   "locations": [
@@ -7,14 +7,16 @@
       "name": "Netherlands",
       "providers": [
         "X-PRO 1",
-        "X-PRO 2"
+        "X-PRO 2",
+        "X-PRO 9"
       ]
     },
     {
       "name": "Bulgaria",
       "providers": [
         "X-PRO 3",
-        "X-PRO 4"
+        "X-PRO 4",
+        "X-PRO 10"
       ]
     },
     {
@@ -29,13 +31,6 @@
       "providers": [
         "X-PRO 7",
         "X-PRO 8"
-      ]
-    },
-    {
-      "name": "Germany",
-      "providers": [
-        "X-PRO 9",
-        "X-PRO 10"
       ]
     }
   ],
@@ -57,6 +52,14 @@
       ]
     },
     {
+      "name": "Netherlands - X-PRO 9",
+      "location": "Netherlands",
+      "servers": [
+        "185.161.112.33",
+        "185.161.112.34"
+      ]
+    },
+    {
       "name": "Bulgaria - X-PRO 3",
       "location": "Bulgaria",
       "servers": [
@@ -70,6 +73,14 @@
       "servers": [
         "194.104.158.48",
         "194.104.158.78"
+      ]
+    },
+    {
+      "name": "Bulgaria - X-PRO 10",
+      "location": "Bulgaria",
+      "servers": [
+        "217.218.127.127",
+        "217.218.155.155"
       ]
     },
     {
@@ -104,22 +115,6 @@
       "servers": [
         "37.32.5.60",
         "37.32.5.61"
-      ]
-    },
-    {
-      "name": "Germany - X-PRO 9",
-      "location": "Germany",
-      "servers": [
-        "185.161.112.33",
-        "185.161.112.34"
-      ]
-    },
-    {
-      "name": "Germany - X-PRO 10",
-      "location": "Germany",
-      "servers": [
-        "217.218.127.127",
-        "217.218.155.155"
       ]
     }
   ]
