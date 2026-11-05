@@ -3,7 +3,7 @@
   "configs": [
     {
       "name": "W-JET",
-      "conf": "[Interface]\nAddress = 10.3.17.156/32\nDNS = 208.67.220.220, 208.67.222.222\nPrivateKey = F5PDRvYaqi5AO2yp/meQr0oyPcuibpLBwWuk6hnPSBQ=\n\n[Peer]\nEndpoint = wg1.mizosandali.com:13850\nPersistentKeepalive = 25\nPublicKey = AVbr5tAn+WS2tXXyjZHvVQs3ePnXCT/CcsVdjhmNywA=\n",
+      "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 5.217.74.141, 8.8.4.4\nMTU = 1419\nPrivateKey = UNYPFv8HesRgSECdsvS+Cx4nXZJFLbfnYaHw6CfKjWk=\n\n[Peer]\nEndpoint = 8.6.112.127:1018\nPersistentKeepalive = 25\nPreSharedKey = 3UoGt3hqpogrKlIr6t8ieJ5y+sjJpDRGLLk1O2mjWYo=\nPublicKey = Ge84cG2Pn8eMFJaEh5HNevRfeCIECqj5C1CLjwChNUg=\n",
       "group": "EzzViP",
       "displayName": "Ezz 1"
     },
@@ -15,25 +15,25 @@
     },
     {
       "name": "Ezz V.I.P",
-      "conf": "[Interface]\nAddress = 10.3.17.156/32\nDNS = 208.67.220.220, 208.67.222.222\nPrivateKey = F5PDRvYaqi5AO2yp/meQr0oyPcuibpLBwWuk6hnPSBQ=\n\n[Peer]\nEndpoint = wg1.mizosandali.com:13850\nPersistentKeepalive = 25\nPublicKey = AVbr5tAn+WS2tXXyjZHvVQs3ePnXCT/CcsVdjhmNywA=\n",
+      "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 5.217.74.141, 8.8.4.4\nMTU = 1419\nPrivateKey = eGPdCOQO2tSpqvWdJj4/T9EZbnVYU8npgASQ6pcEC38=\n\n[Peer]\nEndpoint = 185.123.100.17:51820\nPersistentKeepalive = 25\nPreSharedKey = xN8qG5hJqzhpDAZUReVfWXFz8aoNKRUJTCPka3RAZgo=\nPublicKey = leZBI5PWBB1YIp1aZu/PnD4VSSMJsCjeLKwfq6tzGHU=\n",
       "group": "Gaming",
       "displayName": "Pro VIP"
     },
     {
       "name": "Ezz V.I.P 2",
-      "conf": "[Interface]\nAddress = 10.3.17.156/32\nDNS = 208.67.220.220, 208.67.222.222\nPrivateKey = F5PDRvYaqi5AO2yp/meQr0oyPcuibpLBwWuk6hnPSBQ=\n\n[Peer]\nEndpoint = wg1.mizosandali.com:13850\nPersistentKeepalive = 25\nPublicKey = AVbr5tAn+WS2tXXyjZHvVQs3ePnXCT/CcsVdjhmNywA=\n",
+      "conf": "[Interface]\nAddress = 172.16.7.199/32\nDNS = 8.213.37.17, 8.8.4.4\nPrivateKey = IP7fegePjvOdwBXnazN019oTUI5abmTcqBEpsMb9cVo=\n\n[Peer]\nEndpoint = 185.253.73.166:51820\nPublicKey = BRc6g8NwVRput4d0ojbNIKUuGibomTxLDXH/ZWjyWiU=\n",
       "group": "EzzViP",
       "displayName": "Ezz"
     },
     {
       "name": "Ezz-Pro",
-      "conf": "[Interface]\nAddress = 10.3.17.156/32\nDNS = 208.67.220.220, 208.67.222.222\nPrivateKey = 2LGsGukv2HbsIktk41qGkliipfALQxC2HY1QwsgPwF4=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nEndpoint = war.mizosandali.com:39557\nPublicKey = kWk9nMgLdDpSLIw/Vc3HBWACeeSl3P6lO1OMKb4zIyI=\n",
+      "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 8.8.4.4\nPrivateKey = qDdAg8mKndPV2/zq3KD8iEIv7lO7yHUDdlUKv1OytWE=\n\n[Peer]\nEndpoint = 185.253.73.166:51820\nPublicKey = NMVGehzaiKTwzkOSakULFcVQlIREduOJ2ufJTZDit2Y=\n",
       "group": "Gaming",
       "displayName": "Pro"
     },
     {
       "name": "Ezz-Pro1",
-      "conf": "[Interface]\nAddress = 10.3.17.156/32\nDNS = 208.67.220.220, 208.67.222.222\nPrivateKey = F5PDRvYaqi5AO2yp/meQr0oyPcuibpLBwWuk6hnPSBQ=\n\n[Peer]\nEndpoint = wg1.mizosandali.com:13850\nPersistentKeepalive = 25\nPublicKey = AVbr5tAn+WS2tXXyjZHvVQs3ePnXCT/CcsVdjhmNywA=\n",
+      "conf": "[Interface]\nAddress = 172.16.0.2/32\nDNS = 1.1.1.1, 1.0.0.1\nPrivateKey = UGJ4WGEXehxUV3+Pwp5wGqpTaXqgFD4Iu7aFPBlN0Wg=\n\n[Peer]\nAllowedIPs = 8.8.4.5/32\nEndpoint = 8.6.112.127:1018\nPersistentKeepalive = 25\nPublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\n",
       "group": "Gaming",
       "displayName": "Pro 1"
     }
