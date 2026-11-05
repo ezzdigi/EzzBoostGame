@@ -515,6 +515,25 @@ internal fun MainActivity.selectedDns(): DnsProvider =
     dnsProviders[prefs.getInt("dnsSel", 0).coerceIn(0, dnsProviders.size - 1)]
 
 internal fun MainActivity.buildDnsChanger() {
+    section("DNS رایگان")
+    val guideCard = card()
+    guideCard.addView(label("استفاده از DNS رایگان برای بازی‌ها", 15f, white, true))
+    guideCard.addView(label("یک DNS را از فهرست انتخاب کن؛ قبل از اتصال می‌توانی سرعت DNSها را تست کنی. با گزینه «سریع‌ترین را پیدا کن و وصل شو»، برنامه DNSهای در دسترس را بررسی می‌کند و بهترین نتیجه را انتخاب می‌کند. اتصال DNS در این بخش برای بازی‌ها و برنامه‌های علاقه‌مندشده اعمال می‌شود.", 12.5f, muted), vlp(6, 8))
+    guideCard.addView(button("📘 آموزش DNS رایگان", false) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("آموزش تب DNS رایگان")
+            .setMessage("۱) وارد تب DNS شو و بخش DNS را انتخاب کن.\\n\\n۲) از فهرست، یک سرویس DNS رایگان را انتخاب کن.\\n\\n۳) برای مقایسه، «تست سرعت همه‌ی DNSها» را بزن؛ مقدار کمتر معمولاً پاسخ سریع‌تری را نشان می‌دهد.\\n\\n۴) برای اتصال دستی، دکمه «اتصال» را بزن و اجازه اتصال VPN محلی را تأیید کن.\\n\\n۵) برای انتخاب خودکار، «سریع‌ترین را پیدا کن و وصل شو» را بزن.\\n\\n۶) برای برگشت به DNS پیش‌فرض گوشی، «قطع اتصال» را بزن.\\n\\nنکته: DNS ممکن است زمان پاسخ نام دامنه را بهتر کند، اما کاهش پینگ بازی را تضمین نمی‌کند.")
+            .setPositiveButton("متوجه شدم", null)
+            .show()
+    }, vlp(4, 0))
+    guideCard.addView(button("🎮 آموزش کار با برنامه", false) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("راهنمای EzzGameBOOST")
+            .setMessage("🎮 بازی‌ها: بازی‌های نصب‌شده را ببین، بازی‌های موردنظرت را به علاقه‌مندی‌ها اضافه کن و از همان‌جا اجرا کن.\\n\\n⚡ Pro Gaming: سرورهای WireGuard را از دسته‌بندی Gaming یا EzzViP انتخاب کن؛ ابتدا تست و سپس اتصال را بزن.\\n\\n🚀 EzzGaming: سرورهای V2Ray اشتراک را بررسی، تست و متصل کن.\\n\\n💎 اشتراک ویژه: برای ورود، تمدید و همگام‌سازی سرورهای مخصوص حساب استفاده می‌شود.\\n\\n📡 DNS: DNS رایگان را انتخاب، تست، متصل یا قطع کن. بخش Private DNS برای تنظیم DNS رمزگذاری‌شده اندروید است و PING برای سنجش تأخیر سرورهاست.\\n\\n📊 آمار: وضعیت منابع و اطلاعات عملکرد گوشی را ببین.\\n\\nنکته: برای استفاده از سرورهای اشتراکی، ابتدا در تب اشتراک ویژه وارد حساب شو.")
+            .setPositiveButton("بستن", null)
+            .show()
+    }, vlp(6, 0))
+    content.addView(guideCard, vlp(0, 8))
     section("DNS CHANGER")
     val dCard = card()
     val statusTitle = label("", 15f, white, true)
