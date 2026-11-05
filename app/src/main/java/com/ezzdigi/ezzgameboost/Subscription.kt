@@ -840,17 +840,32 @@ internal fun MainActivity.buildSubWg() {
             wList.addView(label("هنوز کانفیگی نیست.", 12.5f, muted))
             return
         }
-        val groups = listOf("ProGaming", "EzzViP")
-        for (group in groups) {
+        val groups = listOf("ProGaming" to "🎮 Pro Gaming", "EzzViP" to "⚡ EzzViP")
+        for ((group, title) in groups) {
             val groupNames = names.filter { subWgGroup(it) == group }
             if (groupNames.isEmpty()) continue
-            wList.addView(label(group, 14f, accent, true), vlp(8, 6))
-            for (base in groupNames) wList.addView(subWgRow(base, subWgDisplayName(base)), vlp(0, 6))
+
+            // Separate glass card for each server category, matching the X-PRO cards.
+            val groupCard = subGlass(12)
+            val head = LinearLayout(this)
+            head.orientation = LinearLayout.HORIZONTAL
+            head.gravity = android.view.Gravity.CENTER_VERTICAL
+            head.addView(label(title, 15f, white, true, false),
+                LinearLayout.LayoutParams(0, WRAP, 1f))
+            head.addView(label("${groupNames.size} سرور", 10.5f, muted, true, false))
+            groupCard.addView(head, vlp(0, 9))
+
+            for (base in groupNames) {
+                groupCard.addView(subWgRow(base, subWgDisplayName(base)), vlp(0, 7))
+            }
+            wList.addView(groupCard, vlp(0, 9))
         }
         val ungrouped = names.filter { subWgGroup(it).isEmpty() }
         if (ungrouped.isNotEmpty()) {
-            wList.addView(label("سایر", 14f, accent, true), vlp(8, 6))
-            for (base in ungrouped) wList.addView(subWgRow(base), vlp(0, 6))
+            val otherCard = subGlass(12)
+            otherCard.addView(label("سایر سرورها", 14f, white, true), vlp(0, 8))
+            for (base in ungrouped) otherCard.addView(subWgRow(base), vlp(0, 7))
+            wList.addView(otherCard, vlp(0, 9))
         }
     }
 
