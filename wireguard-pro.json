@@ -3,37 +3,37 @@
   "configs": [
     {
       "name": "W-JET",
-      "conf": "[Interface]\nAddress = 178.22.122.100/31\nDNS = 185.51.200.2, 10.202.10.102\nMTU = 1380\nPrivateKey = AJ78UyvNyen+If69v/toTbnPYIHHsdgUZ9jx0M2gxHs=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nEndpoint = ae1.vpnjantit.com:1024\nPublicKey = 3GNyI2xtm6UcQq+GNVqMq6ulokySRGGSng+UNzW+whM=\n",
+      "conf": "[Interface]\nAddress = 178.22.122.100/31\nDNS = 185.51.200.2, 178.22.122.100\nMTU = 1380\nPrivateKey = AJ78UyvNyen+If69v/toTbnPYIHHsdgUZ9jx0M2gxHs=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nEndpoint = ae1.vpnjantit.com:1024\nPublicKey = 3GNyI2xtm6UcQq+GNVqMq6ulokySRGGSng+UNzW+whM=\n",
       "group": "EzzViP",
       "displayName": "Ezz 1"
     },
     {
       "name": "W-JET 2",
-      "conf": "[Interface]\nAddress = 10.66.2.225/32\nDNS = 208.67.222.222, 208.67.220.220\nMTU = 1300\nPrivateKey = 2BQByzkWP959aZKKLiU2pAwEXTgFdlcJRGeZ0i5a+ng=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nPersistentKeepalive = 11\nPreSharedKey = GOtWDEq1Hcu9zr4r7oUN/DyNjm04j2p4YQSKX6SZhIc=\nPublicKey = qhwUFEli/e2CTfTEx4A1c9GRQzDrkplDheUztaAPaS8=\n",
+      "conf": "[Interface]\nAddress = 10.66.2.225/32\nDNS = 78.157.42.100, 78.157.42.101\nMTU = 1300\nPrivateKey = 2BQByzkWP959aZKKLiU2pAwEXTgFdlcJRGeZ0i5a+ng=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nPersistentKeepalive = 11\nPreSharedKey = GOtWDEq1Hcu9zr4r7oUN/DyNjm04j2p4YQSKX6SZhIc=\nPublicKey = qhwUFEli/e2CTfTEx4A1c9GRQzDrkplDheUztaAPaS8=\n",
       "group": "EzzViP",
       "displayName": "Ezz 2"
     },
     {
       "name": "Ezz V.I.P",
-      "conf": "[Interface]\nAddress = 95.3.92.2/32\nDNS = 95.3.92.2, 1.1.1.1\nMTU = 1200\nPrivateKey = SLqmDN+1u8nBcAS/Nj6LfMtuMmkN7QJ66agPbd04sU4=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
+      "conf": "[Interface]\nAddress = 194.146.68.68/32\nDNS = 194.146.68.66\nMTU = 1200\nPrivateKey = SLqmDN+1u8nBcAS/Nj6LfMtuMmkN7QJ66agPbd04sU4=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
       "group": "Gaming",
       "displayName": "Pro VIP"
     },
     {
       "name": "Ezz V.I.P 2",
-      "conf": "[Interface]\nAddress = 46.209.123.98/32\nDNS = 46.209.123.98, 1.1.1.1\nMTU = 1200\nPrivateKey = 4OlEA6DLNh0+FJ2yP6EkF/QHgFtNwvltPqnZFeKrYlw=\n\n[Peer]\nAllowedIPs = 154.94.99.56/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
+      "conf": "[Interface]\nAddress = 193.186.32.32/32\nDNS = 46.209.123.98, 193.186.32.32\nMTU = 1200\nPrivateKey = 4OlEA6DLNh0+FJ2yP6EkF/QHgFtNwvltPqnZFeKrYlw=\n\n[Peer]\nAllowedIPs = 154.94.99.56/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
       "group": "EzzViP",
       "displayName": "Ezz"
     },
     {
       "name": "Ezz-Pro",
-      "conf": "[Interface]\nAddress = 172.104.185.69/32\nDNS = 172.104.185.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
+      "conf": "[Interface]\nAddress = 87.248.145.40/32\nDNS = 87.107.170.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
       "group": "Gaming",
       "displayName": "Pro"
     },
     {
       "name": "Ezz-Pro1",
-      "conf": "[Interface]\nAddress = 10.66.30.189/32\nDNS = 8.8.8.8, 8.8.4.4\nMTU = 1300\nPrivateKey = IHfNsDOMZ64H2Z/UefnENwMnm/3GKJi9TOAnhi6feHM=\n\n[Peer]\nEndpoint = wireusa.asan-ps.ir:908\nPersistentKeepalive = 11\nPreSharedKey = yjKHTF1CVZEVXmxfwKFEFxgTl8Q4QOB0qpwwrsrIvnk=\nPublicKey = uznTDJ/dvA05a/Ybx7MRUsaFHCBEddicMBn5kY/wcRg=\n",
+      "conf": "[Interface]\nAddress = 194.147.167.221/32\nDNS = 77.104.85.50\nMTU = 1300\nPrivateKey = IHfNsDOMZ64H2Z/UefnENwMnm/3GKJi9TOAnhi6feHM=\n\n[Peer]\nEndpoint = wireusa.asan-ps.ir:908\nPersistentKeepalive = 11\nPreSharedKey = yjKHTF1CVZEVXmxfwKFEFxgTl8Q4QOB0qpwwrsrIvnk=\nPublicKey = uznTDJ/dvA05a/Ybx7MRUsaFHCBEddicMBn5kY/wcRg=\n",
       "group": "Gaming",
       "displayName": "Pro 1"
     }
