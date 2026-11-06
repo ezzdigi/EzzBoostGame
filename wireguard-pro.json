@@ -33,7 +33,7 @@
     },
     {
       "name": "Ezz-Pro1",
-      "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 78.157.42.100\nMTU = 1280\nPrivateKey = IHfNsDOMZ64H2Z/UefnENwMnm/3GKJi9TOAnhi6feHM=\n\n[Peer]\nEndpoint = wireusa.asan-ps.ir:908\nPersistentKeepalive = 11\nPreSharedKey = yjKHTF1CVZEVXmxfwKFEFxgTl8Q4QOB0qpwwrsrIvnk=\nPublicKey=/n",
+      "conf": "[Interface]\nAddress = 172.104.185.69/32\nDNS = 172.104.185.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
       "group": "Gaming",
       "displayName": "Pro 1"
     }
