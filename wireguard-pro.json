@@ -33,7 +33,7 @@
     },
     {
       "name": "Ezz-Pro1",
-      "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 78.157.42.100\nMTU = 1280\nPrivateKey = IHfNsDOMZ64H2Z/UefnENwMnm/3GKJi9TOAnhi6feHM=\n\n[Peer]\nEndpoint = wireusa.asan-ps.ir:908\nPersistentKeepalive = 11\nPreSharedKey = yjKHTF1CVZEVXmxfwKFEFxgTl8Q4QOB0qpwwrsrIvnk=\nPublicKey = uznTDJ/dvA05a/Ybx7MRUsaFHCBEddicMBn5kY/wcRg=\n",
+      "conf": "[Interface]\nAddress = 78.157.42.100/32\nDNS = 78.157.42.100\nMTU = 1280\nPrivateKey = IHfNsDOMZ64H2Z/UefnENwMnm/3GKJi9TOAnhi6feHM=\n\n[Peer]\nEndpoint = wireusa.asan-ps.ir:908\nPersistentKeepalive = 11\nPreSharedKey = yjKHTF1CVZEVXmxfwKFEFxgTl8Q4QOB0qpwwrsrIvnk=\nPublicKey=/n",
       "group": "Gaming",
       "displayName": "Pro 1"
     }
