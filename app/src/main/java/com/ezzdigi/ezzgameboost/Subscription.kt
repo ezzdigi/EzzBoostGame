@@ -863,7 +863,7 @@ internal fun MainActivity.buildSubWg() {
         val ungrouped = names.filter { subWgGroup(it).isEmpty() }
         if (ungrouped.isNotEmpty()) {
             val otherCard = subGlass(12)
-            otherCard.addView(label("سایر سرورها", 14f, white, true), vlp(0, 8))
+            otherCard.addView(label("پیشنهاد ویژه", 14f, white, true), vlp(0, 8))
             for (base in ungrouped) otherCard.addView(subWgRow(base), vlp(0, 7))
             wList.addView(otherCard, vlp(0, 9))
         }
