@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "updated": "2026-11-09",
   "note": "Location labels are editable metadata; actual server country has not been verified.",
   "locations": [
@@ -15,28 +15,28 @@
     {
       "name": "Iran",
       "providers": [
-        "سرور 5",
-        "سرور 6",
-        "سرور 7",
-        "سرور 8"
+        "سرور 1",
+        "سرور 2",
+        "سرور 3",
+        "سرور 4"
       ]
     },
     {
       "name": "Bulgaria",
       "providers": [
-        "سرور 9",
-        "سرور 10",
-        "سرور 11",
-        "سرور 12"
+        "سرور 1",
+        "سرور 2",
+        "سرور 3",
+        "سرور 4"
       ]
     },
     {
       "name": "UAE",
       "providers": [
-        "سرور 13",
-        "سرور 14",
-        "سرور 15",
-        "سرور 16"
+        "سرور 1",
+        "سرور 2",
+        "سرور 3",
+        "سرور 4"
       ]
     }
   ],
@@ -74,7 +74,7 @@
       ]
     },
     {
-      "name": "Iran - سرور 5",
+      "name": "Iran - سرور 1",
       "location": "Iran",
       "servers": [
         "92.119.56.162",
@@ -82,7 +82,7 @@
       ]
     },
     {
-      "name": "Iran - سرور 6",
+      "name": "Iran - سرور 2",
       "location": "Iran",
       "servers": [
         "37.156.145.21",
@@ -90,7 +90,7 @@
       ]
     },
     {
-      "name": "Iran - سرور 7",
+      "name": "Iran - سرور 3",
       "location": "Iran",
       "servers": [
         "37.156.145.229",
@@ -98,7 +98,7 @@
       ]
     },
     {
-      "name": "Iran - سرور 8",
+      "name": "Iran - سرور 4",
       "location": "Iran",
       "servers": [
         "185.161.112.34",
@@ -106,7 +106,7 @@
       ]
     },
     {
-      "name": "Bulgaria - سرور 9",
+      "name": "Bulgaria - سرور 1",
       "location": "Bulgaria",
       "servers": [
         "194.6.227.150",
@@ -114,7 +114,7 @@
       ]
     },
     {
-      "name": "Bulgaria - سرور 10",
+      "name": "Bulgaria - سرور 2",
       "location": "Bulgaria",
       "servers": [
         "84.199.93.50",
@@ -122,7 +122,7 @@
       ]
     },
     {
-      "name": "Bulgaria - سرور 11",
+      "name": "Bulgaria - سرور 3",
       "location": "Bulgaria",
       "servers": [
         "81.241.249.178",
@@ -130,7 +130,7 @@
       ]
     },
     {
-      "name": "Bulgaria - سرور 12",
+      "name": "Bulgaria - سرور 4",
       "location": "Bulgaria",
       "servers": [
         "91.183.52.34",
@@ -138,7 +138,7 @@
       ]
     },
     {
-      "name": "UAE - سرور 13",
+      "name": "UAE - سرور 1",
       "location": "UAE",
       "servers": [
         "188.135.60.222",
@@ -146,7 +146,7 @@
       ]
     },
     {
-      "name": "UAE - سرور 14",
+      "name": "UAE - سرور 2",
       "location": "UAE",
       "servers": [
         "5.36.63.155",
@@ -154,7 +154,7 @@
       ]
     },
     {
-      "name": "UAE - سرور 15",
+      "name": "UAE - سرور 3",
       "location": "UAE",
       "servers": [
         "46.40.245.248",
@@ -162,7 +162,7 @@
       ]
     },
     {
-      "name": "UAE - سرور 16",
+      "name": "UAE - سرور 4",
       "location": "UAE",
       "servers": [
         "46.40.227.57",
