@@ -1,120 +1,172 @@
 {
-  "version": 3,
-  "updated": "2026-11-05",
+  "version": 5,
+  "updated": "2026-11-09",
   "note": "Location labels are editable metadata; actual server country has not been verified.",
   "locations": [
     {
-      "name": "Netherlands",
+      "name": "Turkey",
       "providers": [
-        "X-PRO 1",
-        "X-PRO 2",
-        "X-PRO 9"
+        "سرور 1",
+        "سرور 2",
+        "سرور 3",
+        "سرور 4"
+      ]
+    },
+    {
+      "name": "Iran",
+      "providers": [
+        "سرور 5",
+        "سرور 6",
+        "سرور 7",
+        "سرور 8"
       ]
     },
     {
       "name": "Bulgaria",
       "providers": [
-        "X-PRO 3",
-        "X-PRO 4",
-        "X-PRO 10"
+        "سرور 9",
+        "سرور 10",
+        "سرور 11",
+        "سرور 12"
       ]
     },
     {
       "name": "UAE",
       "providers": [
-        "X-PRO 5",
-        "X-PRO 6"
-      ]
-    },
-    {
-      "name": "Turkey",
-      "providers": [
-        "X-PRO 7",
-        "X-PRO 8"
+        "سرور 13",
+        "سرور 14",
+        "سرور 15",
+        "سرور 16"
       ]
     }
   ],
   "providers": [
     {
-      "name": "Netherlands - X-PRO 1",
-      "location": "Netherlands",
+      "name": "Turkey - سرور 1",
+      "location": "Turkey",
       "servers": [
-        "81.90.158.110",
-        "81.90.158.111"
+        "78.135.102.232",
+        "188.132.203.3"
       ]
     },
     {
-      "name": "Netherlands - X-PRO 2",
-      "location": "Netherlands",
+      "name": "Turkey - سرور 2",
+      "location": "Turkey",
       "servers": [
-        "87.107.110.109",
-        "87.107.110.110"
+        "81.214.54.88",
+        "78.186.147.181"
       ]
     },
     {
-      "name": "Netherlands - X-PRO 9",
-      "location": "Netherlands",
+      "name": "Turkey - سرور 3",
+      "location": "Turkey",
       "servers": [
-        "185.161.112.33",
-        "185.161.112.34"
+        "212.154.19.244",
+        "78.188.42.52"
       ]
     },
     {
-      "name": "Bulgaria - X-PRO 3",
-      "location": "Bulgaria",
+      "name": "Turkey - سرور 4",
+      "location": "Turkey",
       "servers": [
-        "217.218.127.127",
+        "81.215.2.60",
+        "91.230.149.174"
+      ]
+    },
+    {
+      "name": "Iran - سرور 5",
+      "location": "Iran",
+      "servers": [
+        "92.119.56.162",
         "217.218.155.155"
       ]
     },
     {
-      "name": "Bulgaria - X-PRO 4",
+      "name": "Iran - سرور 6",
+      "location": "Iran",
+      "servers": [
+        "37.156.145.21",
+        "91.245.229.1"
+      ]
+    },
+    {
+      "name": "Iran - سرور 7",
+      "location": "Iran",
+      "servers": [
+        "37.156.145.229",
+        "185.97.117.187"
+      ]
+    },
+    {
+      "name": "Iran - سرور 8",
+      "location": "Iran",
+      "servers": [
+        "185.161.112.34",
+        "185.161.112.33"
+      ]
+    },
+    {
+      "name": "Bulgaria - سرور 9",
       "location": "Bulgaria",
       "servers": [
-        "194.104.158.48",
-        "194.104.158.78"
+        "194.6.227.150",
+        "195.189.203.193"
       ]
     },
     {
-      "name": "Bulgaria - X-PRO 10",
+      "name": "Bulgaria - سرور 10",
       "location": "Bulgaria",
       "servers": [
-        "217.218.127.127",
-        "217.218.155.155"
+        "84.199.93.50",
+        "81.245.37.159"
       ]
     },
     {
-      "name": "UAE - X-PRO 5",
+      "name": "Bulgaria - سرور 11",
+      "location": "Bulgaria",
+      "servers": [
+        "81.241.249.178",
+        "80.169.82.30"
+      ]
+    },
+    {
+      "name": "Bulgaria - سرور 12",
+      "location": "Bulgaria",
+      "servers": [
+        "91.183.52.34",
+        "81.247.107.128"
+      ]
+    },
+    {
+      "name": "UAE - سرور 13",
       "location": "UAE",
       "servers": [
-        "194.27.192.6",
-        "194.27.192.5"
+        "188.135.60.222",
+        "91.132.64.87"
       ]
     },
     {
-      "name": "UAE - X-PRO 6",
+      "name": "UAE - سرور 14",
       "location": "UAE",
       "servers": [
-        "40.93.135.86",
-        "94.101.180.48",
-        "2001:2c71:56a8::bd03",
-        "2001:2c71:56a8::bd03"
+        "5.36.63.155",
+        "5.36.19.35"
       ]
     },
     {
-      "name": "Turkey - X-PRO 7",
-      "location": "Turkey",
+      "name": "UAE - سرور 15",
+      "location": "UAE",
       "servers": [
-        "78.157.42.100",
-        "45.90.33.120"
+        "46.40.245.248",
+        "46.40.247.116"
       ]
     },
     {
-      "name": "Turkey - X-PRO 8",
-      "location": "Turkey",
+      "name": "UAE - سرور 16",
+      "location": "UAE",
       "servers": [
-        "37.32.5.60",
-        "37.32.5.61"
+        "46.40.227.57",
+        "85.154.37.161"
       ]
     }
   ]
