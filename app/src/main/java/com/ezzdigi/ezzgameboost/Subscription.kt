@@ -607,31 +607,39 @@ internal fun MainActivity.buildSubscription() {
     val accountStatus = label("", 11.5f, muted, false, false).apply { gravity = android.view.Gravity.CENTER }
     accountCard.addView(accountStatus, vlp(0, 7))
     content.addView(accountCard, vlp(0, 5))
+
     section("سرورهای بازی")
     val gamesContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
     content.addView(gamesContainer, vlp(0, 4))
     data class GameGroup(val key: String, val english: String, val persian: String, val aliases: List<String>)
     val games = listOf(
-        GameGroup("cod", "Call of Duty Mobile", "کالاف دیوتی موبایل", listOf("cod", "call of duty", "callofduty", "کالاف")),
-        GameGroup("pubg", "PUBG Mobile", "پابجی موبایل", listOf("pubg", "پابجی")),
-        GameGroup("freefire", "Free Fire", "فری فایر", listOf("free fire", "freefire", "فری فایر")),
-        GameGroup("ml", "Mobile Legends", "موبایل لجندز", listOf("mobile legends", "mobilelegends", "mlbb", "موبایل لجندز"))
+        GameGroup("cod", "CALL OF DUTY MOBILE", "کالاف دیوتی موبایل", listOf("cod", "call of duty", "callofduty", "کالاف")),
+        GameGroup("pubg", "PUBG MOBILE", "پابجی موبایل", listOf("pubg", "پابجی")),
+        GameGroup("freefire", "FREE FIRE", "فری فایر", listOf("free fire", "freefire", "فری فایر")),
+        GameGroup("ml", "MOBILE LEGENDS", "موبایل لجندز", listOf("mobile legends", "mobilelegends", "mlbb", "موبایل لجندز"))
     )
     val expanded = HashSet<String>()
-    fun matchesGame(name: String, game: GameGroup): Boolean {
-        val n = name.lowercase()
-        return game.aliases.any { n.contains(it.lowercase()) }
+    fun matchesGame(value: String, game: GameGroup): Boolean {
+        val normalized = value.lowercase().replace("_", " ").replace("-", " ")
+        return game.aliases.any { normalized.contains(it.lowercase()) }
+    }
+    fun wgGame(name: String, game: GameGroup): Boolean {
+        return matchesGame(name + " " + subWgDisplayName(name) + " " + subWgGroup(name), game)
     }
     fun makeGameCard(game: GameGroup, wgNames: List<String>, v2Items: List<V2Item>): LinearLayout {
         val card = subGlass(13)
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(dp(2), dp(2), dp(2), dp(2))
+            setPadding(dp(2), dp(4), dp(2), dp(4))
         }
         val titleCol = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        titleCol.addView(label(game.english, 14f, white, true, false))
-        titleCol.addView(label(game.persian, 11f, muted, false, false), vlp(0, 1))
+        val englishTitle = label(game.english, 18f, white, true, false)
+        try {
+            englishTitle.typeface = android.graphics.Typeface.createFromAsset(assets, "fonts/BlackOpsOne-Regular.ttf")
+        } catch (_: Throwable) { }
+        titleCol.addView(englishTitle)
+        titleCol.addView(label(game.persian, 12f, muted, false, false), vlp(0, 2))
         header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
         val count = wgNames.size + v2Items.size
         header.addView(label("$count سرور", 10.5f, muted, true, false))
@@ -647,39 +655,34 @@ internal fun MainActivity.buildSubscription() {
                 card.addView(label("V2Gaming", 12.5f, muted, true), vlp(0, 9))
                 for (item in v2Items) card.addView(subV2Row(item), vlp(0, 7))
             }
-            if (count == 0) card.addView(label("برای این بازی هنوز سروری دریافت نشده است.", 11.5f, muted), vlp(0, 8))
+            if (count == 0) card.addView(label("سروری برای این بازی موجود نیست.", 11.5f, muted), vlp(0, 8))
         }
         return card
     }
     fun renderGames() {
-        val wgNames = subWgList()
-        val v2Items = subV2Items()
-        gamesContainer.removeAllViews()
+        val allWg = subWgList()
+        val allV2 = subV2Items()
         val assignedWg = HashSet<String>()
         val assignedV2 = HashSet<String>()
-        for (game in games) {
-            val wgForGame = wgNames.filter { name ->
-                matchesGame(name + " " + subWgDisplayName(name), game).also { if (it) assignedWg.add(name) }
-            }
-            val v2ForGame = v2Items.filter { item ->
-                matchesGame(item.name, game).also { if (it) assignedV2.add(item.raw) }
-            }
-            gamesContainer.addView(makeGameCard(game, wgForGame, v2ForGame), vlp(0, 9))
+        val wgByGame = games.associate { game ->
+            val matched = allWg.filter { wgGame(it, game) }
+            matched.forEach { assignedWg.add(it) }
+            game.key to matched
         }
-        val otherWg = wgNames.filter { it !in assignedWg }
-        val otherV2 = v2Items.filter { it.raw !in assignedV2 }
-        if (otherWg.isNotEmpty() || otherV2.isNotEmpty()) {
-            val other = subGlass(13)
-            other.addView(label("سایر سرورها", 14f, white, true), vlp(0, 4))
-            if (otherWg.isNotEmpty()) {
-                other.addView(label("WireGuard Gaming", 12.5f, muted, true), vlp(0, 7))
-                for (name in otherWg) other.addView(subWgRow(name, subWgDisplayName(name)), vlp(0, 7))
-            }
-            if (otherV2.isNotEmpty()) {
-                other.addView(label("V2Gaming", 12.5f, muted, true), vlp(0, 9))
-                for (item in otherV2) other.addView(subV2Row(item), vlp(0, 7))
-            }
-            gamesContainer.addView(other, vlp(0, 9))
+        val v2ByGame = games.associate { game ->
+            val matched = allV2.filter { matchesGame(it.name, game) }
+            matched.forEach { assignedV2.add(it.raw) }
+            game.key to matched
+        }
+        // General subscription servers are shared by all game cards. Do not create an
+        // "Other servers" section in the Pro Subscription tab.
+        val sharedWg = allWg.filter { it !in assignedWg }
+        val sharedV2 = allV2.filter { it.raw !in assignedV2 }
+        gamesContainer.removeAllViews()
+        for (game in games) {
+            val wgForGame = (wgByGame[game.key] ?: emptyList()) + sharedWg
+            val v2ForGame = (v2ByGame[game.key] ?: emptyList()) + sharedV2
+            gamesContainer.addView(makeGameCard(game, wgForGame, v2ForGame), vlp(0, 9))
         }
         accountStatus.text = when {
             WgState.up -> "متصل از طریق WireGuard"
