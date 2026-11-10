@@ -624,10 +624,8 @@ internal fun MainActivity.buildSubscription() {
     content.addView(hCard, vlp(0, 8))
 
     section("سرورهای بازی")
-    val serverCard = subGlass(12)
     val serverList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    serverCard.addView(serverList)
-    content.addView(serverCard, vlp(0, 4))
+    content.addView(serverList, vlp(0, 4))
 
     var expandedWg = true
     var expandedV2 = true
