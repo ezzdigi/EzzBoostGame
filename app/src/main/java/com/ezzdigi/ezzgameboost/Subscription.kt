@@ -606,7 +606,7 @@ internal fun MainActivity.buildSubscription() {
         toast("در حال به‌روزرسانی…")
         syncSubscription(true) { m ->
             toast(if (m.isEmpty()) "به‌روز شد ✅" else m)
-            vpnRender?.invoke()
+            paintHead()
         }
     }
     val bOut = button("خروج از حساب", false) {
@@ -619,56 +619,11 @@ internal fun MainActivity.buildSubscription() {
     aRow.addView(bOut, a2)
     hCard.addView(aRow, vlp(8, 6))
     hCard.addView(button("تمدید / دریافت اکانت", true) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
-    val connectionLbl = label("", 12f, muted, true, false)
-    hCard.addView(connectionLbl, vlp(10, 0))
     content.addView(hCard, vlp(0, 8))
 
-    section("سرورهای بازی")
-    val serverList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    content.addView(serverList, vlp(0, 4))
-
-    var expandedWg = true
-    var expandedV2 = true
-    fun addGroup(title: String, count: Int, expanded: Boolean, toggle: () -> Unit, rows: List<View>) {
-        val group = subGlass(12)
-        val head = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            isClickable = true
-            isFocusable = true
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-        }
-        head.addView(label(title, 15f, white, true, false), LinearLayout.LayoutParams(0, WRAP, 1f))
-        head.addView(label("$count سرور  ${if (expanded) "⌃" else "⌄"}", 11f, muted, true, false))
-        head.setOnClickListener { toggle() }
-        group.addView(head)
-        if (expanded) {
-            if (rows.isEmpty()) group.addView(label("هنوز سروری برای این بخش دریافت نشده است.", 12f, muted), vlp(8, 0))
-            else rows.forEach { group.addView(it, vlp(0, 7)) }
-        }
-        serverList.addView(group, vlp(0, 8))
-    }
-
-    fun renderServers() {
-        serverList.removeAllViews()
-        val wgNames = subWgList()
-        val v2Items = subV2Items()
-        val wgRows = wgNames.map { subWgRow(it, subWgDisplayName(it)) as View }
-        val v2Rows = v2Items.map { subV2Row(it) as View }
-        addGroup("WireGuard Gaming", wgNames.size, expandedWg, { expandedWg = !expandedWg; renderServers() }, wgRows)
-        addGroup("V2Gaming", v2Items.size, expandedV2, { expandedV2 = !expandedV2; renderServers() }, v2Rows)
-        connectionLbl.text = when {
-            WgState.up -> Tr.t("🟢 متصل: ") + WgState.activeName
-            V2VpnService.running -> Tr.t("🟢 اتصال V2Gaming فعال است")
-            else -> Tr.t("⚪ قطع")
-        }
-        connectionLbl.setTextColor(if (WgState.up || V2VpnService.running) good else muted)
-    }
-
-    vpnRefresh = { paintHead(); renderServers() }
-    vpnRender = { paintHead(); renderServers() }
+    vpnRefresh = { paintHead() }
+    vpnRender = { paintHead() }
     paintHead()
-    renderServers()
 }
 
 // Shown in the EzzGaming / Pro Gaming tabs while nobody is logged in.
