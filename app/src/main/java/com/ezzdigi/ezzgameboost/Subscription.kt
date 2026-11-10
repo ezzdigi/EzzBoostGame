@@ -568,109 +568,130 @@ internal fun MainActivity.logoutSub() {
 // ----- "اشتراک ویژه" tab ---------------------------------------------------------
 
 internal fun MainActivity.buildSubscription() {
-    if (subToken().isEmpty()) {
-        buildSubLogin()
-        return
-    }
-
+    if (subToken().isEmpty()) { buildSubLogin(); return }
     section("اشتراک ویژه")
-    val hCard = subGlass(16)
-    val userLbl = label(prefs.getString("subUser", "") ?: "", 15f, white, true, false)
-    hCard.addView(userLbl)
+    val accountCard = subGlass(16)
+    accountCard.addView(label(prefs.getString("subUser", "") ?: "", 15f, white, true, false))
     val daysLbl = label("", 26f, good, true, false)
-    hCard.addView(daysLbl, vlp(7, 0))
+    accountCard.addView(daysLbl, vlp(7, 0))
     val expLbl = label("", 12f, muted, false, false)
-    hCard.addView(expLbl, vlp(2, 6))
-
+    accountCard.addView(expLbl, vlp(2, 6))
     fun paintHead() {
-        val act = prefs.getBoolean("subActive", false)
-        val d = subDaysLeft()
-        val exp = prefs.getString("subExp", "") ?: ""
-        if (!act || (d != null && d <= 0)) {
-            daysLbl.text = Tr.t("❌ اشتراک منقضی شده")
-            daysLbl.setTextColor(bad)
-        } else if (d == null) {
-            daysLbl.text = Tr.t("✅ اشتراک فعال")
-            daysLbl.setTextColor(good)
+        val active = prefs.getBoolean("subActive", false)
+        val days = subDaysLeft()
+        val expiry = prefs.getString("subExp", "") ?: ""
+        if (!active || (days != null && days <= 0)) {
+            daysLbl.text = Tr.t("اشتراک منقضی شده"); daysLbl.setTextColor(bad)
+        } else if (days == null) {
+            daysLbl.text = Tr.t("اشتراک فعال"); daysLbl.setTextColor(good)
         } else {
-            daysLbl.text = if (Tr.en) "$d days left" else "$d روز باقی‌مانده"
-            daysLbl.setTextColor(if (d <= 3) bad else if (d <= 7) warn else good)
+            daysLbl.text = if (Tr.en) "$days days left" else "$days روز باقی‌مانده"
+            daysLbl.setTextColor(if (days <= 3) bad else if (days <= 7) warn else good)
         }
-        expLbl.visibility = if (exp.isEmpty()) View.GONE else View.VISIBLE
-        if (exp.isNotEmpty()) expLbl.text = Tr.t("تاریخ پایان:") + " " + exp
+        expLbl.visibility = if (expiry.isEmpty()) View.GONE else View.VISIBLE
+        if (expiry.isNotEmpty()) expLbl.text = Tr.t("تاریخ پایان:") + " " + expiry
     }
-
-    val aRow = LinearLayout(this)
-    aRow.orientation = LinearLayout.HORIZONTAL
-    val bRefresh = button("به‌روزرسانی", false) {
+    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    val refreshButton = button("به‌روزرسانی", false) {
         toast("در حال به‌روزرسانی…")
-        syncSubscription(true) { m ->
-            toast(if (m.isEmpty()) "به‌روز شد ✅" else m)
-            vpnRender?.invoke()
+        syncSubscription(true) { message ->
+            toast(if (message.isEmpty()) "به‌روز شد" else message)
+            handler.postDelayed({ vpnRender?.invoke() }, 300)
         }
     }
-    val bOut = button("خروج از حساب", false) {
-        logoutSub()
-        showTab(4)
-    }
-    val a1 = LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginEnd = dp(4) }
-    val a2 = LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(4) }
-    aRow.addView(bRefresh, a1)
-    aRow.addView(bOut, a2)
-    hCard.addView(aRow, vlp(8, 6))
-    hCard.addView(button("تمدید / دریافت اکانت", true) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
-    val connectionLbl = label("", 12f, muted, true, false)
-    hCard.addView(connectionLbl, vlp(10, 0))
-    content.addView(hCard, vlp(0, 8))
-
+    val logoutButton = button("خروج از حساب", false) { logoutSub(); showTab(4) }
+    actions.addView(refreshButton, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginEnd = dp(4) })
+    actions.addView(logoutButton, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(4) })
+    accountCard.addView(actions, vlp(4, 7))
+    accountCard.addView(button("تمدید / دریافت اکانت", true) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
+    val accountStatus = label("", 11.5f, muted, false, false).apply { gravity = android.view.Gravity.CENTER }
+    accountCard.addView(accountStatus, vlp(0, 7))
+    content.addView(accountCard, vlp(0, 5))
     section("سرورهای بازی")
-    val serverCard = subGlass(12)
-    val serverList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    serverCard.addView(serverList)
-    content.addView(serverCard, vlp(0, 4))
-
-    var expandedWg = true
-    var expandedV2 = true
-    fun addGroup(title: String, count: Int, expanded: Boolean, toggle: () -> Unit, rows: List<View>) {
-        val group = subGlass(12)
-        val head = LinearLayout(this).apply {
+    val gamesContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    content.addView(gamesContainer, vlp(0, 4))
+    data class GameGroup(val key: String, val english: String, val persian: String, val aliases: List<String>)
+    val games = listOf(
+        GameGroup("cod", "Call of Duty Mobile", "کالاف دیوتی موبایل", listOf("cod", "call of duty", "callofduty", "کالاف")),
+        GameGroup("pubg", "PUBG Mobile", "پابجی موبایل", listOf("pubg", "پابجی")),
+        GameGroup("freefire", "Free Fire", "فری فایر", listOf("free fire", "freefire", "فری فایر")),
+        GameGroup("ml", "Mobile Legends", "موبایل لجندز", listOf("mobile legends", "mobilelegends", "mlbb", "موبایل لجندز"))
+    )
+    val expanded = HashSet<String>()
+    fun matchesGame(name: String, game: GameGroup): Boolean {
+        val n = name.lowercase()
+        return game.aliases.any { n.contains(it.lowercase()) }
+    }
+    fun makeGameCard(game: GameGroup, wgNames: List<String>, v2Items: List<V2Item>): LinearLayout {
+        val card = subGlass(13)
+        val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
-            isClickable = true
-            isFocusable = true
-            setPadding(dp(2), dp(4), dp(2), dp(4))
+            setPadding(dp(2), dp(2), dp(2), dp(2))
         }
-        head.addView(label(title, 15f, white, true, false), LinearLayout.LayoutParams(0, WRAP, 1f))
-        head.addView(label("$count سرور  ${if (expanded) "⌃" else "⌄"}", 11f, muted, true, false))
-        head.setOnClickListener { toggle() }
-        group.addView(head)
-        if (expanded) {
-            if (rows.isEmpty()) group.addView(label("هنوز سروری برای این بخش دریافت نشده است.", 12f, muted), vlp(8, 0))
-            else rows.forEach { group.addView(it, vlp(0, 7)) }
+        val titleCol = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        titleCol.addView(label(game.english, 14f, white, true, false))
+        titleCol.addView(label(game.persian, 11f, muted, false, false), vlp(0, 1))
+        header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
+        val count = wgNames.size + v2Items.size
+        header.addView(label("$count سرور", 10.5f, muted, true, false))
+        header.addView(label(if (expanded.contains(game.key)) "⌃" else "⌄", 19f, white, true, false), vlp(8, 0))
+        header.setOnClickListener { if (!expanded.add(game.key)) expanded.remove(game.key); vpnRender?.invoke() }
+        card.addView(header)
+        if (expanded.contains(game.key)) {
+            if (wgNames.isNotEmpty()) {
+                card.addView(label("WireGuard Gaming", 12.5f, muted, true), vlp(0, 8))
+                for (name in wgNames) card.addView(subWgRow(name, subWgDisplayName(name)), vlp(0, 7))
+            }
+            if (v2Items.isNotEmpty()) {
+                card.addView(label("V2Gaming", 12.5f, muted, true), vlp(0, 9))
+                for (item in v2Items) card.addView(subV2Row(item), vlp(0, 7))
+            }
+            if (count == 0) card.addView(label("برای این بازی هنوز سروری دریافت نشده است.", 11.5f, muted), vlp(0, 8))
         }
-        serverList.addView(group, vlp(0, 8))
+        return card
     }
-
-    fun renderServers() {
-        serverList.removeAllViews()
+    fun renderGames() {
         val wgNames = subWgList()
         val v2Items = subV2Items()
-        val wgRows = wgNames.map { subWgRow(it, subWgDisplayName(it)) as View }
-        val v2Rows = v2Items.map { subV2Row(it) as View }
-        addGroup("WireGuard Gaming", wgNames.size, expandedWg, { expandedWg = !expandedWg; renderServers() }, wgRows)
-        addGroup("V2Gaming", v2Items.size, expandedV2, { expandedV2 = !expandedV2; renderServers() }, v2Rows)
-        connectionLbl.text = when {
-            WgState.up -> Tr.t("🟢 متصل: ") + WgState.activeName
-            V2VpnService.running -> Tr.t("🟢 اتصال V2Gaming فعال است")
-            else -> Tr.t("⚪ قطع")
+        gamesContainer.removeAllViews()
+        val assignedWg = HashSet<String>()
+        val assignedV2 = HashSet<String>()
+        for (game in games) {
+            val wgForGame = wgNames.filter { name ->
+                matchesGame(name + " " + subWgDisplayName(name), game).also { if (it) assignedWg.add(name) }
+            }
+            val v2ForGame = v2Items.filter { item ->
+                matchesGame(item.name, game).also { if (it) assignedV2.add(item.raw) }
+            }
+            gamesContainer.addView(makeGameCard(game, wgForGame, v2ForGame), vlp(0, 9))
         }
-        connectionLbl.setTextColor(if (WgState.up || V2VpnService.running) good else muted)
+        val otherWg = wgNames.filter { it !in assignedWg }
+        val otherV2 = v2Items.filter { it.raw !in assignedV2 }
+        if (otherWg.isNotEmpty() || otherV2.isNotEmpty()) {
+            val other = subGlass(13)
+            other.addView(label("سایر سرورها", 14f, white, true), vlp(0, 4))
+            if (otherWg.isNotEmpty()) {
+                other.addView(label("WireGuard Gaming", 12.5f, muted, true), vlp(0, 7))
+                for (name in otherWg) other.addView(subWgRow(name, subWgDisplayName(name)), vlp(0, 7))
+            }
+            if (otherV2.isNotEmpty()) {
+                other.addView(label("V2Gaming", 12.5f, muted, true), vlp(0, 9))
+                for (item in otherV2) other.addView(subV2Row(item), vlp(0, 7))
+            }
+            gamesContainer.addView(other, vlp(0, 9))
+        }
+        accountStatus.text = when {
+            WgState.up -> "متصل از طریق WireGuard"
+            V2VpnService.running -> "متصل از طریق V2Gaming"
+            else -> "قطع"
+        }
+        accountStatus.setTextColor(if (WgState.up || V2VpnService.running) good else muted)
     }
-
-    vpnRefresh = { paintHead(); renderServers() }
-    vpnRender = { paintHead(); renderServers() }
+    vpnRefresh = { paintHead(); renderGames() }
+    vpnRender = { paintHead(); renderGames() }
     paintHead()
-    renderServers()
+    renderGames()
 }
 
 // Shown in the EzzGaming / Pro Gaming tabs while nobody is logged in.
