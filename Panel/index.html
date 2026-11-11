@@ -542,9 +542,11 @@
         font-weight:700;
     }
     /* Old functional sections remain in the file/data, but are not shown. */
-    #autoTab,#locationTab,#publicTab,#operatorTab,#manualTab,#wifiTab,#guideTab,#indexTab{
+    #locationTab,#publicTab,#operatorTab,#manualTab,#wifiTab,#guideTab,#indexTab{
         display:none!important;
     }
+    #autoTab{display:none!important;margin:12px 0 16px}
+    #autoTab.own-show{display:block!important}
     @media(max-width:420px){
         .form-grid{grid-template-columns:1fr}
         .field-card.full{grid-column:auto}
@@ -725,10 +727,11 @@ body.ezz-locked>.container{visibility:hidden}
 
 
 <style id="ezz-mode-tabs-style">
-.ezz-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
-.ezz-mode-btn{padding:11px 8px;border:1px solid #1f2740;background:#0d1220;color:#9aa7c7;font:700 13px 'Vazirmatn',Tahoma,sans-serif;border-radius:12px;cursor:pointer;transition:.15s ease}
+.ezz-mode-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:0 0 12px}
+.ezz-mode-btn{padding:11px 4px;border:1px solid #1f2740;background:#0d1220;color:#9aa7c7;font:700 12px 'Vazirmatn',Tahoma,sans-serif;border-radius:12px;cursor:pointer;transition:.15s ease}
 .ezz-mode-btn:hover:not(.active){border-color:rgba(0,229,255,.4);color:#cfe9ff}
 .ezz-mode-btn.active{background:linear-gradient(135deg,#00e5ff,#00b3cc);color:#04141a;box-shadow:0 0 14px rgba(0,229,255,.35)}
+#ezzModeGaming.active{background:linear-gradient(135deg,#39ff88,#00c853);color:#04210f;box-shadow:0 0 16px rgba(57,255,136,.35)}
 #ezzModePro.active{background:linear-gradient(135deg,#ffd45a,#f5a300);color:#2a1a00;box-shadow:0 0 16px rgba(245,179,1,.4)}
 .ezz-pro-panel{border-color:rgba(245,179,1,.55)}
 .ezz-pro-panel[hidden]{display:none}
@@ -736,6 +739,19 @@ body.ezz-locked>.container{visibility:hidden}
 .ezz-pro-panel .field-card input,.ezz-pro-panel .field-card select{border-color:#f5b301!important}
 .ezz-pro-panel .new-dns-display{border-color:#f5b301}
 .ezz-pro-panel .new-dns-display span{color:#b57f00}
+</style>
+<style id="own-config-style">
+.own-head{margin:0 0 10px;text-align:center;font-size:13px;font-weight:900;color:#fff}
+.own-config-list{display:grid;gap:10px}
+.own-card{padding:12px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(8,25,55,.42);direction:rtl;text-align:right;color:#fff}
+.own-name{font-size:14px;font-weight:800}
+.own-desc{margin-top:4px;font-size:11px;line-height:1.8;color:rgba(255,255,255,.72)}
+.own-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.own-btn{min-height:42px;border:0;border-radius:10px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.own-dl{background:linear-gradient(135deg,#39ff88,#00c853);color:#04210f}
+.own-cp{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff}
+.own-btn:active{transform:scale(.98)}
+.own-empty{padding:14px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);border:1px dashed rgba(255,255,255,.2);border-radius:12px}
 </style>
 </head>
 
@@ -750,8 +766,9 @@ body.ezz-locked>.container{visibility:hidden}
     </div>
 
     <div class="ezz-mode-tabs" role="tablist" aria-label="نوع کانفیگ">
-        <button type="button" id="ezzModeFree" class="ezz-mode-btn active" role="tab" aria-selected="true" onclick="ezzSwitchMode('free')">🆓 رایگان</button>
-        <button type="button" id="ezzModePro" class="ezz-mode-btn" role="tab" aria-selected="false" onclick="ezzSwitchMode('pro')">👑 ساخت کانفیگ پرو</button>
+        <button type="button" id="ezzModeFree" class="ezz-mode-btn active" role="tab" aria-selected="true" onclick="ezzSwitchMode('free')">🆓 ساخت کانفیگ</button>
+        <button type="button" id="ezzModePro" class="ezz-mode-btn" role="tab" aria-selected="false" onclick="ezzSwitchMode('pro')">👑 کانفیگ پرو</button>
+        <button type="button" id="ezzModeGaming" class="ezz-mode-btn" role="tab" aria-selected="false" onclick="ezzSwitchMode('gaming')">🎮 سرور گیمینگ</button>
     </div>
 
     <div class="new-generator-panel" id="ezzFreePanel">
@@ -761,14 +778,6 @@ body.ezz-locked>.container{visibility:hidden}
                 <input id="newConfigName" type="text" placeholder="مثلاً EzzDigi01" autocomplete="off" required>
             </div>
             <div class="field-card">
-                <label for="newConfigSize" style="color:#22c55e">حجم GB</label>
-                <input id="newConfigSize" type="number" min="1" step="1" placeholder="مثلاً 50" inputmode="numeric" required>
-            </div>
-            <div class="field-card">
-                <label for="newConfigDays" style="color:#22c55e">مدت زمان روز</label>
-                <input id="newConfigDays" type="number" min="1" step="1" placeholder="مثلاً 30" inputmode="numeric" required>
-            </div>
-            <div class="field-card full">
                 <label for="newServerSelect">انتخاب سرور</label>
                 <select id="newServerSelect">
                     <option value="smart">⚡ هوشمند — تغییر خودکار سرور</option>
@@ -779,15 +788,13 @@ body.ezz-locked>.container{visibility:hidden}
                 </select>
             </div>
         </div>
-        <div class="ezz-form-hint">نام کانفیگ کانفیگ، حجم GB و مدت زمان روز را قبل از ساخت وارد کنید.</div>
+        <div class="ezz-form-hint">نام کانفیگ را قبل از ساخت وارد کنید.</div>
         <button type="button" class="ezz-help-tab" id="ezzHelpTab" onclick="toggleEzzHelp()">📖 آموزش و نکات مهم <span id="ezzHelpArrow">⌄</span></button>
         <div id="ezzHelpPanel" class="ezz-help-panel" hidden>
             <div class="ezz-help-title">آموزش سریع ساخت کانفیگ</div>
             <div class="ezz-help-step"><b>۱.</b> در قسمت <b style="color:#22c55e">نام کانفیگ</b> یک اسم دلخواه برای فایل وارد کنید.</div>
-            <div class="ezz-help-step"><b>۲.</b> مقدار <b style="color:#22c55e">حجم GB</b> را برحسب GB وارد کنید.</div>
-            <div class="ezz-help-step"><b>۳.</b> <b style="color:#22c55e">مدت زمان روز</b> را برحسب روز وارد کنید.</div>
-            <div class="ezz-help-step"><b>۴.</b> سرور را انتخاب کنید؛ حالت <b>هوشمند</b> برای تغییر خودکار سرور است.</div>
-            <div class="ezz-help-step"><b>۵.</b> روی <b>ساخت کانفیگ</b> بزنید و بعد از ساخته‌شدن، <b>دانلود فایل WireGuard</b> را انتخاب کنید.</div>
+            <div class="ezz-help-step"><b>۲.</b> سرور را انتخاب کنید؛ حالت <b>هوشمند</b> برای تغییر خودکار سرور است.</div>
+            <div class="ezz-help-step"><b>۳.</b> روی <b>ساخت کانفیگ</b> بزنید و بعد از ساخته‌شدن، <b>دانلود فایل WireGuard</b> را انتخاب کنید.</div>
             <div class="ezz-help-important"><b>⚠️ نکات مهم</b><br>• فایل خروجی با فرمت <b>.conf</b> دانلود می‌شود.<br>• نام کانفیگ را کوتاه و ساده وارد کنید.<br>• اگر کانفیگ قبلی وصل نشد، یک سرور دیگر را امتحان کنید.<br>• فایل دانلودشده را مستقیماً در برنام کانفیگه WireGuard وارد کنید.</div>
         </div>
         <div class="new-action-row">
@@ -817,14 +824,6 @@ body.ezz-locked>.container{visibility:hidden}
             <div class="field-card">
                 <label for="proConfigName" style="color:#f5b301">نام کانفیگ</label>
                 <input id="proConfigName" type="text" placeholder="مثلاً EzzPro01" autocomplete="off">
-            </div>
-            <div class="field-card">
-                <label for="proConfigSize" style="color:#f5b301">حجم GB</label>
-                <input id="proConfigSize" type="number" min="1" step="1" placeholder="مثلاً 100" inputmode="numeric">
-            </div>
-            <div class="field-card">
-                <label for="proConfigDays" style="color:#f5b301">مدت زمان روز</label>
-                <input id="proConfigDays" type="number" min="1" step="1" placeholder="مثلاً 30" inputmode="numeric">
             </div>
             <div class="field-card">
                 <label for="proServerSelect">سرور پرو</label>
@@ -859,17 +858,9 @@ body.ezz-locked>.container{visibility:hidden}
     </div>
 
     <div id="autoTab" class="tab-content active">
-        <textarea id="configTextBox" placeholder="برای گرفتن کانفیگ روی دکمه سبز رنگ بزنید..." readonly></textarea>
-
-        <div class="button-container">
-            <button id="generateButton" class="main-btn" onclick="generateConfig()"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ</button>
-            <div class="row-btns">
-                <button id="copyButton" class="main-btn" onclick="copyConfig()">
-                    <i class="fa-regular fa-copy"></i> کپی متن
-                </button>
-                <button id="saveButton" class="main-btn" onclick="saveConfig()"><i class="fa-regular fa-download"></i> دانلود فایل</button>
-            </div>
-        </div>
+        <textarea id="configTextBox" readonly hidden style="display:none"></textarea>
+        <div class="own-head">🎮 سرور گیمینگ</div>
+        <div id="ownConfigList" class="own-config-list"><div class="own-empty">در حال بارگذاری...</div></div>
     </div>
 
     <div id="locationTab" class="tab-content">
@@ -2541,8 +2532,6 @@ body.ezz-locked>.container{visibility:hidden}
 
     window.generateNewConfig = function(){
         const nameInput = document.getElementById("newConfigName");
-        const sizeInput = document.getElementById("newConfigSize");
-        const daysInput = document.getElementById("newConfigDays");
         const serverInput = document.getElementById("newServerSelect");
         const status = document.getElementById("newConfigStatus");
 
@@ -2557,8 +2546,7 @@ body.ezz-locked>.container{visibility:hidden}
 
         const config = randomItem(pool);
         const userName = safeName(nameInput.value);
-        const size = sizeInput.value.trim();
-        const days = daysInput.value.trim();
+        const size = "", days = "";
 
         let result = "[Interface]\n";
         result += "Address = " + config.Address + "\n";
@@ -2698,13 +2686,10 @@ body.ezz-locked>.container{visibility:hidden}
     let ezzLastServerKey = "";
     window.generateNewConfig = function(){
         const name = document.getElementById("newConfigName").value.trim();
-        const size = document.getElementById("newConfigSize").value.trim();
-        const days = document.getElementById("newConfigDays").value.trim();
+        const size = "", days = "";
         let serverKey = document.getElementById("newServerSelect").value;
         const serverNames = {iran:"ایران",uae:"امارات",netherlands:"هلند",germany:"آلمان",turkey:"ترکیه"};
         const statusEl = document.getElementById("newConfigStatus");
-        if(!size || Number(size) < 1){ statusEl.textContent="⚠️ حجم GB کانفیگ را وارد کنید."; document.getElementById("newConfigSize").focus(); return; }
-        if(!days || Number(days) < 1){ statusEl.textContent="⚠️ مدت زمان روز کانفیگ را وارد کنید."; document.getElementById("newConfigDays").focus(); return; }
         const serverKeys = ["iran","uae","germany","turkey"];
         if(serverKey === "smart"){
             const choices = serverKeys.filter(k=>k!==ezzLastServerKey);
@@ -2849,22 +2834,20 @@ document.addEventListener("DOMContentLoaded",function(){
     const dnsOf = conf => ((conf.match(/^\s*DNS\s*=\s*(.+)$/mi)||[])[1]||"—").trim();
 
     window.ezzSwitchMode = function(mode){
-        const pro = mode === "pro";
-        $("ezzFreePanel").hidden = pro;
+        const pro = mode === "pro", gaming = mode === "gaming", free = !pro && !gaming;
+        $("ezzFreePanel").hidden = !free;
         $("ezzProPanel").hidden = !pro;
-        $("ezzModeFree").classList.toggle("active", !pro);
-        $("ezzModePro").classList.toggle("active", pro);
-        $("ezzModeFree").setAttribute("aria-selected", String(!pro));
-        $("ezzModePro").setAttribute("aria-selected", String(pro));
+        $("autoTab").classList.toggle("own-show", gaming);
+        [["ezzModeFree", free], ["ezzModePro", pro], ["ezzModeGaming", gaming]].forEach(function(x){
+            $(x[0]).classList.toggle("active", x[1]);
+            $(x[0]).setAttribute("aria-selected", String(x[1]));
+        });
     };
 
     window.generateProConfig = function(){
         const status = $("proConfigStatus");
         const name = $("proConfigName").value.trim();
-        const size = $("proConfigSize").value.trim();
-        const days = $("proConfigDays").value.trim();
-        if(!size || Number(size) < 1){ status.textContent = "⚠️ حجم GB کانفیگ را وارد کنید."; $("proConfigSize").focus(); return; }
-        if(!days || Number(days) < 1){ status.textContent = "⚠️ مدت زمان روز کانفیگ را وارد کنید."; $("proConfigDays").focus(); return; }
+        const size = "", days = "";
 
         let idx = $("proServerSelect").value;
         if(idx === "auto"){
@@ -2885,7 +2868,7 @@ document.addEventListener("DOMContentLoaded",function(){
         $("proResultDns").textContent = dns;
         $("proFileName").textContent = fileName + ".conf";
         status.classList.remove("download-success");
-        status.textContent = "✓ کانفیگ پرو ساخته شد • " + item.label + " • " + size + "GB • " + days + " روز";
+        status.textContent = "✓ کانفیگ پرو ساخته شد • " + item.label;
 
         try{
             const key = "EZZDIGI_CONFIG_DATABASE";
@@ -2926,5 +2909,73 @@ document.addEventListener("DOMContentLoaded",function(){
 })();
 </script>
 
+<script id="own-config-script">
+(function(){
+    var listEl;
+    function confText(item){
+        var c = item && item.conf;
+        if (Array.isArray(c)) c = c.join('\n');
+        c = String(c || '').replace(/\r\n/g, '\n').trim();
+        return c ? c + '\n' : '';
+    }
+    function downloadOwn(item){
+        var text = confText(item);
+        if (!text) return;
+        var name = makeSafeFileName([item.file || item.name], 'wgconf') + '.conf';
+        var blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    }
+    function copyOwn(item, btn){
+        var text = confText(item);
+        function done(){ var o = btn.textContent; btn.textContent = '✓ کپی شد'; setTimeout(function(){ btn.textContent = o; }, 1400); }
+        function fallback(){
+            var t = document.createElement('textarea');
+            t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+            document.body.appendChild(t); t.select();
+            try { document.execCommand('copy'); done(); } catch(e) {}
+            t.remove();
+        }
+        if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+        else fallback();
+    }
+    function render(items){
+        listEl.innerHTML = '';
+        items = (Array.isArray(items) ? items : []).filter(function(i){ return i && confText(i); });
+        if (!items.length){
+            listEl.innerHTML = '<div class="own-empty">هنوز کانفیگی اضافه نشده است.</div>';
+            return;
+        }
+        items.forEach(function(item){
+            var card = document.createElement('div'); card.className = 'own-card';
+            var n = document.createElement('div'); n.className = 'own-name'; n.textContent = item.name || 'Config';
+            card.appendChild(n);
+            if (item.description){
+                var d = document.createElement('div'); d.className = 'own-desc'; d.textContent = item.description;
+                card.appendChild(d);
+            }
+            var row = document.createElement('div'); row.className = 'own-actions';
+            var dl = document.createElement('button'); dl.type = 'button'; dl.className = 'own-btn own-dl'; dl.textContent = '⬇ دانلود فایل';
+            dl.onclick = function(){ downloadOwn(item); };
+            var cp = document.createElement('button'); cp.type = 'button'; cp.className = 'own-btn own-cp'; cp.textContent = 'کپی متن';
+            cp.onclick = function(){ copyOwn(item, cp); };
+            row.appendChild(dl); row.appendChild(cp); card.appendChild(row);
+            listEl.appendChild(card);
+        });
+    }
+    function load(){
+        listEl = document.getElementById('ownConfigList');
+        if (!listEl) return;
+        fetch('configs.json?v=' + Date.now(), {cache: 'no-store'})
+            .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(render)
+            .catch(function(){ listEl.innerHTML = '<div class="own-empty">خواندن فایل configs.json ممکن نشد. مطمئن شو کنار index.html آپلود شده و فرمت آن درست است.</div>'; });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load); else load();
+})();
+</script>
 </body>
 </html>
