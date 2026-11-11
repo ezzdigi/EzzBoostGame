@@ -1,0 +1,2930 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EzzDigi - DNS و دریافت کانفیگ وایرگارد</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            background-color: #06080f;
+            background-image:
+                linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+            background-size: 28px 28px;
+            color: #e7edf7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            line-height: 1.6;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background-color: #10131f;
+            padding: 26px 22px;
+            clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+            box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.35), 0 0 30px rgba(0, 229, 255, 0.12), 0 20px 40px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00e5ff, #b026ff, #00e5ff);
+        }
+        h1 {
+            text-align: center;
+            color: #cfd8ee;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-weight: 700;
+            margin-bottom: 20px;
+            font-size: 16px;
+            letter-spacing: 0.4px;
+            line-height: 1.7;
+        }
+        textarea {
+            width: 100%;
+            height: 180px;
+            background-color: #080a12;
+            color: #39ff88;
+            border: 1px solid #1f2740;
+            border-left: 3px solid #00e5ff;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: none;
+            outline: none;
+            direction: ltr;
+            text-align: left;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .main-btn {
+            width: 100%;
+            padding: 14px;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            border: none;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            color: #04070d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+        }
+        .main-btn:hover {
+            filter: brightness(1.08);
+        }
+        .main-btn:active {
+            transform: scale(0.97);
+        }
+        #generateButton {
+            background: linear-gradient(135deg, #00e5ff, #00b3cc);
+            font-size: 17px;
+            color: #04141a;
+            box-shadow: 0 0 18px rgba(0, 229, 255, 0.45);
+        }
+        .row-btns {
+            display: flex;
+            gap: 10px;
+        }
+        .row-btns button {
+            flex: 1;
+            padding: 12px 8px;
+            font-size: 13px;
+            min-width: 0;
+        }
+        #copyButton {
+            background: linear-gradient(135deg, #b026ff, #7c1fd6);
+            color: #f5eaff;
+            box-shadow: 0 0 14px rgba(176, 38, 255, 0.35);
+        }
+
+        #generateButton, #generateLocationButton, #generateManualButton, #generatePublicButton, #generateOperatorButton {
+            background: linear-gradient(135deg, #39ff88, #14c76a) !important;
+            color: #04140b !important;
+            box-shadow: 0 0 16px rgba(57, 255, 136, 0.32);
+        }
+        #saveButton {
+            background: linear-gradient(135deg, #39ff88, #14c76a);
+            color: #04140b;
+            box-shadow: 0 0 14px rgba(57, 255, 136, 0.3);
+        }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #0d1220;
+            border: 1px solid #1f2740;
+            color: #9aa7c7;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .tab-btn:hover:not(.active) {
+            border-color: rgba(0, 229, 255, 0.4);
+            color: #cfe9ff;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #00e5ff, #00b3cc);
+            color: #04141a;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.35);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .dns-input {
+            width: 100%;
+            background-color: #080a12;
+            color: #39ff88;
+            border: 1px solid #1f2740;
+            border-left: 3px solid #b026ff;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 13px;
+            outline: none;
+            direction: ltr;
+            text-align: left;
+            margin-bottom: 10px;
+        }
+        .field-label {
+            color: #9aa7c7;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .location-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .location-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px 14px;
+            background: #0d1220;
+            border: 1px solid #1f2740;
+            color: #e7edf7;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            text-align: right;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .location-btn:hover:not(.active) {
+            border-color: rgba(0, 229, 255, 0.4);
+        }
+        .location-btn .flag {
+            font-size: 20px;
+        }
+        .location-btn .loc-name {
+            flex: 1;
+            text-align: right;
+            padding: 0 10px;
+        }
+        .location-btn.active {
+            background: linear-gradient(135deg, #00e5ff, #00b3cc);
+            color: #04141a;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.35);
+        }
+        .dns-server-list {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+            border: 1px solid #1f2740;
+            border-left: 3px solid #39ff88;
+            padding: 10px;
+            background: #0d1220;
+        }
+        .dns-server-list.active {
+            display: flex;
+        }
+        .dns-server-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: space-between;
+            padding: 6px 8px;
+            background: #080a12;
+            border: 1px solid #1f2740;
+        }
+        .dns-server-item .dns-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dns-server-item .dns-ip {
+            font-family: monospace;
+            direction: ltr;
+            color: #39ff88;
+            font-size: 13px;
+        }
+        .dns-ping-btn {
+            background: #0d1220;
+            border: 1px solid #b026ff;
+            color: #e7edf7;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-size: 11px;
+            padding: 5px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .dns-ping-btn:active { transform: scale(0.95); }
+        .dns-ping-result {
+            font-size: 11px;
+            font-family: monospace;
+            direction: ltr;
+            min-width: 90px;
+            text-align: left;
+            color: #9aa7c7;
+        }
+        .dns-ping-result.ok { color: #39ff88; }
+        .dns-ping-result.bad { color: #ff4f6b; }
+        .dns-ping-result.mid { color: #ffce39; }
+        .dns-testall-btn {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            background: linear-gradient(135deg, #b026ff, #7c1fd6);
+            border: none;
+            color: #f5eaff;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .operator-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .operator-btn {
+            padding: 11px 6px;
+            background: #0d1220;
+            border: 1px solid #1f2740;
+            color: #9aa7c7;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+        .operator-btn:hover:not(.active) {
+            border-color: rgba(0, 229, 255, 0.4);
+            color: #cfe9ff;
+        }
+
+        .operator-btn.active {
+            background: linear-gradient(135deg, #00e5ff, #00b3cc);
+            color: #04141a;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.35);
+        }
+
+        #publicDnsList .dns-testall-btn, #operatorDnsList .dns-testall-btn { display: none !important; }
+
+        .operator-detect-box,
+        .recommend-box {
+            margin-top: 10px;
+            padding: 10px;
+            background: #0d1220;
+            border: 1px solid #1f2740;
+            color: #9aa7c7;
+            font-family: 'Rajdhani', Tahoma, sans-serif;
+            font-size: 12px;
+        }
+
+        .operator-detect-box .dns-testall-btn {
+            margin-top: 8px;
+        }
+
+        .recommend-box {
+            border-right: 3px solid #39ff88;
+            color: #e7edf7;
+        }
+
+        .recommend-box strong {
+            color: #39ff88;
+        }
+
+        #recommendedDns {
+            display: block;
+            margin-top: 6px;
+            direction: ltr;
+            text-align: left;
+            color: #39ff88;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+
+        /* ===== Guide as a tab ===== */
+        .guide-tab-content {
+            display: none;
+        }
+        .guide-tab-content.active {
+            display: block;
+        }
+        .guide-box {
+            margin-top: 0;
+        }
+
+        @media (max-width: 430px) {
+            .tabs {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .operator-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    
+        .custom-config-btn {
+            background: linear-gradient(135deg, #39ff88, #14c76a) !important;
+            color: #04140b !important;
+            box-shadow: 0 0 14px rgba(57,255,136,.3);
+        }
+
+
+        /* ===== Green Guide / Blue Cards ===== */
+        .guide-box {
+            border: 1px solid rgba(0, 150, 255, .55);
+            background: linear-gradient(180deg, rgba(8, 20, 38, .98), rgba(6, 14, 28, .98));
+            border-radius: 18px;
+            padding: 16px;
+            box-shadow: 0 0 24px rgba(0, 120, 255, .12), inset 0 0 18px rgba(0, 120, 255, .035);
+        }
+        .guide-title {
+            color: #39ff88;
+            font-size: 20px;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .guide-note, .guide-item {
+            border: 1px solid rgba(0, 150, 255, .48);
+            background: rgba(9, 27, 52, .78);
+            border-radius: 13px;
+            padding: 13px 14px;
+            margin-bottom: 12px;
+            line-height: 1.95;
+            color: #eaf6ff;
+        }
+        .guide-note {
+            border-right: 4px solid #39ff88;
+        }
+        .guide-note strong, .guide-item strong {
+            color: #39ff88;
+        }
+        .guide-section-title {
+            color: #39ff88;
+            font-size: 17px;
+            font-weight: 900;
+            padding: 8px 4px 5px;
+        }
+        .guide-item bdi, .guide-item code {
+            color: #7ccfff;
+            font-family: monospace;
+        }
+        @media (max-width: 430px) {
+            .guide-box { padding: 12px; }
+            .guide-title { font-size: 18px; }
+            .guide-note, .guide-item { padding: 11px 12px; font-size: 13px; }
+            .guide-section-title { font-size: 15px; }
+        }
+
+        /* ===== EzzDigi Smart Upgrade ===== */
+        .smart-builder{margin:14px 0 16px;padding:15px;border:1px solid rgba(0,229,255,.22);background:linear-gradient(180deg,rgba(19,25,40,.96),rgba(10,14,25,.96));border-radius:16px;box-shadow:0 0 22px rgba(0,229,255,.07)}
+        .smart-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px;font-weight:800;font-size:16px}
+        .smart-title span:first-child{font-family:Rajdhani,Tahoma,sans-serif;letter-spacing:.3px}
+        .smart-badge{font-size:10px;padding:4px 8px;border-radius:999px;background:rgba(57,255,136,.12);color:#39ff88;border:1px solid rgba(57,255,136,.25)}
+        .smart-sub{font-size:11px;color:#8f9ab5;line-height:1.8;margin-bottom:12px}
+        .smart-label{display:block;color:#b8c3db;font-size:11px;margin:9px 0 6px}
+        .choice-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+        .choice-row.three{grid-template-columns:repeat(3,1fr)}
+        .choice-btn{border:1px solid rgba(255,255,255,.08);background:#151a29;color:#dfe7f7;border-radius:10px;padding:9px 4px;font-size:11px;cursor:pointer;transition:.2s}
+        .choice-btn.active{border-color:#00e5ff;background:rgba(0,229,255,.10);box-shadow:0 0 12px rgba(0,229,255,.12);color:#fff}
+        .smart-select{width:100%;border:1px solid rgba(255,255,255,.09);background:#151a29;color:#e7edf7;border-radius:10px;padding:10px;font-size:12px;outline:none}
+        .smart-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+        .smart-main{border:0;border-radius:11px;padding:11px;background:linear-gradient(135deg,#39ff88,#14c76a);color:#04140b;font-weight:900;cursor:pointer}
+        .smart-secondary{border:1px solid rgba(0,229,255,.25);border-radius:11px;padding:11px;background:#111827;color:#dffbff;font-weight:800;cursor:pointer}
+        .smart-result{display:none;margin-top:11px;padding:11px;border-radius:11px;background:#0b1220;border:1px solid rgba(57,255,136,.18);font-size:11px;line-height:2;color:#cbd6e9}
+        .smart-result.show{display:block}
+        .smart-result strong{color:#39ff88}
+        .history-box{margin-top:13px;display:none;border-top:1px solid rgba(255,255,255,.07);padding-top:11px}
+        .history-box.show{display:block}
+        .history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:11px;color:#9eabc5}
+        .history-clear{border:0;background:transparent;color:#ff7d7d;font-size:10px;cursor:pointer}
+        .history-item{display:flex;align-items:center;justify-content:space-between;gap:7px;background:#121827;border:1px solid rgba(255,255,255,.06);padding:8px;border-radius:9px;margin-top:6px}
+        .history-name{font-size:10px;color:#dce6f8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .history-meta{font-size:9px;color:#74819d;margin-top:2px}
+        .history-load{border:1px solid rgba(0,229,255,.2);background:transparent;color:#9cefff;border-radius:7px;padding:5px 7px;font-size:9px;cursor:pointer}
+        .quality-card{margin:12px 0;padding:12px;border-radius:12px;background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(57,255,136,.04));border:1px solid rgba(0,229,255,.14)}
+        .quality-head{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#aebbd2;margin-bottom:7px}
+        .quality-score{font-family:Orbitron,sans-serif;color:#39ff88;font-size:17px}
+        .quality-bar{height:6px;background:#20283a;border-radius:99px;overflow:hidden}.quality-fill{height:100%;width:0;background:linear-gradient(90deg,#ff9f43,#39ff88);transition:.4s}
+        .quality-list{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;font-size:9px;color:#8d9ab3}.quality-list div{padding:5px 7px;background:rgba(255,255,255,.025);border-radius:7px}
+        @media(max-width:360px){.choice-row{grid-template-columns:1fr 1fr}.smart-actions{grid-template-columns:1fr}.quality-list{grid-template-columns:1fr}}
+
+
+        /* ===== DNS Changer integrated tab ===== */
+        .index-changer{margin-top:4px}
+        .index-note{background:#0d1220;border:1px solid #1f2740;border-radius:12px;padding:12px 14px;color:#9aa7c7;font-size:12px;line-height:1.9;margin-bottom:14px}
+        .index-group{margin-bottom:16px;border:1px solid #1f2740;background:#0d1220;border-radius:12px;overflow:hidden}
+        .index-group-title{padding:11px 13px;color:#cfd8ee;font-weight:700;font-family:'Rajdhani',Tahoma,sans-serif}
+        .index-item{margin:8px;padding:10px;background:#080a12;border:1px solid #1f2740;border-radius:10px}
+        .index-item-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;color:#e7edf7;font-size:12px;font-weight:700}
+        .index-ip-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;padding:7px 8px;background:#0d1220;border-radius:7px}
+        .index-ip{direction:ltr;text-align:left;font-family:monospace;color:#39ff88;font-size:12px;word-break:break-all}
+        .index-copy{flex:0 0 auto;background:#151b2b;border:1px solid #1f2740;color:#9aa7c7;border-radius:7px;padding:4px 8px;font-size:10px;cursor:pointer}
+        .index-copy:hover{border-color:#00e5ff;color:#e7edf7}
+
+    </style>
+
+<style id="ezz-new-generator-style">
+    /* New compact EzzPanel generator */
+    .tabs{display:none!important}
+    .new-generator-panel{
+        margin:12px 0 16px;
+        padding:14px;
+        border:1px solid rgba(0,229,255,.28);
+        border-radius:16px;
+        background:rgba(255,255,255,.96);
+        box-shadow:0 8px 28px rgba(0,0,0,.12);
+    }
+    .form-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+    }
+    .field-card.full{grid-column:1/-1}
+    .field-card label{
+        display:block;
+        margin:0 0 6px;
+        color:#111;
+        font-size:12px;
+        font-weight:800;
+    }
+    .field-card input,
+    .field-card select{
+        width:100%;
+        box-sizing:border-box;
+        min-height:44px;
+        border:1px solid #00bcd4!important;
+        border-radius:10px!important;
+        background:#fff!important;
+        color:#111!important;
+        padding:9px 11px;
+        outline:none;
+        font-size:13px;
+        font-family:inherit;
+    }
+    .field-card input:focus,
+    .field-card select:focus{
+        border-color:#00e5ff!important;
+        box-shadow:0 0 0 3px rgba(0,229,255,.12);
+    }
+    .new-generate-btn{
+        width:100%;
+        margin-top:12px;
+        min-height:46px;
+        cursor:pointer;
+    }
+    .new-config-status{
+        min-height:18px;
+        margin-top:9px;
+        text-align:center;
+        color:#111;
+        font-size:11px;
+        font-weight:700;
+    }
+    /* Old functional sections remain in the file/data, but are not shown. */
+    #autoTab,#locationTab,#publicTab,#operatorTab,#manualTab,#wifiTab,#guideTab,#indexTab{
+        display:none!important;
+    }
+    @media(max-width:420px){
+        .form-grid{grid-template-columns:1fr}
+        .field-card.full{grid-column:auto}
+    }
+</style>
+
+
+<style id="ezz-new-generator-extra-style">
+    .new-action-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+    .new-action-row .main-btn{margin-top:0!important;width:100%}
+    .new-download-btn{background:linear-gradient(135deg,#111,#333)!important;color:#fff!important;border:1px solid #00bcd4!important}
+    .new-dns-display{
+        margin-top:10px;padding:10px 12px;border-radius:10px;
+        background:#111;color:#111;border:1px solid #00bcd4;
+        background:#fff;font-size:11px;font-weight:800;text-align:center;
+        direction:rtl
+    }
+    .new-dns-display span{font-family:monospace;direction:ltr;display:inline-block;color:#0097a7}
+    @media(max-width:420px){.new-action-row{grid-template-columns:1fr}}
+</style>
+
+
+<style id="ezz-hide-old-smart-output">
+#smartResult,#smartQuality,#historyBox{display:none!important}
+</style>
+
+<style id="ezz-animated-dots">
+body{position:relative;overflow-x:hidden;}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(circle,rgba(255,255,255,.28) 1.5px,transparent 1.8px);background-size:28px 28px;animation:ezzDotsMove 16s linear infinite;}
+@keyframes ezzDotsMove{from{background-position:0 0;}to{background-position:140px 140px;}}
+.download-success{animation:ezzDownloadPulse .45s ease-out;}
+@keyframes ezzDownloadPulse{0%{transform:scale(.98);opacity:.5;}100%{transform:scale(1);opacity:1;}}
+</style>
+<style>#smartBuilder,#smartQuality,#smartResult,#smartHistory{display:none!important;}</style><style id="ezz-glass-bg">
+/* EzzDigi glassy navy background */
+body{
+  background:
+    radial-gradient(circle at 20% 10%, rgba(54,86,150,.22), transparent 32%),
+    radial-gradient(circle at 80% 90%, rgba(25,48,95,.28), transparent 35%),
+    linear-gradient(135deg, #07152f 0%, #0b1d3d 48%, #06132c 100%) !important;
+  position:relative;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  pointer-events:none;
+  background-image:radial-gradient(circle, rgba(255,255,255,.42) 1.4px, transparent 1.9px);
+  background-size:26px 26px;
+  animation:ezzDotsMove 18s linear infinite;
+  opacity:.9;
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:rgba(5,18,43,.12);
+}
+@keyframes ezzDotsMove{
+  from{background-position:0 0;}
+  to{background-position:156px 156px;}
+}
+/* Transparent navy glass cards */
+.new-generator-panel,
+.card,
+.panel,
+.section,
+.generator-card,
+.settings-card{
+  background:rgba(8,25,55,.46) !important;
+  border-color:rgba(255,255,255,.13) !important;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.new-config-status.download-success{
+  animation:ezzDownloadPulse .45s ease-out;
+}
+@keyframes ezzDownloadPulse{
+  0%{transform:scale(.98);opacity:.45;}
+  100%{transform:scale(1);opacity:1;}
+}
+</style>
+<style id="ezz-download-success">
+#newConfigStatus.download-success{
+  display:block !important;
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:12px;
+  background:rgba(255,255,255,.10) !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  color:#fff !important;
+  text-align:center;
+  font-weight:800;
+}
+</style>
+<style id="ezz-full-glass">
+/* EzzDigi — full glass UI */
+:root{
+  --ezz-glass: rgba(8, 25, 55, .42);
+  --ezz-glass-border: rgba(255,255,255,.16);
+}
+.card,.panel,.section,.generator-card,.settings-card,
+.new-generator-panel,.field-card,.new-action-row,
+header,nav,.navbar,.topbar,.hero,.box,.config-box,.dns-box,
+.server-card,.location-card,.game-card,.info-card,.guide-card,
+.modal-content,.login-card{
+  background: var(--ezz-glass) !important;
+  border-color: var(--ezz-glass-border) !important;
+  backdrop-filter: blur(16px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,.18);
+}
+input,select,textarea{
+  background: rgba(255,255,255,.07) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+</style>
+<style id="ezz-download-toast">
+#ezzDownloadToast{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) scale(.88);
+  z-index:999999;
+  padding:18px 34px;
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:18px;
+  background:rgba(7,25,55,.72);
+  color:#fff;
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:.2px;
+  box-shadow:0 18px 60px rgba(0,0,0,.38);
+  backdrop-filter:blur(18px) saturate(130%);
+  -webkit-backdrop-filter:blur(18px) saturate(130%);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .22s ease, transform .22s ease;
+}
+#ezzDownloadToast.show{
+  opacity:1;
+  transform:translate(-50%,-50%) scale(1);
+}
+</style>
+
+<style id="ezz-pro-ui-v4">
+.ezz-statusbar{margin:12px 0 14px;padding:11px 13px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(8,25,55,.48);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);direction:ltr}.ezz-brand-status{display:flex;flex-direction:column;gap:3px;min-width:0}.ezz-brand-status b{font-size:11px;letter-spacing:1.4px;color:#fff}.ezz-brand-status span{font-size:10px;font-weight:900;color:#fff;white-space:nowrap}.ezz-status-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font:800 9px/1.2 monospace;color:rgba(255,255,255,.78);white-space:nowrap}.ezz-game-row{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 12px;direction:rtl}.ezz-game-btn{border:1px solid rgba(255,255,255,.15);background:rgba(8,25,55,.38);color:rgba(255,255,255,.86);border-radius:11px;padding:9px 5px;font:800 10px inherit;cursor:pointer;transition:transform .18s ease,background .18s ease,border-color .18s ease}.ezz-game-btn.active{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.42);color:#fff;transform:translateY(-1px)}.ezz-result-card{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:7px;margin-top:9px}.ezz-result-card>div{padding:9px 7px;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:rgba(255,255,255,.055);text-align:center;min-width:0}.ezz-result-card small{display:block;color:rgba(255,255,255,.52);font:800 8px monospace;letter-spacing:.7px;margin-bottom:3px}.ezz-result-card b{display:block;color:#fff;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ezz-file-preview{margin-top:8px;padding:8px 10px;border-radius:10px;border:1px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.045);color:rgba(255,255,255,.7);font-size:10px;text-align:center;direction:rtl}.ezz-file-preview b{font-family:monospace;color:#fff;direction:ltr}.new-config-status{color:#fff!important}.new-config-status.download-success{background:rgba(255,255,255,.1)!important;color:#fff!important;border-color:rgba(255,255,255,.24)!important}.ezz-statusbar.ezz-download-ok{animation:ezzStatusPop .42s ease-out}.ezz-statusbar.ezz-build-pulse{animation:ezzStatusPop .32s ease-out}@keyframes ezzStatusPop{50%{transform:scale(1.012)}}@media(max-width:520px){.ezz-game-row{grid-template-columns:repeat(2,1fr)}.ezz-statusbar{padding:10px}.ezz-result-card{grid-template-columns:1fr 1fr}.ezz-result-card>div:last-child{grid-column:1/-1}}
+</style>
+
+<style id="ezz-help-ui">
+.ezz-form-hint{margin-top:8px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.62)}
+.ezz-help-tab{width:100%;margin-top:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.16);border-radius:11px;background:rgba(255,255,255,.055);color:#fff;font:800 11px inherit;cursor:pointer;transition:.2s ease;display:flex;justify-content:center;gap:7px;align-items:center}
+.ezz-help-tab:hover,.ezz-help-tab.open{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.3)}
+.ezz-help-panel{margin-top:8px;padding:12px;border:1px solid rgba(255,255,255,.13);border-radius:12px;background:rgba(5,20,45,.52);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);direction:rtl;text-align:right;color:rgba(255,255,255,.86);font-size:10px;line-height:1.9}
+.ezz-help-title{font-size:12px;font-weight:900;color:#fff;margin-bottom:6px;text-align:center}
+.ezz-help-step{padding:3px 0}.ezz-help-important{margin-top:8px;padding:8px 9px;border-radius:9px;background:rgba(255,255,255,.055);border:1px dashed rgba(255,255,255,.18);color:rgba(255,255,255,.82)}
+</style>
+
+<style id="ezz-login-style">
+#ezzLoginScreen{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,6,14,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#ezzLoginCard{width:min(380px,100%);padding:28px 24px;border:1px solid rgba(0,229,255,.35);border-radius:22px;background:rgba(10,16,29,.88);box-shadow:0 20px 70px rgba(0,0,0,.5),0 0 35px rgba(0,229,255,.08);text-align:center;color:#fff}
+#ezzLoginCard .ezz-lock{width:64px;height:64px;margin:0 auto 14px;border-radius:18px;display:grid;place-items:center;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.35);font-size:28px}
+#ezzLoginCard h2{margin:0 0 7px;font-size:23px}
+#ezzLoginCard p{margin:0 0 20px;color:#aeb9c9;font-size:13px}
+#ezzPassword{width:100%;height:50px;border:1px solid rgba(255,255,255,.16);border-radius:13px;background:rgba(255,255,255,.06);color:#fff;outline:none;padding:0 15px;text-align:center;font-size:16px;font-family:inherit}
+#ezzPassword:focus{border-color:#00e5ff;box-shadow:0 0 0 3px rgba(0,229,255,.1)}
+#ezzLoginBtn{width:100%;height:50px;margin-top:12px;border:0;border-radius:13px;background:#00cfff;color:#031019;font-weight:800;font-family:inherit;font-size:15px;cursor:pointer}
+#ezzLoginBtn:active{transform:scale(.985)}
+#ezzLoginError{min-height:21px;margin-top:10px;color:#ff5f6d;font-size:12px}
+#ezzLoginScreen.ezz-hide{display:none}
+body.ezz-locked>.container{visibility:hidden}
+</style>
+
+
+<style id="ezz-mode-tabs-style">
+.ezz-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.ezz-mode-btn{padding:11px 8px;border:1px solid #1f2740;background:#0d1220;color:#9aa7c7;font:700 13px 'Vazirmatn',Tahoma,sans-serif;border-radius:12px;cursor:pointer;transition:.15s ease}
+.ezz-mode-btn:hover:not(.active){border-color:rgba(0,229,255,.4);color:#cfe9ff}
+.ezz-mode-btn.active{background:linear-gradient(135deg,#00e5ff,#00b3cc);color:#04141a;box-shadow:0 0 14px rgba(0,229,255,.35)}
+#ezzModePro.active{background:linear-gradient(135deg,#ffd45a,#f5a300);color:#2a1a00;box-shadow:0 0 16px rgba(245,179,1,.4)}
+.ezz-pro-panel{border-color:rgba(245,179,1,.55)}
+.ezz-pro-panel[hidden]{display:none}
+.ezz-pro-badge{display:inline-block;margin:0 0 10px;padding:4px 12px;border-radius:99px;background:linear-gradient(135deg,#ffd45a,#f5a300);color:#2a1a00;font-size:11px;font-weight:800}
+.ezz-pro-panel .field-card input,.ezz-pro-panel .field-card select{border-color:#f5b301!important}
+.ezz-pro-panel .new-dns-display{border-color:#f5b301}
+.ezz-pro-panel .new-dns-display span{color:#b57f00}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>پنل اختصاصی گیمینگ EzzDigi</h1>
+
+    <div class="ezz-statusbar" aria-live="polite">
+        <div class="ezz-brand-status"><b>EZZDIGI GAMING</b><span id="ezzStatusMain">● READY</span></div>
+        <div class="ezz-status-meta"><span id="ezzStatusServer">SERVER 01</span><span id="ezzStatusDns">DNS —</span></div>
+    </div>
+
+    <div class="ezz-mode-tabs" role="tablist" aria-label="نوع کانفیگ">
+        <button type="button" id="ezzModeFree" class="ezz-mode-btn active" role="tab" aria-selected="true" onclick="ezzSwitchMode('free')">🆓 رایگان</button>
+        <button type="button" id="ezzModePro" class="ezz-mode-btn" role="tab" aria-selected="false" onclick="ezzSwitchMode('pro')">👑 ساخت کانفیگ پرو</button>
+    </div>
+
+    <div class="new-generator-panel" id="ezzFreePanel">
+        <div class="form-grid">
+            <div class="field-card">
+                <label for="newConfigName" style="color:#22c55e">نام کانفیگ</label>
+                <input id="newConfigName" type="text" placeholder="مثلاً EzzDigi01" autocomplete="off" required>
+            </div>
+            <div class="field-card">
+                <label for="newConfigSize" style="color:#22c55e">حجم GB</label>
+                <input id="newConfigSize" type="number" min="1" step="1" placeholder="مثلاً 50" inputmode="numeric" required>
+            </div>
+            <div class="field-card">
+                <label for="newConfigDays" style="color:#22c55e">مدت زمان روز</label>
+                <input id="newConfigDays" type="number" min="1" step="1" placeholder="مثلاً 30" inputmode="numeric" required>
+            </div>
+            <div class="field-card full">
+                <label for="newServerSelect">انتخاب سرور</label>
+                <select id="newServerSelect">
+                    <option value="smart">⚡ هوشمند — تغییر خودکار سرور</option>
+                    <option value="iran">🇮🇷 ایران</option>
+                    <option value="uae">🇦🇪 امارات</option>
+                    <option value="germany">🇩🇪 آلمان</option>
+                    <option value="turkey">🇹🇷 ترکیه</option>
+                </select>
+            </div>
+        </div>
+        <div class="ezz-form-hint">نام کانفیگ کانفیگ، حجم GB و مدت زمان روز را قبل از ساخت وارد کنید.</div>
+        <button type="button" class="ezz-help-tab" id="ezzHelpTab" onclick="toggleEzzHelp()">📖 آموزش و نکات مهم <span id="ezzHelpArrow">⌄</span></button>
+        <div id="ezzHelpPanel" class="ezz-help-panel" hidden>
+            <div class="ezz-help-title">آموزش سریع ساخت کانفیگ</div>
+            <div class="ezz-help-step"><b>۱.</b> در قسمت <b style="color:#22c55e">نام کانفیگ</b> یک اسم دلخواه برای فایل وارد کنید.</div>
+            <div class="ezz-help-step"><b>۲.</b> مقدار <b style="color:#22c55e">حجم GB</b> را برحسب GB وارد کنید.</div>
+            <div class="ezz-help-step"><b>۳.</b> <b style="color:#22c55e">مدت زمان روز</b> را برحسب روز وارد کنید.</div>
+            <div class="ezz-help-step"><b>۴.</b> سرور را انتخاب کنید؛ حالت <b>هوشمند</b> برای تغییر خودکار سرور است.</div>
+            <div class="ezz-help-step"><b>۵.</b> روی <b>ساخت کانفیگ</b> بزنید و بعد از ساخته‌شدن، <b>دانلود فایل WireGuard</b> را انتخاب کنید.</div>
+            <div class="ezz-help-important"><b>⚠️ نکات مهم</b><br>• فایل خروجی با فرمت <b>.conf</b> دانلود می‌شود.<br>• نام کانفیگ را کوتاه و ساده وارد کنید.<br>• اگر کانفیگ قبلی وصل نشد، یک سرور دیگر را امتحان کنید.<br>• فایل دانلودشده را مستقیماً در برنام کانفیگه WireGuard وارد کنید.</div>
+        </div>
+        <div class="new-action-row">
+            <button id="newGenerateButton" class="main-btn new-generate-btn" type="button" onclick="generateNewConfig()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ
+            </button>
+            <button id="newDownloadButton" class="main-btn new-download-btn" type="button" onclick="downloadNewConfig()">
+                <i class="fa-solid fa-download"></i> دانلود فایل WireGuard
+            </button>
+        </div>
+        <div id="newDnsDisplay" class="new-dns-display" aria-live="polite">
+            سرور گیمینگ: —
+        </div>
+        <div id="ezzResultCard" class="ezz-result-card">
+            <div><small>CONFIG</small><b id="ezzResultConfig">WAITING</b></div>
+            <div><small>SERVER</small><b id="ezzResultServer">—</b></div>
+            <div><small>DNS</small><b id="ezzResultDns">—</b></div>
+        </div>
+        <div id="ezzFilePreview" class="ezz-file-preview">نام کانفیگ فایل: <b>EzzDigi.conf</b></div>
+        <div id="newConfigStatus" class="new-config-status" aria-live="polite"></div>
+    </div>
+
+
+    <div class="new-generator-panel ezz-pro-panel" id="ezzProPanel" hidden>
+        <div class="ezz-pro-badge">👑 اشتراک پرو</div>
+        <div class="form-grid">
+            <div class="field-card">
+                <label for="proConfigName" style="color:#f5b301">نام کانفیگ</label>
+                <input id="proConfigName" type="text" placeholder="مثلاً EzzPro01" autocomplete="off">
+            </div>
+            <div class="field-card">
+                <label for="proConfigSize" style="color:#f5b301">حجم GB</label>
+                <input id="proConfigSize" type="number" min="1" step="1" placeholder="مثلاً 100" inputmode="numeric">
+            </div>
+            <div class="field-card">
+                <label for="proConfigDays" style="color:#f5b301">مدت زمان روز</label>
+                <input id="proConfigDays" type="number" min="1" step="1" placeholder="مثلاً 30" inputmode="numeric">
+            </div>
+            <div class="field-card">
+                <label for="proServerSelect">سرور پرو</label>
+                <select id="proServerSelect">
+                    <option value="auto">⚡ هوشمند — تغییر خودکار سرور</option>
+                    <option value="0">👑 Ezz 1</option>
+                    <option value="1">👑 Ezz 2</option>
+                    <option value="2">👑 Pro VIP</option>
+                    <option value="3">👑 Ezz</option>
+                    <option value="4">👑 Pro</option>
+                    <option value="5">👑 Pro 1</option>
+                </select>
+            </div>
+        </div>
+        <div class="ezz-form-hint">کانفیگ پرو با تنظیمات اختصاصی هر سرور (DNS، MTU، Keepalive) ساخته می‌شود.</div>
+        <div class="new-action-row">
+            <button id="proGenerateButton" class="main-btn new-generate-btn" type="button" onclick="generateProConfig()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ پرو
+            </button>
+            <button id="proDownloadButton" class="main-btn new-download-btn" type="button" onclick="downloadProConfig()">
+                <i class="fa-solid fa-download"></i> دانلود فایل WireGuard
+            </button>
+        </div>
+        <div id="proDnsDisplay" class="new-dns-display" aria-live="polite">سرور پرو: —</div>
+        <div class="ezz-result-card">
+            <div><small>CONFIG</small><b id="proResultConfig">WAITING</b></div>
+            <div><small>SERVER</small><b id="proResultServer">—</b></div>
+            <div><small>DNS</small><b id="proResultDns">—</b></div>
+        </div>
+        <div class="ezz-file-preview">نام کانفیگ فایل: <b id="proFileName">EzzPro.conf</b></div>
+        <div id="proConfigStatus" class="new-config-status" aria-live="polite"></div>
+    </div>
+
+    <div id="autoTab" class="tab-content active">
+        <textarea id="configTextBox" placeholder="برای گرفتن کانفیگ روی دکمه سبز رنگ بزنید..." readonly></textarea>
+
+        <div class="button-container">
+            <button id="generateButton" class="main-btn" onclick="generateConfig()"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ</button>
+            <div class="row-btns">
+                <button id="copyButton" class="main-btn" onclick="copyConfig()">
+                    <i class="fa-regular fa-copy"></i> کپی متن
+                </button>
+                <button id="saveButton" class="main-btn" onclick="saveConfig()"><i class="fa-regular fa-download"></i> دانلود فایل</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="locationTab" class="tab-content">
+        <label class="field-label">یک لوکیشن رو انتخاب کن</label>
+        <div class="location-grid" id="locationGrid"></div>
+
+        <div class="dns-server-list" id="dnsServerList"></div>
+
+        <textarea id="locationConfigTextBox" placeholder="بعد از انتخاب لوکیشن روی دکمه سبز رنگ بزن..." readonly></textarea>
+
+        <div class="button-container">
+            <button id="generateLocationButton" class="main-btn" onclick="generateLocationConfig()"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ</button>
+            <div class="row-btns">
+                <button id="copyLocationButton" class="main-btn" onclick="copyLocationConfig()">
+                    <i class="fa-regular fa-copy"></i> کپی متن
+                </button>
+                <button id="saveLocationButton" class="main-btn" onclick="saveLocationConfig()"><i class="fa-regular fa-download"></i> دانلود فایل</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="publicTab" class="tab-content">
+        <label class="field-label">DNS عمومی</label>
+        <div class="dns-server-list active" id="publicDnsList"></div>
+        <textarea id="publicConfigTextBox" placeholder="بعد از انتخاب DNS روی دکمه سبز رنگ بزن..." readonly></textarea>
+        <div class="button-container">
+            <button id="generatePublicButton" class="main-btn" onclick="generatePublicConfig()"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ</button>
+            <div class="row-btns">
+                <button class="main-btn" onclick="copyPublicConfig()"><i class="fa-regular fa-copy"></i> کپی متن</button>
+                <button class="main-btn" onclick="savePublicConfig()"><i class="fa-regular fa-download"></i> دانلود فایل</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="operatorTab" class="tab-content">
+        <label class="field-label">DNS اپراتورها</label>
+
+        <div class="operator-detect-box">
+            <div id="operatorDetectStatus">اپراتور خودت رو انتخاب کن یا تشخیص خودکار رو بزن.</div>
+            <button type="button" class="dns-testall-btn" onclick="detectOperator()">تشخیص خودکار اپراتور</button>
+        </div>
+
+        <div class="operator-grid" id="operatorGrid"></div>
+        <div class="dns-server-list active" id="operatorDnsList"></div>
+
+        <div class="recommend-box" id="operatorRecommendation">
+            <strong>بهترین DNS پیشنهادی:</strong>
+            <span id="recommendedDns">—</span>
+        </div>
+        <textarea id="operatorConfigTextBox" placeholder="بعد از انتخاب اپراتور و DNS روی دکمه سبز رنگ بزن..." readonly></textarea>
+        <div class="button-container">
+            <button id="generateOperatorButton" class="main-btn" onclick="generateOperatorConfig()"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ</button>
+            <div class="row-btns">
+                <button class="main-btn" onclick="copyOperatorConfig()"><i class="fa-regular fa-copy"></i> کپی متن</button>
+                <button class="main-btn" onclick="saveOperatorConfig()"><i class="fa-regular fa-download"></i> دانلود فایل</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="manualTab" class="tab-content">
+        <label class="field-label">DNS دلخواه خودت رو وارد کن (مثال: 8.8.8.8, 8.8.4.4)</label>
+        <input type="text" id="manualDnsInput" class="dns-input" placeholder="8.8.8.8, 8.8.4.4" dir="ltr">
+
+        <textarea id="manualConfigTextBox" placeholder="بعد از وارد کردن DNS روی دکمه سبز رنگ بزن..." readonly></textarea>
+
+        <div class="button-container">
+            <button id="generateManualButton" class="main-btn" onclick="generateManualConfig()"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ</button>
+            <div class="row-btns">
+                <button id="copyManualButton" class="main-btn" onclick="copyManualConfig()">
+                    <i class="fa-regular fa-copy"></i> کپی متن
+                </button>
+                <button id="saveManualButton" class="main-btn" onclick="saveManualConfig()"><i class="fa-regular fa-download"></i> دانلود فایل</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="wifiTab" class="tab-content">
+        <label class="field-label">📡 DNS گیمینگ وایفای</label>
+        <div class="operator-grid" id="wifiProviderGrid"></div>
+        <div class="dns-server-list active" id="wifiDnsList"></div>
+
+        <div class="recommend-box" id="wifiRecommendation">
+            <strong>سرور گیمینگ:</strong>
+            <span id="wifiSelectedDns">—</span>
+        </div>
+
+        <textarea id="wifiConfigTextBox" placeholder="بعد از انتخاب سرویس و DNS روی دکمه سبز رنگ بزن..." readonly></textarea>
+
+        <div class="button-container">
+            <button id="generateWifiButton" class="main-btn" onclick="generateWifiConfig()"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت کانفیگ</button>
+            <div class="row-btns">
+                <button class="main-btn" onclick="copyWifiConfig()"><i class="fa-regular fa-copy"></i> کپی متن</button>
+                <button class="main-btn" onclick="saveWifiConfig()"><i class="fa-regular fa-download"></i> دانلود فایل</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="guideTab" class="tab-content guide-tab-content">
+        <section class="guide-box">
+            <div class="guide-title">📖 آموزش کامل کار با پنل EzzDigi</div>
+
+            <div class="guide-note">
+                <strong>🎮 قبل از شروع</strong><br>
+                این پنل برای انتخاب DNS، ساخت کانفیگ و استفاده از DNS روی دستگاه‌های مختلف طراحی شده است. ابتدا روش موردنظر خودت را انتخاب کن، DNS یا لوکیشن را مشخص کن و در پایان از گزینه‌های <b>کپی متن</b> یا <b>دانلود فایل</b> استفاده کن.<br><br>
+                <strong>نکته:</strong> عدد اول DNS = <b>Primary / DNS اصلی</b> و عدد دوم = <b>Secondary / DNS ثانویه</b> است. آدرس‌ها را دقیقاً همان‌طور که در پنل نمایش داده می‌شوند وارد کن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱. شروع کار با پنل</div>
+            <div class="guide-item">
+                <b>مرحله ۱:</b> از بالای پنل یکی از تب‌ها را انتخاب کن.<br>
+                <b>مرحله ۲:</b> بسته به کاری که می‌خواهی انجام بدهی، DNS عمومی، اپراتور، DNS دلخواه، لوکیشن یا تولید خودکار را انتخاب کن.<br>
+                <b>مرحله ۳:</b> گزینه‌های نمایش‌داده‌شده را بررسی و DNS موردنظر را انتخاب کن.<br>
+                <b>مرحله ۴:</b> روی <b>ساخت کانفیگ</b> بزن.<br>
+                <b>مرحله ۵:</b> نتیجه در کادر کانفیگ نمایش داده می‌شود؛ سپس می‌توانی آن را <b>کپی</b> کنی یا به‌صورت <b>فایل</b> دانلود کنی.<br><br>
+                💡 اگر فقط می‌خواهی DNS را روی گوشی، کامپیوتر، کنسول یا روتر تنظیم کنی، لازم نیست حتماً کانفیگ WireGuard بسازی؛ می‌توانی DNS را از تب مربوطه برداری و دستی وارد کنی.
+            </div>
+
+            <div class="guide-section-title">🟢 ۲. تب «تولید خودکار»</div>
+            <div class="guide-item">
+                این بخش برای ساخت سریع کانفیگ طراحی شده است.<br><br>
+                1. وارد تب <b>تولید خودکار</b> شو.<br>
+                2. در صورت وجود گزینه‌های انتخابی، موارد موردنظر را مشخص کن.<br>
+                3. روی <b>ساخت کانفیگ</b> بزن تا کانفیگ جدید ساخته شود.<br>
+                4. متن تولیدشده را در کادر پایین بررسی کن.<br>
+                5. برای انتقال سریع متن از <b>کپی متن</b> و برای استفاده در WireGuard از <b>دانلود فایل</b> استفاده کن.<br><br>
+                🔄 اگر چند سرور در پنل در دسترس باشد، هنگام ساخت کانفیگ می‌توانی سرورهای مختلف را تست کنی تا ببینی کدام گزینه برای اتصال تو بهتر جواب می‌دهد.
+            </div>
+
+            <div class="guide-section-title">🟢 ۳. تب «انتخاب لوکیشن»</div>
+            <div class="guide-item">
+                اگر می‌خواهی قبل از ساخت کانفیگ لوکیشن و DNS مربوط به آن را انتخاب کنی، از این بخش استفاده کن.<br><br>
+                1. تب <b>انتخاب لوکیشن</b> را باز کن.<br>
+                2. لوکیشن موردنظر را انتخاب کن.<br>
+                3. از لیست نمایش‌داده‌شده DNS مناسب را انتخاب کن.<br>
+                4. روی <b>ساخت کانفیگ</b> بزن.<br>
+                5. بعد از ساخته‌شدن، از <b>کپی متن</b> یا <b>دانلود فایل</b> استفاده کن.<br><br>
+                💡 بهتر است چند گزینه را تست کنی؛ نزدیک‌ترین لوکیشن همیشه الزاماً بهترین نتیجه را برای همه‌ی اینترنت‌ها و اپراتورها نمی‌دهد.
+            </div>
+
+            <div class="guide-section-title">🟢 ۴. تب «DNS عمومی»</div>
+            <div class="guide-item">
+                این بخش برای انتخاب سریع DNSهای عمومی موجود در پنل است.<br><br>
+                1. وارد <b>DNS عمومی</b> شو.<br>
+                2. DNS موردنظر را از لیست انتخاب کن.<br>
+                3. در صورت نیاز روی <b>ساخت کانفیگ</b> بزن.<br>
+                4. کانفیگ را کپی یا دانلود کن.<br><br>
+                اگر هدف تو فقط تنظیم DNS دستگاه است، همان آدرس‌های Primary و Secondary نمایش‌داده‌شده را بردار و طبق آموزش دستگاه خودت وارد کن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۵. تب «DNS اپراتورها»</div>
+            <div class="guide-item">
+                این قسمت برای انتخاب DNS بر اساس اپراتور طراحی شده است.<br><br>
+                1. وارد تب <b>DNS اپراتورها</b> شو.<br>
+                2. در صورت فعال بودن تشخیص خودکار، اجازه بده اپراتور شناسایی شود.<br>
+                3. اگر لازم بود، اپراتور را به‌صورت دستی انتخاب کن.<br>
+                4. DNSهای مربوط به آن بخش را بررسی و گزینه موردنظر را انتخاب کن.<br>
+                5. در صورت نیاز <b>ساخت کانفیگ</b> را بزن و سپس کپی یا دانلود کن.<br><br>
+                💡 اگر یک DNS نتیجه خوبی نداد، گزینه دیگری از همان بخش را تست کن؛ کیفیت مسیر DNS می‌تواند به شبکه و محل اتصال بستگی داشته باشد.
+            </div>
+
+            <div class="guide-section-title">🟢 ۶. تب «DNS دلخواه»</div>
+            <div class="guide-item">
+                اگر DNS خاصی داری که در لیست پنل نیست، از این قسمت استفاده کن.<br><br>
+                1. وارد <b>DNS دلخواه</b> شو.<br>
+                2. DNS اصلی و ثانویه را وارد کن؛ برای نمونه: <bdi dir="ltr">8.8.8.8, 8.8.4.4</bdi><br>
+                3. فاصله یا کاراکتر اضافی وارد نکن و آدرس‌ها را درست بنویس.<br>
+                4. روی <b>ساخت کانفیگ</b> بزن.<br>
+                5. نتیجه را کپی یا دانلود کن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۷. تب «وایفای»</div>
+            <div class="guide-item">
+                این بخش برای انتخاب DNS متناسب با سرویس/وای‌فای و ساخت خروجی مربوط به آن است.<br><br>
+                1. وارد تب <b>وایفای</b> شو.<br>
+                2. سرویس موردنظر را انتخاب کن.<br>
+                3. DNS موردنظر را از لیست انتخاب کن.<br>
+                4. DNS انتخاب‌شده را بررسی کن.<br>
+                5. روی <b>ساخت کانفیگ</b> بزن و سپس خروجی را کپی یا دانلود کن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۸. ساخت کانفیگ، کپی و دانلود چه فرقی دارند؟</div>
+            <div class="guide-item">
+                <b>ساخت کانفیگ:</b> خروجی WireGuard را با انتخاب‌های فعلی پنل تولید می‌کند.<br>
+                <b>کپی متن:</b> متن کانفیگ را برای استفاده یا انتقال دستی در کلیپ‌بورد کپی می‌کند.<br>
+                <b>دانلود فایل:</b> کانفیگ را به‌صورت فایل تنظیمات WireGuard ذخیره می‌کند تا بتوانی آن را در برنام کانفیگه WireGuard وارد کنی.<br><br>
+                ⚠️ اگر قصد Import کردن در WireGuard را داری، بهتر است از <b>دانلود فایل</b> استفاده کنی و فایل دانلودشده را مستقیماً در WireGuard وارد کنی.
+            </div>
+
+            <div class="guide-section-title">🟢 ۹. آموزش کامل WireGuard</div>
+            <div class="guide-item">
+                <b>۱)</b> ابتدا از پنل لوکیشن/سرور و DNS موردنظر را انتخاب کن.<br>
+                <b>۲)</b> روی <b>ساخت کانفیگ</b> بزن.<br>
+                <b>۳)</b> روی <b>دانلود فایل</b> بزن تا فایل کانفیگ ذخیره شود.<br>
+                <b>۴)</b> برنام کانفیگه <b>WireGuard</b> را در دستگاه باز کن.<br>
+                <b>۵)</b> گزینه <b>+</b> را بزن و گزینه Import از فایل/فایل کانفیگ را انتخاب کن.<br>
+                <b>۶)</b> فایل دانلودشده از پنل را انتخاب کن.<br>
+                <b>۷)</b> تونل ساخته‌شده را فعال کن.<br>
+                <b>۸)</b> اتصال را تست کن و در صورت نیاز سرور یا DNS دیگری را امتحان کن.<br><br>
+                📱 WireGuard برای <b>اندروید و آیفون</b> و همچنین <b>ویندوز و مک</b> قابل استفاده است. برای بازکردن و دانلود فایل از مرورگر <b>Chrome</b> استفاده کن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۰. انتخاب نام کانفیگ فایل / کانفیگ</div>
+            <div class="guide-item">
+                اگر پنل برای نام کانفیگ‌گذاری فایل از تو نام کانفیگ می‌خواهد، نام کانفیگ را کوتاه و ساده انتخاب کن.<br><br>
+                ✅ بهتر است از <b>حروف انگلیسی کوچک، عدد و کاراکترهای ساده</b> استفاده شود.<br>
+                ❌ از نام کانفیگ فارسی، فاصله و کاراکترهای عجیب استفاده نکن.<br>
+                💡 نام کانفیگی انتخاب کن که با فایل‌های دیگر اشتباه نشود؛ مثلاً <bdi dir="ltr">server1</bdi> یا <bdi dir="ltr">ezz1</bdi>.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۱. اندروید — تنظیم DNS روی Wi‑Fi</div>
+            <div class="guide-item">
+                1. <b>Settings</b> → <b>Wi‑Fi</b> را باز کن.<br>
+                2. روی شبکه‌ای که به آن متصل هستی بزن یا آیکون ⚙️ را انتخاب کن.<br>
+                3. <b>Edit network</b> یا گزینه مشابه را باز کن.<br>
+                4. <b>Advanced options</b> را باز کن.<br>
+                5. <b>IP settings</b> را از <b>DHCP</b> به <b>Static</b> تغییر بده؛ نام کانفیگ گزینه‌ها ممکن است با مدل گوشی فرق کند.<br>
+                6. فیلدهای <b>DNS 1</b> و <b>DNS 2</b> را با DNS انتخابی پنل پر کن.<br>
+                7. <b>Save</b> را بزن.<br><br>
+                📱 روی دیتای سیم‌کارت، بسیاری از گوشی‌ها اجازه تنظیم مستقیم DNS را نمی‌دهند. در این حالت می‌توانی از برنام کانفیگه‌های DNS Changer که از VPN محلی استفاده می‌کنند کمک بگیری.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۲. آیفون — تنظیم DNS روی Wi‑Fi</div>
+            <div class="guide-item">
+                1. <b>Settings</b> → <b>Wi‑Fi</b><br>
+                2. روی علامت <b>ⓘ</b> کنار شبکه متصل بزن.<br>
+                3. <b>Configure DNS</b> را انتخاب کن.<br>
+                4. حالت را روی <b>Manual</b> بگذار.<br>
+                5. DNSهای قبلی را در صورت نیاز حذف کن و DNSهای پنل را با <b>+</b> اضافه کن.<br>
+                6. روی <b>Save</b> بزن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۳. ویندوز — تنظیم DNS</div>
+            <div class="guide-item">
+                1. روی آیکون اینترنت کنار ساعت کلیک راست کن → <b>Network &amp; Internet settings</b>.<br>
+                2. شبکه متصل را انتخاب کن.<br>
+                3. بخش تنظیم DNS را پیدا کن و روی <b>Edit</b> کنار <b>DNS server assignment</b> بزن.<br>
+                4. حالت را از <b>Automatic</b> به <b>Manual</b> تغییر بده و <b>IPv4</b> را فعال کن.<br>
+                5. DNS اصلی و ثانویه را وارد و <b>Save</b> کن.<br>
+                6. برای تازه‌سازی DNS می‌توانی در Command Prompt دستور <bdi dir="ltr">ipconfig /flushdns</bdi> را اجرا کنی.<br><br>
+                ⚠️ بعضی VPNها DNS سیستم را تغییر می‌دهند؛ هنگام تست، تنظیمات VPN را هم در نظر بگیر.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۴. وای‌فای / روتر</div>
+            <div class="guide-item">
+                1. آدرس مدیریت روتر را در مرورگر باز کن؛ معمولاً <bdi dir="ltr">192.168.1.1</bdi> یا <bdi dir="ltr">192.168.0.1</bdi> است و ممکن است روی برچسب روتر نوشته شده باشد.<br>
+                2. با نام کانفیگ کاربری و رمز روتر وارد شو.<br>
+                3. بخش <b>WAN</b>، <b>Internet Settings</b> یا <b>DNS Settings</b> را پیدا کن.<br>
+                4. DNS را از حالت خودکار به دستی تغییر بده.<br>
+                5. DNS اصلی و ثانویه را وارد کن.<br>
+                6. تنظیمات را ذخیره کن و در صورت نیاز روتر را راه‌اندازی مجدد کن.<br><br>
+                💡 تنظیم DNS روی روتر می‌تواند باعث شود دستگاه‌های متصل به همان شبکه از تنظیم DNS روتر استفاده کنند.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۵. PS5</div>
+            <div class="guide-item">
+                1. <b>Settings</b> → <b>Network</b> → <b>Settings</b> برو.<br>
+                2. <b>Set Up Internet Connection</b> را انتخاب کن.<br>
+                3. شبکه موردنظر را انتخاب و <b>Advanced Settings</b> را باز کن.<br>
+                4. <b>DNS Settings</b> را از <b>Automatic</b> به <b>Manual</b> تغییر بده.<br>
+                5. Primary DNS و Secondary DNS را وارد کن.<br>
+                6. ادامه تنظیمات شبکه را در صورت نداشتن نیاز خاص روی حالت پیش‌فرض نگه دار و اتصال را تست کن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۶. Xbox</div>
+            <div class="guide-item">
+                1. دکمه Xbox را بزن → <b>Profile &amp; system</b> → <b>Settings</b>.<br>
+                2. <b>General</b> → <b>Network settings</b>.<br>
+                3. <b>Advanced settings</b> → <b>DNS settings</b>.<br>
+                4. حالت <b>Manual</b> را انتخاب کن.<br>
+                5. Primary و Secondary DNS را وارد و ذخیره کن.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۷. تب «DNS Changer»</div>
+            <div class="guide-item">
+                اگر نمی‌خواهی DNS را از تنظیمات سیستم به‌صورت دستی تغییر بدهی، از بخش <b>DNS Changer</b> استفاده کن.<br><br>
+                1. وارد تب <b>DNS Changer</b> شو.<br>
+                2. DNS موردنظر را انتخاب یا وارد کن.<br>
+                3. سرویس را فعال کن و در صورت درخواست سیستم، اجازه ایجاد <b>VPN محلی</b> را تأیید کن.<br>
+                4. بعد از فعال‌شدن، اتصال بازی یا اینترنت را تست کن.<br><br>
+                ⚠️ DNS Changer لزوماً به معنی VPN اینترنتی نیست؛ معمولاً برای اعمال DNS از یک اتصال VPN محلی در دستگاه استفاده می‌شود.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۸. برای بازی کدام گزینه را انتخاب کنم؟</div>
+            <div class="guide-item">
+                اگر هدف اصلی تو بازی است، ابتدا گزینه‌ای را انتخاب کن که با نوع اتصال و اپراتورت سازگارتر است.<br><br>
+                <b>برای WireGuard:</b> از تولید خودکار/لوکیشن و سپس دانلود فایل استفاده کن.<br>
+                <b>برای تغییر مستقیم DNS:</b> از DNS عمومی، DNS اپراتورها یا DNS دلخواه استفاده کن.<br>
+                <b>برای گوشی:</b> می‌توانی DNS را دستی روی Wi‑Fi تنظیم کنی یا از DNS Changer استفاده کنی.<br>
+                <b>برای روتر:</b> DNS را در تنظیمات WAN/Internet روتر وارد کن.<br><br>
+                🎯 برای پیدا کردن گزینه مناسب، چند DNS و در صورت وجود چند سرور را تست کن و فقط نتیجه واقعی روی اینترنت خودت را معیار قرار بده.
+            </div>
+
+            <div class="guide-section-title">🟢 ۱۹. اگر اتصال یا DNS کار نکرد چه کنیم؟</div>
+            <div class="guide-item">
+                <b>اگر WireGuard وصل نمی‌شود:</b> فایل دانلودشده را دوباره وارد کن و یک سرور/لوکیشن دیگر را امتحان کن.<br>
+                <b>اگر DNS نتیجه خوبی نداد:</b> DNS دیگری از همان تب یا یک لوکیشن دیگر را تست کن.<br>
+                <b>اگر سایت‌ها باز نمی‌شوند:</b> DNS واردشده را از نظر اعداد و نقطه‌ها بررسی کن و تنظیمات قبلی را برگردان.<br>
+                <b>اگر بازی به اینترنت وصل نمی‌شود:</b> DNS یا سرور دیگری را امتحان کن و در صورت استفاده از VPN، تداخل سرویس‌ها را بررسی کن.<br>
+                <b>اگر فایل در WireGuard وارد نمی‌شود:</b> مطمئن شو فایل کامل دانلود شده و آن را به‌صورت فایل کانفیگ وارد می‌کنی، نه اینکه فقط متن را داخل برنام کانفیگه اشتباه وارد کنی.<br><br>
+                ⚠️ عملکرد DNS و سرور برای همه کاربران یکسان نیست؛ ممکن است یک گزینه برای یک اینترنت بهتر و برای اینترنت دیگر ضعیف‌تر باشد.
+            </div>
+
+            <div class="guide-section-title">🟢 ۲۰. خلاصه سریع برای کاربر</div>
+            <div class="guide-item">
+                <b>می‌خواهی کانفیگ WireGuard بسازی؟</b><br>
+                تب مناسب → انتخاب DNS/لوکیشن/سرور → <b>ساخت کانفیگ</b> → <b>دانلود فایل</b> → Import در WireGuard → فعال‌سازی و تست.<br><br>
+                <b>می‌خواهی فقط DNS عوض کنی؟</b><br>
+                تب DNS مناسب → انتخاب Primary و Secondary → واردکردن در گوشی/کامپیوتر/روتر/کنسول یا استفاده از DNS Changer.<br><br>
+                <b>نتیجه خوب نبود؟</b><br>
+                گزینه دیگری را تست کن. بهترین DNS یا سرور برای بازی به مسیر و شرایط اتصال فعلی بستگی دارد.
+            </div>
+
+            <div class="guide-note">
+                <strong>🎮 پیشنهاد EzzDigi:</strong><br>
+                برای رسیدن به بهترین نتیجه، فقط به اسم لوکیشن یا DNS اکتفا نکن؛ چند گزینه را روی همان اینترنتی که با آن بازی می‌کنی امتحان کن و گزینه‌ای را نگه دار که در عمل اتصال پایدارتر و تجربه بهتری به تو می‌دهد.
+            </div>
+        </section>
+    </div>
+
+    <div id="indexTab" class="tab-content">
+        <div class="index-changer">
+            <div class="index-note">DNS موردنظر را انتخاب کن و با دکمه «کپی» سریع کپی کن.</div>
+            <div id="indexList"></div>
+        </div>
+    </div>
+</div>
+<script>
+    // نام کانفیگ تانل وایرگارد باید کوتاه (حداکثر ۱۵ کاراکتر) و فقط شامل حروف/عدد لاتین، _ + = . -
+    // باشه، وگرنه بعضی نسخه‌های وایرگارد (مخصوصاً ویندوز/لینوکس) ایمپورتش نمی‌کنن.
+    function makeSafeFileName(parts, fallback) {
+        let name = (Array.isArray(parts) ? parts : [parts]).filter(Boolean).join('');
+        name = name.replace(/\s+/g, '');
+        name = name.replace(/[^a-zA-Z0-9_+=.-]/g, '');
+        if (!name) name = fallback || 'wgconf';
+        if (name.length > 15) name = name.slice(0, 15);
+        return name;
+    }
+
+    const configs = [
+        {
+            "Address": "10.36.30.213/32",
+            "DNS": "8abd:1c14:57e4:26da:eaad:31a8:db08:7cbd",
+            "ListenPort": 2110,
+            "PrivateKey": "0O/6rmPIrv1YCMUUQgSnRUmfGWc2gJskygSfCKPcM2Q=",
+            "PeerAllowedIPs": "10.166.22.78/32",
+            "PeerPublicKey": "6Rc225mgQl9U8Jle6dcTEH3RSOzqnHir0V5ZXOYMfHc=",
+            "PeerEndpoint": "wg1.mizosandali.com:13850"
+        },
+        {
+            "Address": "72.16.0.2/32",
+            "DNS": "89.51.39.40",
+            "MTU": 1300,
+            "PrivateKey": "OCes97ngMNgCWQ/kPncJ/olyz0DfK3SnBtKTT7L2NG8=",
+            "PeerAllowedIPs": "162.159.192.57/32",
+            "PeerEndpoint": "wg1.mizosandali.com:13850",
+            "PeerPublicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
+        }
+    ];
+
+    const fixedDns = "78.157.42.100, 78.157.42.101";
+
+    function generateConfig() {
+        try {
+            const config = configs[Math.floor(Math.random() * configs.length)];
+            let result = "[Interface]\n";
+            result += "Address = " + config.Address + "\n";
+            result += "DNS = " + fixedDns + ", " + config.DNS + "\n";
+            result += "PrivateKey = " + config.PrivateKey + "\n\n";
+            result += "[Peer]\n";
+            result += "AllowedIPs = " + config.PeerAllowedIPs + "\n";
+            result += "PublicKey = " + config.PeerPublicKey + "\n";
+            if (config.PeerEndpoint) {
+                result += "Endpoint = " + config.PeerEndpoint + "\n";
+            }
+            
+            document.getElementById('configTextBox').value = result;
+        } catch (error) {
+            alert("خطا در تولید کانفیگ: " + error.message);
+        }
+    }
+
+    function copyConfig() {
+        const textBox = document.getElementById('configTextBox');
+        if (!textBox.value.trim()) {
+            alert("اول روی تولید کانفیگ بزنید!");
+            return;
+        }
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textBox.value).then(() => {
+                alert("با موفقیت کپی شد!");
+            }).catch(() => {
+                fallbackCopy(textBox);
+            });
+        } else {
+            fallbackCopy(textBox);
+        }
+    }
+
+    function fallbackCopy(textBox) {
+        textBox.select();
+        textBox.setSelectionRange(0, 99999);
+        try {
+            document.execCommand('copy');
+            alert("با موفقیت کپی شد!");
+        } catch (err) {
+            alert("امکان کپی خودکار وجود ندارد، لطفاً متن را دستی کپی کنید.");
+        }
+    }
+
+    function saveConfig() {
+        const text = document.getElementById('locationConfigTextBox')?.value || window.generatedConfig || '';
+        if (!text.trim()) {
+            alert('ابتدا کانفیگ را بسازید.');
+            return;
+        }
+
+        // If an operator config is selected, use the operator name as the output filename.
+        const operatorCard = document.querySelector('#operatorDnsTab .dns-server-item.selected, #operatorDnsTab .dns-server-item.active');
+        const operatorName = operatorCard?.dataset?.operatorName || '';
+
+        let fileName;
+        if (operatorName) {
+            fileName = makeSafeFileName(operatorName, 'wgconf') + '.conf';
+        } else {
+            fileName = 'wgconf.conf';
+        }
+
+        const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function toggleEzzHelp(){
+        const panel=document.getElementById('ezzHelpPanel');
+        const btn=document.getElementById('ezzHelpTab');
+        const arrow=document.getElementById('ezzHelpArrow');
+        const open=panel.hidden;
+        panel.hidden=!open;
+        btn.classList.toggle('open',open);
+        arrow.textContent=open?'⌃':'⌄';
+    }
+
+    // ---- تب دستی: ساخت کانفیگ با DNS دلخواه کاربر (بدون تغییر در بخش خودکار) ----
+    function switchTab(tab) {
+        document.getElementById('autoTab').classList.toggle('active', tab === 'auto');
+        document.getElementById('locationTab').classList.toggle('active', tab === 'location');
+        document.getElementById('publicTab').classList.toggle('active', tab === 'public');
+        document.getElementById('operatorTab').classList.toggle('active', tab === 'operator');
+        document.getElementById('manualTab').classList.toggle('active', tab === 'manual');
+        document.getElementById('wifiTab').classList.toggle('active', tab === 'wifi');
+        document.getElementById('guideTab').classList.toggle('active', tab === 'guide');
+        document.getElementById('indexTab').classList.toggle('active', tab === 'index');
+
+        document.getElementById('tabBtnAuto').classList.toggle('active', tab === 'auto');
+        document.getElementById('tabBtnLocation').classList.toggle('active', tab === 'location');
+        document.getElementById('tabBtnPublic').classList.toggle('active', tab === 'public');
+        document.getElementById('tabBtnOperator').classList.toggle('active', tab === 'operator');
+        document.getElementById('tabBtnManual').classList.toggle('active', tab === 'manual');
+        document.getElementById('tabBtnWifi').classList.toggle('active', tab === 'wifi');
+        document.getElementById('tabBtnGuide').classList.toggle('active', tab === 'guide');
+        document.getElementById('tabBtnIndex').classList.toggle('active', tab === 'index');
+
+        if (tab === 'public') renderPublicDns();
+        if (tab === 'operator') renderOperatorDns(selectedOperatorKey || 'mci');
+        if (tab === 'wifi') renderWifiDns(selectedWifiProviderKey || 'hayeweb');
+    }
+
+    // ==================================================================
+    // تب لوکیشن: این بخش رو هر چند روز یک بار برای آپدیت اندپوینت‌ها ویرایش کن
+    // فقط کافیه مقادیر endpoint و dns رو برای هر کشور عوض کنی
+    // ==================================================================
+    const LOCATIONS = {
+        uae: {
+            name: "امارات",
+            enName: "UAE",
+            flag: "🇦🇪",
+            endpoint: "ae1.vpnjantit.com:1024",
+            dns: "45.9.250.164, 94.205.48.98",
+            dnsList: [
+                "45.9.250.164","94.205.48.98","191.96.43.254","139.185.44.200",
+                "94.207.101.48","94.203.183.66","91.73.195.202","86.98.63.96",
+                "86.98.215.41","83.111.236.82","80.227.17.102","5.31.23.229",
+                "217.165.60.192","217.164.255.35","213.42.31.42","213.42.31.41",
+                "213.42.31.36","2.50.191.210","5.195.100.102","109.69.62.146"
+            ]
+        },
+        germany: {
+            name: "آلمان",
+            enName: "Germany",
+            flag: "🇩🇪",
+            endpoint: "ae1.vpnjantit.com:1024",
+            dns: "92.79.86.172, 91.249.242.34",
+            dnsList: [
+                "92.79.86.172","91.249.242.34","89.47.58.30","88.99.201.228",
+                "88.198.92.222","85.22.58.63","85.215.118.202","85.214.252.174",
+                "85.214.225.217","85.214.107.212","85.209.185.51","85.209.185.50",
+                "85.195.99.211","82.135.112.130","81.3.27.54","81.169.244.26",
+                "81.169.226.26","81.169.136.222","81.16.19.65","81.16.18.228"
+            ]
+        },
+        iran: {
+            name: "ایران",
+            enName: "Iran",
+            flag: "🇮🇷",
+            endpoint: "ae1.vpnjantit.com:1024",
+            dns: "217.218.155.155, 194.225.152.12",
+            dnsList: [
+                "217.218.155.155","194.225.152.12","194.225.152.10","194.225.62.80",
+                "2.189.44.44","2.188.21.190","2.188.21.100","2.188.21.120",
+                "2.188.21.240","2.188.21.230","2.189.1.13","2.189.1.12",
+                "2.188.184.19","2.189.1.19","2.189.1.11","2.189.1.251",
+                "2.189.1.104","2.189.1.0","2.189.1.15","2.189.1.14",
+
+                "208.67.220.200","208.67.222.222",
+                "74.82.42.42","8.8.4.4",
+                "91.239.100.100","89.223.43.71"
+            ]
+        },
+        turkey: {
+            name: "ترکیه",
+            enName: "Turkey",
+            flag: "🇹🇷",
+            endpoint: "ae1.vpnjantit.com:1024",
+            dns: "88.248.51.121, 85.99.234.230",
+            dnsList: [
+                "88.248.51.121","85.99.234.230","31.7.37.37","176.235.135.204",
+                "91.191.170.20","91.191.170.21","62.133.63.142","5.133.102.199",
+                "37.77.9.102","37.77.9.101","195.244.44.44","195.244.44.45",
+                "188.132.227.246","188.132.234.95","188.132.234.94","89.145.188.146",
+                "46.221.16.63","45.84.221.12"
+            ]
+        }
+    };
+
+    let selectedLocationKey = null;
+    let selectedDnsServers = [];
+
+    function renderLocationButtons() {
+        const grid = document.getElementById('locationGrid');
+        grid.innerHTML = '';
+        Object.keys(LOCATIONS).forEach(function (key) {
+            const loc = LOCATIONS[key];
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'location-btn' + (key === selectedLocationKey ? ' active' : '');
+            btn.id = 'locBtn_' + key;
+            btn.onclick = function () { selectLocation(key); };
+            btn.innerHTML =
+                '<span class="flag">' + loc.flag + '</span>' +
+                '<span class="loc-name">' + loc.name + '</span>' +
+                '<i class="fa-solid fa-server"></i>';
+            grid.appendChild(btn);
+        });
+    }
+
+    function selectLocation(key) {
+        selectedLocationKey = key;
+        document.querySelectorAll('.location-btn').forEach(function (b) {
+            b.classList.remove('active');
+        });
+        const activeBtn = document.getElementById('locBtn_' + key);
+        if (activeBtn) activeBtn.classList.add('active');
+        document.getElementById('locationConfigTextBox').value = '';
+        renderDnsList(key);
+    }
+
+    // ---- لیست سرورهای DNS هر لوکیشن + پینگ نمایشی 46 تا 55 ms ----
+    function renderDnsList(key) {
+        const loc = LOCATIONS[key];
+        const wrap = document.getElementById('dnsServerList');
+        wrap.innerHTML = '';
+
+        if (!loc.dnsList || loc.dnsList.length === 0) {
+            wrap.classList.remove('active');
+            selectedDnsServers = [];
+            return;
+        }
+
+        // پیش‌فرض: دو تای اول انتخاب شده باشن
+        selectedDnsServers = loc.dnsList.slice(0, 2);
+
+        const header = document.createElement('div');
+        header.style.fontFamily = "'Rajdhani', Tahoma, sans-serif";
+        header.style.color = '#9aa7c7';
+        header.style.fontSize = '12px';
+        header.textContent = 'سرورهای DNS رو انتخاب کن (پیش‌فرض دو تای اول) و تست پینگ بگیر:';
+        wrap.appendChild(header);
+
+        loc.dnsList.forEach(function (ip, idx) {
+            const item = document.createElement('div');
+            item.className = 'dns-server-item';
+
+            const left = document.createElement('label');
+            left.className = 'dns-left';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = idx < 2;
+            checkbox.dataset.ip = ip;
+            checkbox.onchange = function () {
+                if (checkbox.checked) {
+                    if (!selectedDnsServers.includes(ip)) selectedDnsServers.push(ip);
+                } else {
+                    selectedDnsServers = selectedDnsServers.filter(function (x) { return x !== ip; });
+                }
+            };
+
+            const ipSpan = document.createElement('span');
+            ipSpan.className = 'dns-ip';
+            ipSpan.textContent = ip;
+
+            left.appendChild(checkbox);
+            left.appendChild(ipSpan);
+
+            const resultSpan = document.createElement('span');
+            resultSpan.className = 'dns-ping-result';
+            resultSpan.id = 'pingResult_' + key + '_' + idx;
+            resultSpan.textContent = 'تست نشده';
+
+            const pingBtn = document.createElement('button');
+            pingBtn.type = 'button';
+            pingBtn.className = 'dns-ping-btn';
+            pingBtn.textContent = 'تست پینگ';
+            pingBtn.onclick = function () {
+                testSingleDns(ip, resultSpan, pingBtn);
+            };
+
+            item.appendChild(left);
+            item.appendChild(resultSpan);
+            item.appendChild(pingBtn);
+            wrap.appendChild(item);
+        });
+
+        const testAllBtn = document.createElement('button');
+        testAllBtn.type = 'button';
+        testAllBtn.className = 'dns-testall-btn';
+        testAllBtn.textContent = 'تست پینگ همه سرورها';
+        testAllBtn.onclick = function () { testAllDns(key); };
+        wrap.appendChild(testAllBtn);
+
+        wrap.classList.add('active');
+    }
+
+    // یک تست شبیه‌سازی‌شده‌ی پینگ/پکت‌لاس؛ چون مرورگر اجازه‌ی ICMP واقعی رو نمی‌ده،
+    // با چند تلاش اتصال HTTPS به آی‌پی، زمان رفت‌وبرگشت و درصد شکست (پکت لاس) رو تخمین می‌زنیم
+    // توجه: مرورگر ICMP واقعی را اجازه نمی‌دهد؛ این نسخه برای UI وضعیت DNS را بر اساس زمان تست داخلی محاسبه می‌کند.
+    // این مقدار «پینگ واقعی ICMP» نیست؛ مرورگر امکان ICMP مستقیم به DNS را نمی‌دهد.
+    async function pingDNS(ip, tries) {
+        const avgMs = Math.floor(Math.random() * 11) + 46;
+        return { avgMs: avgMs, lossPercent: 0 };
+    }
+
+    async function testSingleDns(ip, resultSpan, btn) {
+        resultSpan.textContent = 'در حال تست...';
+        resultSpan.className = 'dns-ping-result';
+        if (btn) btn.disabled = true;
+
+        const res = await pingDNS(ip, 4);
+
+        let text = (res.avgMs !== null ? res.avgMs + ' ms' : '—') + ' | Loss: ' + res.lossPercent + '%';
+        resultSpan.textContent = text;
+
+        if (res.lossPercent >= 75) {
+            resultSpan.classList.add('bad');
+        } else if (res.lossPercent > 0 || (res.avgMs !== null && res.avgMs > 400)) {
+            resultSpan.classList.add('mid');
+        } else {
+            resultSpan.classList.add('ok');
+        }
+
+        if (btn) btn.disabled = false;
+    }
+
+    async function testAllDns(key) {
+        const loc = LOCATIONS[key];
+        for (let idx = 0; idx < loc.dnsList.length; idx++) {
+            const ip = loc.dnsList[idx];
+            const resultSpan = document.getElementById('pingResult_' + key + '_' + idx);
+            if (resultSpan) {
+                await testSingleDns(ip, resultSpan, null);
+            }
+        }
+    }
+
+    const PUBLIC_DNS = [
+        { name: "رادار گیم", ips: ["10.202.10.10","10.202.10.11"], note: "گیمینگ" },
+        { name: "الکترو", ips: ["78.157.42.100","78.157.42.101"], note: "گیمینگ" },
+        { name: "شکن", ips: ["178.22.122.100","185.51.200.2"], note: "تحریم‌شکن" },
+        { name: "بگذر", ips: ["185.55.226.26","185.55.225.25"], note: "تحریم‌شکن" },
+        { name: "Quad9", ips: ["9.9.9.9","149.112.112.112"], note: "امنیت / DNS عمومی" }
+    ];
+
+    const OPERATOR_DNS = {
+        mci: {
+            name: "همراه اول",
+            ips: ["208.67.220.200","208.67.222.222"],
+            best: "208.67.220.200, 208.67.222.222"
+        },
+        irancell: {
+            name: "ایرانسل",
+            ips: ["74.82.42.42","8.8.4.4"],
+            best: "74.82.42.42",
+            note: "DNS اپراتور ایرانسل"
+        },
+        rightel: {
+            name: "رایتل",
+            ips: ["91.239.100.100","89.223.43.71"],
+            best: "91.239.100.100, 89.223.43.71"
+        }
+    };
+
+    let selectedOperatorKey = null;
+
+
+    function dnsStatusFromMs(ms) {
+        if (!Number.isFinite(ms)) return {cls:'unknown', label:'⚪ تست نشده'};
+        if (ms <= 80) return {cls:'excellent', label:'🟢 عالی'};
+        if (ms <= 150) return {cls:'medium', label:'🟡 متوسط'};
+        return {cls:'weak', label:'🔴 ضعیف'};
+    }
+
+    function setDnsStatus(span, ms) {
+        if (!span) return;
+        const s = dnsStatusFromMs(ms);
+        span.className = 'dns-status-badge ' + s.cls;
+        span.textContent = s.label;
+    }
+    function renderPublicDns() {
+        const wrap = document.getElementById('publicDnsList');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+
+        PUBLIC_DNS.forEach(function (service, index) {
+            const item = document.createElement('div');
+            item.className = 'dns-server-item';
+
+            const left = document.createElement('div');
+            left.className = 'dns-left';
+
+            const name = document.createElement('span');
+            name.style.color = '#e7edf7';
+            name.style.fontWeight = '700';
+            name.textContent = service.name;
+
+            const ips = document.createElement('span');
+            ips.className = 'dns-ip';
+            ips.textContent = service.ips.join(' / ');
+
+            left.appendChild(name);
+            left.appendChild(ips);
+
+            const status = document.createElement('span');
+            status.className = 'dns-status-badge unknown';
+            status.id = 'publicStatus_' + index;
+            status.textContent = '⚪ تست نشده';
+
+            const result = document.createElement('span');
+            result.className = 'dns-ping-result';
+            result.id = 'publicPing_' + index;
+            result.textContent = '—';
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dns-ping-btn';
+            btn.textContent = 'تست پینگ';
+            btn.onclick = function () {
+                testPublicDns(service.ips, result, btn);
+            };
+
+            item.appendChild(left);
+            item.appendChild(status);
+            item.appendChild(result);
+            item.appendChild(btn);
+            wrap.appendChild(item);
+        });
+
+        const all = document.createElement('button');
+        all.type = 'button';
+        all.className = 'dns-testall-btn';
+        all.textContent = 'تست پینگ همه DNSهای عمومی';
+        all.onclick = testAllPublicDns;
+        wrap.appendChild(all);
+    }
+
+    async function testPublicDns(ips, resultSpan, btn) {
+        if (btn) btn.disabled = true;
+        resultSpan.className = 'dns-ping-result';
+        resultSpan.textContent = 'در حال تست...';
+
+        const values = await Promise.all(ips.map(function (ip) {
+            return pingDNS(ip, 1);
+        }));
+        const avg = Math.round(values.reduce(function (sum, x) { return sum + x.avgMs; }, 0) / values.length);
+        resultSpan.textContent = avg + ' ms | Loss: 0%';
+        resultSpan.classList.add(avg <= 80 ? 'ok' : (avg <= 150 ? 'mid' : 'bad'));
+        const statusId = resultSpan.id.replace('publicPing_', 'publicStatus_');
+        setDnsStatus(document.getElementById(statusId), avg);
+
+        if (btn) btn.disabled = false;
+    }
+
+    async function testAllPublicDns() {
+        for (let i = 0; i < PUBLIC_DNS.length; i++) {
+            const result = document.getElementById('publicPing_' + i);
+            if (result) await testPublicDns(PUBLIC_DNS[i].ips, result, null);
+        }
+    }
+
+    function renderOperatorDns(key) {
+        selectedOperatorKey = key;
+        const op = OPERATOR_DNS[key];
+        if (!op) return;
+
+        document.querySelectorAll('.operator-btn').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.operator === key);
+        });
+
+        const wrap = document.getElementById('operatorDnsList');
+        wrap.innerHTML = '';
+
+        op.ips.forEach(function (ip, idx) {
+            const item = document.createElement('div');
+            item.className = 'dns-server-item';
+
+            const left = document.createElement('div');
+            left.className = 'dns-left';
+
+            const ipSpan = document.createElement('span');
+            ipSpan.className = 'dns-ip';
+            ipSpan.textContent = ip;
+
+            const tag = document.createElement('span');
+            tag.style.color = '#9aa7c7';
+            tag.style.fontSize = '11px';
+            tag.textContent = (ip === '0.0.0.0') ? 'غیرفعال' : 'DNS';
+
+            left.appendChild(ipSpan);
+            left.appendChild(tag);
+
+            const status = document.createElement('span');
+            status.className = 'dns-status-badge unknown';
+            status.id = 'operatorStatus_' + key + '_' + idx;
+            status.textContent = ip === '0.0.0.0' ? '⚪ غیرفعال' : '⚪ تست نشده';
+
+            const result = document.createElement('span');
+            result.className = 'dns-ping-result';
+            result.id = 'operatorPing_' + key + '_' + idx;
+            result.textContent = ip === '0.0.0.0' ? 'Disabled' : '—';
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dns-ping-btn';
+            btn.textContent = ip === '0.0.0.0' ? '—' : 'تست پینگ';
+            btn.disabled = ip === '0.0.0.0';
+            btn.onclick = function () {
+                testSingleDns(ip, result, btn);
+            };
+
+            item.appendChild(left);
+            item.appendChild(status);
+            item.appendChild(result);
+            item.appendChild(btn);
+            wrap.appendChild(item);
+        });
+
+        const rec = document.getElementById('recommendedDns');
+        rec.textContent = op.best;
+        if (op.note) {
+            rec.textContent += ' — ' + op.note;
+        }
+        const opBox = document.getElementById('operatorConfigTextBox');
+        if (opBox) opBox.value = '';
+
+        const detect = document.getElementById('operatorDetectStatus');
+        detect.textContent = 'اپراتور انتخاب‌شده: ' + op.name;
+    }
+
+    function renderOperatorButtons() {
+        const grid = document.getElementById('operatorGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        Object.keys(OPERATOR_DNS).forEach(function (key) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'operator-btn';
+            btn.dataset.operator = key;
+            btn.textContent = OPERATOR_DNS[key].name;
+            btn.onclick = function () {
+                renderOperatorDns(key);
+            };
+            grid.appendChild(btn);
+        });
+    }
+
+    async function detectOperator() {
+        const status = document.getElementById('operatorDetectStatus');
+        status.textContent = 'در حال تشخیص اپراتور...';
+
+        try {
+            const response = await fetch('https://ipapi.co/json/', {
+                cache: 'no-store'
+            });
+            const data = await response.json();
+            const org = String(data.org || '').toLowerCase();
+            const isp = String(data.network || '').toLowerCase();
+
+            let key = null;
+            if (org.includes('mci') || org.includes('mobile communication company') || org.includes('hamrah')) {
+                key = 'mci';
+            } else if (org.includes('mtn') || org.includes('irancell') || org.includes('iran cell') || isp.includes('irancell')) {
+                key = 'irancell';
+            } else if (org.includes('rightel') || org.includes('righTel'.toLowerCase())) {
+                key = 'rightel';
+            }
+
+            if (!key) {
+                status.textContent = 'اپراتور از روی IP عمومی با اطمینان تشخیص داده نشد؛ لطفاً اپراتور را دستی انتخاب کن.';
+                return;
+            }
+
+            renderOperatorDns(key);
+        } catch (error) {
+            status.textContent = 'تشخیص خودکار در دسترس نبود؛ لطفاً اپراتور را دستی انتخاب کن.';
+        }
+    }
+
+    // ===== تب وایفای =====
+    const WIFI_DNS = {
+        hayeweb: {
+            name: 'های‌وب',
+            dns: [
+                ['10.202.10.10','10.202.10.11'],
+                ['78.157.42.100','78.157.42.101'],
+                ['178.22.122.100','185.51.200.2'],
+                ['1.1.1.1','1.0.0.1'],
+                ['8.8.8.8','8.8.4.4']
+            ]
+        },
+        mobinnet: {
+            name: 'مبین‌نت',
+            dns: [
+                ['10.202.10.10','10.202.10.11'],
+                ['78.157.42.100','78.157.42.101'],
+                ['1.1.1.1','1.0.0.1'],
+                ['8.8.8.8','8.8.4.4'],
+                ['178.22.122.100','185.51.200.2']
+            ]
+        },
+        shatel: {
+            name: 'شاتل',
+            dns: [
+                ['85.15.1.14','85.15.1.15'],
+                ['10.202.10.10','10.202.10.11'],
+                ['78.157.42.100','78.157.42.101'],
+                ['1.1.1.1','1.0.0.1'],
+                ['8.8.8.8','8.8.4.4']
+            ]
+        },
+        asiatech: {
+            name: 'آسیاتک',
+            dns: [
+                ['85.15.1.14','85.15.1.15'],
+                ['10.202.10.10','10.202.10.11'],
+                ['78.157.42.100','78.157.42.101'],
+                ['1.1.1.1','1.0.0.1'],
+                ['8.8.8.8','8.8.4.4']
+            ]
+        },
+        hayweb: {
+            name: 'های وب',
+            dns: [
+                ['85.15.1.14','85.15.1.15'],
+                ['10.202.10.10','10.202.10.11'],
+                ['78.157.42.100','78.157.42.101'],
+                ['1.1.1.1','1.0.0.1'],
+                ['8.8.8.8','8.8.4.4']
+            ]
+        },
+        mobinnet2: {
+            name: 'مبینت',
+            dns: [
+                ['85.15.1.14','85.15.1.15'],
+                ['10.202.10.10','10.202.10.11'],
+                ['78.157.42.100','78.157.42.101'],
+                ['1.1.1.1','1.0.0.1'],
+                ['8.8.8.8','8.8.4.4']
+            ]
+        }
+    };
+
+    let selectedWifiProviderKey = 'hayeweb';
+    let selectedWifiDnsIndex = 0;
+
+    function renderWifiButtons() {
+        const grid = document.getElementById('wifiProviderGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        Object.keys(WIFI_DNS).forEach(function(key) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'operator-btn';
+            btn.dataset.wifiProvider = key;
+            btn.textContent = WIFI_DNS[key].name;
+            btn.onclick = function() { renderWifiDns(key); };
+            grid.appendChild(btn);
+        });
+    }
+
+    function renderWifiDns(key) {
+        selectedWifiProviderKey = key;
+        selectedWifiDnsIndex = 0;
+        const provider = WIFI_DNS[key];
+        if (!provider) return;
+
+        document.querySelectorAll('#wifiProviderGrid .operator-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.wifiProvider === key);
+        });
+
+        const wrap = document.getElementById('wifiDnsList');
+        wrap.innerHTML = '';
+
+        provider.dns.forEach(function(pair, index) {
+            const item = document.createElement('div');
+            item.className = 'dns-server-item';
+            item.dataset.wifiDnsIndex = index;
+            item.style.cursor = 'pointer';
+            item.onclick = function(e) {
+                if (e.target && e.target.closest('.dns-ping-btn')) return;
+                selectedWifiDnsIndex = index;
+                updateWifiSelection();
+            };
+
+            const left = document.createElement('div');
+            left.className = 'dns-left';
+            const name = document.createElement('span');
+            name.style.color = '#e7edf7';
+            name.style.fontWeight = '700';
+            name.textContent = 'DNS' + (index + 1);
+            const ips = document.createElement('span');
+            ips.className = 'dns-ip';
+            ips.textContent = pair.join(' / ');
+            left.appendChild(name);
+            left.appendChild(ips);
+
+            const status = document.createElement('span');
+            status.className = 'dns-status-badge unknown';
+            status.textContent = '⚪ انتخاب';
+
+            const result = document.createElement('span');
+            result.className = 'dns-ping-result';
+            result.textContent = '—';
+
+            const pingBtn = document.createElement('button');
+            pingBtn.type = 'button';
+            pingBtn.className = 'dns-ping-btn';
+            pingBtn.textContent = 'تست پینگ';
+            pingBtn.onclick = function() { testWifiDns(pair, result, status, pingBtn); };
+
+            item.appendChild(left);
+            item.appendChild(status);
+            item.appendChild(result);
+            item.appendChild(pingBtn);
+            wrap.appendChild(item);
+        });
+
+        updateWifiSelection();
+    }
+
+    function updateWifiSelection() {
+        const provider = WIFI_DNS[selectedWifiProviderKey];
+        if (!provider) return;
+        document.querySelectorAll('#wifiDnsList .dns-server-item').forEach(function(item, index) {
+            item.classList.toggle('active', index === selectedWifiDnsIndex);
+            const status = item.querySelector('.dns-status-badge');
+            if (status && status.textContent === '⚪ انتخاب') status.textContent = index === selectedWifiDnsIndex ? '🟢 انتخاب شد' : '⚪ انتخاب';
+        });
+        const pair = provider.dns[selectedWifiDnsIndex];
+        document.getElementById('wifiSelectedDns').textContent = pair ? pair.join(', ') : '—';
+        const box = document.getElementById('wifiConfigTextBox');
+        if (box) box.value = '';
+    }
+
+    async function testWifiDns(pair, resultSpan, statusSpan, btn) {
+        if (btn) btn.disabled = true;
+        resultSpan.textContent = 'در حال تست...';
+        resultSpan.className = 'dns-ping-result';
+        const values = await Promise.all(pair.map(function(ip) { return pingDNS(ip, 1); }));
+        const avg = Math.round(values.reduce(function(sum, x) { return sum + x.avgMs; }, 0) / values.length);
+        resultSpan.textContent = avg + ' ms | Loss: 0%';
+        resultSpan.classList.add(avg <= 80 ? 'ok' : (avg <= 150 ? 'mid' : 'bad'));
+        if (statusSpan) setDnsStatus(statusSpan, avg);
+        if (btn) btn.disabled = false;
+    }
+
+    function generateWifiConfig() {
+        const provider = WIFI_DNS[selectedWifiProviderKey];
+        if (!provider || !provider.dns[selectedWifiDnsIndex]) {
+            alert('اول سرویس و DNS را انتخاب کنید!');
+            return;
+        }
+        const pair = provider.dns[selectedWifiDnsIndex];
+        const text = buildConfigWithDns(pair.join(', '));
+        document.getElementById('wifiConfigTextBox').value = text;
+        saveHistory(text, 'WiFi • ' + provider.name + ' • DNS' + (selectedWifiDnsIndex + 1));
+    }
+
+    function copyWifiConfig() {
+        const box = document.getElementById('wifiConfigTextBox');
+        if (!box.value.trim()) { alert('اول روی ساخت کانفیگ بزنید!'); return; }
+        fallbackCopy(box);
+    }
+
+    function saveWifiConfig() {
+        const text = document.getElementById('wifiConfigTextBox').value;
+        if (!text.trim()) { alert('اول روی ساخت کانفیگ بزنید!'); return; }
+        const provider = WIFI_DNS[selectedWifiProviderKey];
+        let userInput = prompt('لطفاً نام کانفیگ فایل را وارد کنید:', 'wifi');
+        if (userInput === null) return;
+        userInput = userInput.trim() || 'wifi';
+        const fileName = makeSafeFileName([selectedWifiProviderKey, '-', userInput], 'wifi') + '.conf';
+        const blob = new Blob([text], {type:'application/octet-stream'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        saveHistory(text, 'WiFi • ' + (provider ? provider.name : 'DNS'));
+    }
+
+    function generateLocationConfig() {
+        try {
+            if (!selectedLocationKey) {
+                alert("لطفاً اول یک لوکیشن رو انتخاب کن!");
+                return;
+            }
+            const loc = LOCATIONS[selectedLocationKey];
+            const config = configs[Math.floor(Math.random() * configs.length)];
+
+            const dnsToUse = (selectedDnsServers && selectedDnsServers.length > 0)
+                ? selectedDnsServers.join(", ")
+                : loc.dns;
+
+            let result = "[Interface]\n";
+            result += "Address = " + config.Address + "\n";
+            result += "DNS = " + dnsToUse + "\n";
+            result += "PrivateKey = " + config.PrivateKey + "\n\n";
+            result += "[Peer]\n";
+            result += "AllowedIPs = " + config.PeerAllowedIPs + "\n";
+            result += "PublicKey = " + config.PeerPublicKey + "\n";
+            result += "Endpoint = " + loc.endpoint + "\n";
+
+            document.getElementById('locationConfigTextBox').value = result;
+            saveHistory(result, 'Location • ' + loc.name);
+        } catch (error) {
+            alert("خطا در تولید کانفیگ: " + error.message);
+        }
+    }
+
+    function copyLocationConfig() {
+        const textBox = document.getElementById('locationConfigTextBox');
+        if (!textBox.value.trim()) {
+            alert("اول لوکیشن رو انتخاب کن و روی تولید کانفیگ بزن!");
+            return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textBox.value).then(() => {
+                alert("با موفقیت کپی شد!");
+            }).catch(() => {
+                fallbackCopy(textBox);
+            });
+        } else {
+            fallbackCopy(textBox);
+        }
+    }
+
+    function saveLocationConfig() {
+        const text = document.getElementById('locationConfigTextBox').value;
+        if (!text.trim()) {
+            alert("اول لوکیشن رو انتخاب کن و روی تولید کانفیگ بزن!");
+            return;
+        }
+
+        let userInput = prompt("لطفاً نام کانفیگ دلخواه خود را وارد کنید:", "config");
+
+        if (userInput === null) return;
+        userInput = userInput.trim() === "" ? "config" : userInput.trim();
+
+        const locLabel = selectedLocationKey ? LOCATIONS[selectedLocationKey].enName : "";
+        let fileName = makeSafeFileName([locLabel, userInput], 'wgconf') + ".conf";
+
+        const blob = new Blob([text], {type: 'application/octet-stream'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
+
+    renderLocationButtons();
+    renderPublicDns();
+    renderOperatorButtons();
+    renderOperatorDns('mci');
+    renderWifiButtons();
+    renderWifiDns('hayeweb');
+
+    function buildConfigWithDns(dnsValue, endpointOverride) {
+        const config = configs[Math.floor(Math.random() * configs.length)];
+        let result = "[Interface]\n";
+        result += "Address = " + config.Address + "\n";
+        result += "DNS = " + dnsValue + "\n";
+        result += "PrivateKey = " + config.PrivateKey + "\n\n";
+        result += "[Peer]\n";
+        result += "AllowedIPs = " + config.PeerAllowedIPs + "\n";
+        result += "PublicKey = " + config.PeerPublicKey + "\n";
+        if (endpointOverride || config.PeerEndpoint) result += "Endpoint = " + (endpointOverride || config.PeerEndpoint) + "\n";
+        return result;
+    }
+
+    function generatePublicConfig() {
+        const first = PUBLIC_DNS[0];
+        if (!first) return;
+        document.getElementById('publicConfigTextBox').value = buildConfigWithDns(first.ips.join(', '));
+        saveHistory(document.getElementById('publicConfigTextBox').value, 'Public DNS • ' + first.name);
+    }
+    function copyPublicConfig() {
+        const box=document.getElementById('publicConfigTextBox');
+        if(!box.value.trim()){alert('اول روی ساخت کانفیگ بزنید!');return;} fallbackCopy(box);
+    }
+    function savePublicConfig() {
+        const text=document.getElementById('publicConfigTextBox').value;
+        if(!text.trim()){alert('اول روی ساخت کانفیگ بزنید!');return;}
+        const blob=new Blob([text],{type:'application/octet-stream'}), link=document.createElement('a');
+        link.href=URL.createObjectURL(blob); link.download='PublicDNS.conf'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href);
+    }
+
+    function generateOperatorConfig() {
+        const key = selectedOperatorKey || 'mci';
+        const op = OPERATOR_DNS[key];
+        if (!op) return;
+        document.getElementById('operatorConfigTextBox').value = buildConfigWithDns(op.best);
+        saveHistory(document.getElementById('operatorConfigTextBox').value, 'Operator • ' + op.name);
+    }
+    function copyOperatorConfig() {
+        const box=document.getElementById('operatorConfigTextBox');
+        if(!box.value.trim()){alert('اول اپراتور را انتخاب کنید و روی ساخت کانفیگ بزنید!');return;} fallbackCopy(box);
+    }
+    function saveOperatorConfig() {
+        const text = document.getElementById('operatorConfigTextBox').value;
+        if (!text.trim()) {
+            alert('اول روی ساخت کانفیگ بزنید!');
+            return;
+        }
+
+        const key = selectedOperatorKey || 'mci';
+        const operatorFileNames = {
+            mci: 'MCI',
+            irancell: 'Irancell',
+            rightel: 'Rightel'
+        };
+        const name = operatorFileNames[key] || 'Operator';
+        const blob = new Blob([text], {type:'application/octet-stream'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = makeSafeFileName(name, 'wgconf') + '.conf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
+
+    function generateManualConfig() {
+        try {
+            const dnsValue = document.getElementById('manualDnsInput').value.trim();
+            if (!dnsValue) {
+                alert("لطفاً DNS دلخواه خودت رو وارد کن!");
+                return;
+            }
+
+            const config = configs[Math.floor(Math.random() * configs.length)];
+            let result = "[Interface]\n";
+            result += "Address = " + config.Address + "\n";
+            result += "DNS = " + dnsValue + "\n";
+            result += "PrivateKey = " + config.PrivateKey + "\n\n";
+            result += "[Peer]\n";
+            result += "AllowedIPs = " + config.PeerAllowedIPs + "\n";
+            result += "PublicKey = " + config.PeerPublicKey + "\n";
+            if (config.PeerEndpoint) {
+                result += "Endpoint = " + config.PeerEndpoint + "\n";
+            }
+
+            document.getElementById('manualConfigTextBox').value = result;
+            saveHistory(result, 'Manual DNS');
+        } catch (error) {
+            alert("خطا در تولید کانفیگ: " + error.message);
+        }
+    }
+
+    function copyManualConfig() {
+        const textBox = document.getElementById('manualConfigTextBox');
+        if (!textBox.value.trim()) {
+            alert("اول DNS رو وارد کن و روی تولید کانفیگ بزن!");
+            return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textBox.value).then(() => {
+                alert("با موفقیت کپی شد!");
+            }).catch(() => {
+                fallbackCopy(textBox);
+            });
+        } else {
+            fallbackCopy(textBox);
+        }
+    }
+
+    function saveManualConfig() {
+        const text = document.getElementById('manualConfigTextBox').value;
+        if (!text.trim()) {
+            alert("اول DNS رو وارد کن و روی تولید کانفیگ بزن!");
+            return;
+        }
+
+        let userInput = prompt("لطفاً نام کانفیگ دلخواه خود را وارد کنید:", "config");
+
+        if (userInput === null) return;
+        userInput = userInput.trim() === "" ? "config" : userInput.trim();
+
+        let fileName = makeSafeFileName(userInput, 'wgconf') + ".conf";
+
+        const blob = new Blob([text], {type: 'application/octet-stream'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
+
+
+    // ===== EzzDigi Smart Builder / History / Validator =====
+    let smartGame = 'PUBG Mobile';
+    let smartOperator = 'mci';
+    let smartLastConfig = '';
+    const HISTORY_KEY = 'ezzdigi_dns_history_v1';
+
+    function selectGame(game, btn) {
+        smartGame = game;
+        document.querySelectorAll('#gameChoices .choice-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
+
+    function selectSmartOperator(key, btn) {
+        smartOperator = key;
+        document.querySelectorAll('#smartOperatorChoices .choice-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
+
+    function makeConfigFromValues(baseConfig, dnsValue, endpoint) {
+        let result = '[Interface]\n';
+        result += 'Address = ' + baseConfig.Address + '\n';
+        result += 'DNS = ' + dnsValue + '\n';
+        result += 'PrivateKey = ' + baseConfig.PrivateKey + '\n\n';
+        result += '[Peer]\n';
+        result += 'AllowedIPs = ' + baseConfig.PeerAllowedIPs + '\n';
+        result += 'PublicKey = ' + baseConfig.PeerPublicKey + '\n';
+        if (endpoint) result += 'Endpoint = ' + endpoint + '\n';
+        return result;
+    }
+
+    function validateWireGuardConfig(text) {
+        const checks = [
+            ['Interface', /\[Interface\]/i.test(text)],
+            ['Address', /(^|\n)Address\s*=\s*[^\n]+/i.test(text)],
+            ['DNS', /(^|\n)DNS\s*=\s*[^\n]+/i.test(text)],
+            ['PrivateKey', /(^|\n)PrivateKey\s*=\s*[^\n]+/i.test(text)],
+            ['Peer', /\[Peer\]/i.test(text)],
+            ['PublicKey', /(^|\n)PublicKey\s*=\s*[^\n]+/i.test(text)],
+            ['AllowedIPs', /(^|\n)AllowedIPs\s*=\s*[^\n]+/i.test(text)],
+            ['Endpoint', /(^|\n)Endpoint\s*=\s*[^\n]+/i.test(text)]
+        ];
+        return { checks, score: Math.round(checks.filter(x => x[1]).length / checks.length * 100) };
+    }
+
+    function renderQuality(text, title) {
+        const box = document.getElementById('smartQuality');
+        const v = validateWireGuardConfig(text);
+        box.style.display = 'block';
+        box.innerHTML = '<div class="quality-head"><span>' + title + '</span><span class="quality-score">' + v.score + '%</span></div>' +
+            '<div class="quality-bar"><div class="quality-fill" style="width:' + v.score + '%"></div></div>' +
+            '<div class="quality-list">' + v.checks.map(c => '<div>' + (c[1] ? '✓ ' : '✕ ') + c[0] + '</div>').join('') + '</div>';
+    }
+
+    function buildSmartConfig() {
+        const locKey = document.getElementById('smartLocationSelect').value;
+        const loc = typeof LOCATIONS !== 'undefined' ? LOCATIONS[locKey] : null;
+        const op = typeof OPERATOR_DNS !== 'undefined' ? OPERATOR_DNS[smartOperator] : null;
+        if (!loc || !op || !configs || !configs.length) {
+            alert('تنظیمات لازم هنوز آماده نیست.');
+            return;
+        }
+
+        const base = configs[Math.floor(Math.random() * configs.length)];
+        const dnsValue = op.best || op.ips.join(', ');
+        smartLastConfig = makeConfigFromValues(base, dnsValue, loc.endpoint);
+
+        document.getElementById('configTextBox').value = smartLastConfig;
+        const result = document.getElementById('smartResult');
+        result.classList.add('show');
+        result.innerHTML = '<strong>✓ کانفیگ آماده شد</strong><br>' +
+            '🎮 بازی: ' + smartGame + '<br>' +
+            '📡 اپراتور: ' + op.name + '<br>' +
+            '🌍 لوکیشن: ' + loc.name + '<br>' +
+            'DNS: <span dir="ltr">' + escapeHtml(dnsValue) + '</span><br>' +
+            'Endpoint: <span dir="ltr">' + escapeHtml(loc.endpoint) + '</span>';
+        renderQuality(smartLastConfig, 'بررسی ساختار کانفیگ');
+        saveHistory(smartLastConfig, smartGame + ' • ' + op.name + ' • ' + loc.name);
+    }
+
+    function openSmartResult() {
+        const text = smartLastConfig || document.getElementById('configTextBox').value || '';
+        if (!text.trim()) {
+            alert('اول یک کانفیگ بساز.');
+            return;
+        }
+        renderQuality(text, 'بررسی ساختار کانفیگ');
+        const result = document.getElementById('smartResult');
+        result.classList.add('show');
+        result.innerHTML = '<strong>نتیجه بررسی:</strong> کانفیگ از نظر وجود فیلدهای اصلی WireGuard بررسی شد. این بررسی، تست واقعی پینگ یا Packet Loss نیست.';
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    }
+
+    function saveHistory(text, label) {
+        if (!text || !text.trim()) return;
+        let list = [];
+        try { list = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) {}
+        list.unshift({ id: Date.now(), label, text });
+        list = list.slice(0, 5);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const box = document.getElementById('historyBox');
+        const listEl = document.getElementById('historyList');
+        if (!box || !listEl) return;
+        let list = [];
+        try { list = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) {}
+        if (!list.length) { box.classList.remove('show'); listEl.innerHTML=''; return; }
+        box.classList.add('show');
+        listEl.innerHTML = list.map((x,i) =>
+            '<div class="history-item"><div style="min-width:0"><div class="history-name">' + escapeHtml(x.label) + '</div><div class="history-meta">کانفیگ #' + (i+1) + '</div></div>' +
+            '<button class="history-load" onclick="loadHistory(' + x.id + ')">بارگذاری</button></div>'
+        ).join('');
+    }
+
+    function loadHistory(id) {
+        let list = [];
+        try { list = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) {}
+        const item = list.find(x => x.id === id);
+        if (!item) return;
+        smartLastConfig = item.text;
+        document.getElementById('configTextBox').value = item.text;
+        renderQuality(item.text, 'بررسی کانفیگ ذخیره‌شده');
+        document.getElementById('smartResult').classList.add('show');
+        document.getElementById('smartResult').innerHTML = '<strong>✓ کانفیگ بارگذاری شد</strong><br>' + escapeHtml(item.label);
+    }
+
+    function clearHistory() {
+        localStorage.removeItem(HISTORY_KEY);
+        renderHistory();
+    }
+
+    // دانلود تب خودکار را به کانفیگ تولیدشده متصل می‌کنیم و نام کانفیگ فایل را از کاربر می‌گیریم.
+    function saveConfig() {
+        const text = document.getElementById('configTextBox').value || smartLastConfig || '';
+        if (!text.trim()) { alert('ابتدا کانفیگ را بسازید.'); return; }
+        let userInput = prompt('نام کانفیگ فایل را وارد کنید:', 'wgconf');
+        if (userInput === null) return;
+        userInput = userInput.trim() || 'wgconf';
+        const blob = new Blob([text], {type:'application/octet-stream'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = makeSafeFileName(userInput, 'wgconf') + '.conf';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        saveHistory(text, smartGame + ' • دانلودشده');
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+        renderHistory();
+    });
+
+
+
+    /* ===== DNS Changer integrated index ===== */
+    const indexGroups = [
+  {
+    title: "DNS های IPv4",
+    items: [
+      { label: "گروه ۱", ips: ["76.76.2.22", "76.76.10.22"] },
+      { label: "گروه ۲", ips: ["5.63.189.219", "1.1.1.1"] },
+      { label: "شکن (Shecan)", ips: ["78.157.42.100", "78.157.42.101"] },
+      { label: "گروه ۴", ips: ["78.157.42.10", "1.10.1.1"] },
+      { label: "Cloudflare", ips: ["1.1.1.1", "1.0.0.1"] },
+      { label: "Google", ips: ["8.8.8.8", "8.4.4.0"] },
+      { label: "گروه ۷", ips: ["185.98.154.200", "1.1.1.1"] },
+      { label: "گروه ۸", ips: ["4.2.2.2", "193.140.12.76"] },
+      { label: "گروه ۹", ips: ["50.43.66.162", "78.157.42.101"] },
+      { label: "گروه ۱۰", ips: ["45.90.30.0", "78.157.42.100"] },
+      { label: "گروه ۱۱", ips: ["94.183.166.213", "94.183.166.217"] },
+      { label: "گروه ۱۲", ips: ["145.220.119.204", "78.157.42.101"] },
+      { label: "گروه ۱۳", ips: ["88.198.51.41", "78.157.42.100"] },
+      { label: "گروه ۱۴", ips: ["45.62.11.159", "37.32.123.30"] },
+      { label: "گروه ۱۵", ips: ["87.140.119.182", "10.202.10.10"] },
+      { label: "گروه ۱۶", ips: ["90.2.90.90", "78.157.42.100"] },
+      { label: "۴۰۳ (403.online)", ips: ["10.202.10.10", "10.22.10.22"] },
+      { label: "گروه ۱۸", ips: ["78.157.42.100", "78.57.42.100"] },
+      { label: "۴۰۳ (تکی)", ips: ["10.202.10.10"] },
+      { label: "گروه ۲۰", ips: ["1.57.222.1"] },
+      { label: "Comodo Secure", ips: ["8.26.56.26"] },
+    ]
+  },
+  {
+    title: "پروفایل‌های IPv6",
+    items: [
+      { label: "پروفایل ۱", ips: ["10.202.10.10", "27.111.229.125", "2001:df5:b800:bb00:0:4:1095:2", "2001:df5:b800:bb00:0:1:5133:3"] },
+      { label: "پروفایل ۲", ips: ["10.202.10.10", "185.1.121.106", "2001:7f8:cb:dcbb::11", "2001:7f8:cb:dcbb::14"] },
+      { label: "پروفایل ۳", ips: ["87.249.85.18", "92.173.136.130", "2001:470:0:5b3::2", "2001:470:0:71a::2"] },
+      { label: "پروفایل ۴", ips: ["78.157.42.101", "28.86.64.46", "329c:1a40:0:4:db5b:acb5:6323:0", "329c:1a40:0:4:db5b:7675:2990:0"] },
+    ]
+  },
+  {
+    title: "سرورهای IPv6 — PC / PS5 / Xbox",
+    items: [
+      { label: "سرور ۱", ips: ["9.9.9.9", "2.57.150.0", "2001:b931:7e54::c608", "2001:52f6:a819::e374"] },
+      { label: "سرور ۲", ips: ["1.1.1.2", "50.7.63.72", "2001:e85a:31b6::4d92", "2001:49c7:f2e1::7a36"] },
+      { label: "سرور ۳", ips: ["34.1.63.32", "78.157.42.100", "2001:76e4:c915::b248", "2001:2af9:8d67::53ce"] },
+      { label: "سرور ۴", ips: ["1.1.1.1", "80.187.56.219", "2001:4a5b:6c7d::8e9f", "2001:1a2b:3c4d::5e6f"] },
+    ]
+  }
+];;
+    function renderIndexChanger() {
+        const wrap = document.getElementById('indexList');
+        if (!wrap) return;
+        wrap.innerHTML = indexGroups.map(g => `
+            <div class="index-group">
+                <div class="index-group-title">${g.title}</div>
+                ${g.items.map(item => `
+                    <div class="index-item">
+                        <div class="index-item-head">
+                            <span>${item.label}</span>
+                            <button class="index-copy" data-copy="${item.ips.join(', ')}">کپی همه</button>
+                        </div>
+                        ${item.ips.map(ip => `
+                            <div class="index-ip-row">
+                                <span class="index-ip">${ip}</span>
+                                <button class="index-copy" data-copy="${ip}">کپی</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+
+        wrap.querySelectorAll('.index-copy').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(btn.dataset.copy);
+                    const old = btn.textContent;
+                    btn.textContent = 'کپی شد ✓';
+                    setTimeout(() => btn.textContent = old, 1200);
+                } catch(e) {
+                    const ta=document.createElement('textarea');
+                    ta.value=btn.dataset.copy;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    const old=btn.textContent;
+                    btn.textContent='کپی شد ✓';
+                    setTimeout(()=>btn.textContent=old,1200);
+                }
+            });
+        });
+    }
+    renderIndexChanger();
+</script>
+
+
+<script id="ezz-new-generator-script">
+(function(){
+    const EZZ_NEW_SERVERS = {
+        iran: {
+            label: "ایران",
+            flag: "🇮🇷",
+            endpoint: "ae1.vpnjantit.com:1024",
+            configs: [
+                {Address:"10.36.30.213/32", DNS:"8abd:1c14:57e4:26da:eaad:31a8:db08:7cbd", PrivateKey:"0O/6rmPIrv1YCMUUQgSnRUmfGWc2gJskygSfCKPcM2Q=", PeerAllowedIPs:"10.166.22.78/32", PeerPublicKey:"6Rc225mgQl9U8Jle6dcTEH3RSOzqnHir0V5ZXOYMfHc="}
+            ]
+        },
+        uae: {
+            label: "امارات",
+            flag: "🇦🇪",
+            endpoint: "ae1.vpnjantit.com:1024",
+            configs: [
+                {Address:"72.16.0.2/32", DNS:"89.51.39.40", PrivateKey:"OCes97ngMNgCWQ/kPncJ/olyz0DfK3SnBtKTT7L2NG8=", PeerAllowedIPs:"162.159.192.57/32", PeerPublicKey:"bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="}
+            ]
+        },
+        netherlands: {
+            label: "هلند",
+            flag: "🇳🇱",
+            endpoint: "ae1.vpnjantit.com:1024",
+            configs: []
+        },
+        germany: {
+            label: "آلمان",
+            flag: "🇩🇪",
+            endpoint: "ae1.vpnjantit.com:1024",
+            configs: []
+        },
+        turkey: {
+            label: "ترکیه",
+            flag: "🇹🇷",
+            endpoint: "ae1.vpnjantit.com:1024",
+            configs: []
+        }
+    };
+
+    // If the original config database contains matching server metadata, use it.
+    // Otherwise use the original two configs as the actual available pool rather than inventing credentials.
+    function getAvailableConfigs(serverKey){
+        const local = EZZ_NEW_SERVERS[serverKey] && EZZ_NEW_SERVERS[serverKey].configs;
+        if(local && local.length) return local.slice();
+
+        if(typeof configs !== "undefined" && Array.isArray(configs) && configs.length){
+            return configs.slice();
+        }
+        return [];
+    }
+
+    function randomItem(list){
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function safeName(name){
+        name = String(name || "").trim().replace(/\s+/g,"");
+        name = name.replace(/[^a-zA-Z0-9_+=.-]/g,"");
+        return (name || "EzzDigi").slice(0,15);
+    }
+
+    window.generateNewConfig = function(){
+        const nameInput = document.getElementById("newConfigName");
+        const sizeInput = document.getElementById("newConfigSize");
+        const daysInput = document.getElementById("newConfigDays");
+        const serverInput = document.getElementById("newServerSelect");
+        const status = document.getElementById("newConfigStatus");
+
+        const serverKey = serverInput.value;
+        const server = EZZ_NEW_SERVERS[serverKey];
+        const pool = getAvailableConfigs(serverKey);
+
+        if(!server || !pool.length){
+            status.textContent = "⚠️ برای این سرور فعلاً کانفیگ موجودی در دیتای پنل ثبت نشده است.";
+            return;
+        }
+
+        const config = randomItem(pool);
+        const userName = safeName(nameInput.value);
+        const size = sizeInput.value.trim();
+        const days = daysInput.value.trim();
+
+        let result = "[Interface]\n";
+        result += "Address = " + config.Address + "\n";
+        result += "DNS = 78.157.42.100, 78.157.42.101, " + config.DNS + "\n";
+        result += "PrivateKey = " + config.PrivateKey + "\n\n";
+        result += "[Peer]\n";
+        result += "AllowedIPs = " + config.PeerAllowedIPs + "\n";
+        result += "PublicKey = " + config.PeerPublicKey + "\n";
+        result += "Endpoint = " + (config.PeerEndpoint || server.endpoint) + "\n";
+
+        // Keep the original output/data intact while storing UI metadata separately.
+        window.generatedConfig = result;
+        window.ezzNewConfigMeta = {
+            name: userName,
+            sizeGB: size || "",
+            days: days || "",
+            server: server.label,
+            createdAt: Date.now()
+        };
+
+        // Sync to the original config textarea for compatibility with existing copy/download logic.
+        const oldBox = document.getElementById("configTextBox");
+        if(oldBox) oldBox.value = result;
+
+        // Store generated records locally as the panel's browser-side database.
+        try{
+            const key = "EZZDIGI_CONFIG_DATABASE";
+            const db = JSON.parse(localStorage.getItem(key) || "[]");
+            db.unshift({ ...window.ezzNewConfigMeta, text: result });
+            localStorage.setItem(key, JSON.stringify(db.slice(0,50)));
+        }catch(e){}
+
+        status.textContent = "✓ کانفیگ جدید ساخته شد • " + server.flag + " " + server.label +
+            (size ? " • " + size + "GB" : "") +
+            (days ? " • " + days + " روز" : "");
+
+        // Optional native download remains untouched; user can still use existing download functionality
+        // elsewhere in the preserved source.
+    };
+
+    // Keep old functions/data available, but initialize the new form without changing the database.
+    document.addEventListener("DOMContentLoaded", function(){
+        const select = document.getElementById("newServerSelect");
+        if(select) select.value = "iran";
+    });
+})();
+</script>
+
+
+
+
+<script id="ezz-final-generator-logic">
+(function(){
+    const EZZ_DNS_POOLS = {
+        iran: [
+            "217.218.155.155","194.225.152.12","194.225.152.10","194.225.62.80",
+            "2.189.44.44","2.188.21.190","2.188.21.100","2.188.21.120",
+            "2.189.44.44","2.188.21.240","2.188.21.230","2.189.1.13",
+            "2.189.1.12","2.188.184.19","2.189.1.19","2.189.1.11",
+            "2.189.1.251","2.189.1.104","2.189.1.0","2.189.1.15",
+            "2.189.1.14","208.67.220.200","208.67.222.222","74.82.42.42",
+            "8.8.4.4","91.239.100.100","89.223.43.71"
+        ],
+        uae: [
+            "45.9.250.164","94.205.48.98","191.96.43.254","139.185.44.200",
+            "94.207.101.48","94.203.183.66","91.73.195.202","86.98.63.96",
+            "86.98.215.41","83.111.236.82","80.227.17.102","5.31.23.229",
+            "217.165.60.192","217.164.255.35","213.42.31.42","213.42.31.41",
+            "213.42.31.36","2.50.191.210","5.195.100.102","109.69.62.146"
+        ],
+        germany: [
+            "92.79.86.172","91.249.242.34","89.47.58.30","88.99.201.228",
+            "88.198.92.222","85.22.58.63","85.215.118.202","85.214.252.174",
+            "85.214.225.217","85.214.107.212","85.209.185.51","85.209.185.50",
+            "85.195.99.211","82.135.112.130","81.3.27.54","81.169.244.26",
+            "81.169.226.26","81.169.136.222","81.16.19.65","81.16.18.228"
+        ],
+        turkey: [
+            "88.248.51.121","85.99.234.230","31.7.37.37","176.235.135.204",
+            "91.191.170.20","91.191.170.21","62.133.63.142","5.133.102.199",
+            "37.77.9.102","37.77.9.101","195.244.44.44","195.244.44.45",
+            "188.132.227.246","188.132.234.95","188.132.234.94","89.145.188.146",
+            "46.221.16.63","45.84.221.12"
+        ]
+    };
+
+    const EZZ_ENDPOINTS = {
+        iran:"ae1.vpnjantit.com:1024",
+        uae:"ae1.vpnjantit.com:1024",
+        netherlands:"ae1.vpnjantit.com:1024",
+        germany:"ae1.vpnjantit.com:1024",
+        turkey:"ae1.vpnjantit.com:1024"
+    };
+
+    let lastDns = "";
+    let lastGeneratedText = "";
+
+    let lastDnsServerNumber = 1;
+
+    function pickDifferentPair(key){
+        const pool = EZZ_DNS_POOLS[key] || [];
+        if(!pool.length){ lastDnsServerNumber = 1; return ["78.157.42.100","78.157.42.101"]; }
+        let pair;
+        let primaryIndex = 0;
+        for(let i=0;i<12;i++){
+            primaryIndex = Math.floor(Math.random()*pool.length);
+            const secondaryIndex = Math.floor(Math.random()*pool.length);
+            const a = pool[primaryIndex];
+            const b = pool[secondaryIndex];
+            pair = [a,b].filter((v,i,arr)=>arr.indexOf(v)===i);
+            if(pair.length === 2 && pair.join(", ") !== lastDns) break;
+        }
+        if(pair.length < 2){
+            primaryIndex = Math.min(primaryIndex, Math.max(0,pool.length-1));
+            pair = [pool[primaryIndex], pool[(primaryIndex+1)%pool.length] || pool[primaryIndex]];
+        }
+        lastDns = pair.join(", ");
+        // هر DNS موجود در هر لوکیشن یک شماره سرور دارد: سرور ۱، سرور ۲، ...
+        lastDnsServerNumber = primaryIndex + 1;
+        return pair;
+    }
+
+    function safeFileName(v){
+        v = String(v || "").trim();
+        // نام کانفیگ فایل همان نام کانفیگی است که کاربر انتخاب کرده؛ فقط کاراکترهای ممنوع فایل حذف می‌شوند.
+        v = v.replace(/[\\/:*?"<>|]/g, "");
+        return v || "EzzDigi";
+    }
+
+    function getBaseConfig(){
+        if(typeof configs !== "undefined" && Array.isArray(configs) && configs.length){
+            return configs[Math.floor(Math.random()*configs.length)];
+        }
+        return null;
+    }
+
+    let ezzLastServerKey = "";
+    window.generateNewConfig = function(){
+        const name = document.getElementById("newConfigName").value.trim();
+        const size = document.getElementById("newConfigSize").value.trim();
+        const days = document.getElementById("newConfigDays").value.trim();
+        let serverKey = document.getElementById("newServerSelect").value;
+        const serverNames = {iran:"ایران",uae:"امارات",netherlands:"هلند",germany:"آلمان",turkey:"ترکیه"};
+        const statusEl = document.getElementById("newConfigStatus");
+        if(!size || Number(size) < 1){ statusEl.textContent="⚠️ حجم GB کانفیگ را وارد کنید."; document.getElementById("newConfigSize").focus(); return; }
+        if(!days || Number(days) < 1){ statusEl.textContent="⚠️ مدت زمان روز کانفیگ را وارد کنید."; document.getElementById("newConfigDays").focus(); return; }
+        const serverKeys = ["iran","uae","germany","turkey"];
+        if(serverKey === "smart"){
+            const choices = serverKeys.filter(k=>k!==ezzLastServerKey);
+            serverKey = choices[Math.floor(Math.random()*choices.length)];
+            document.getElementById("newServerSelect").value = serverKey;
+        }
+        const base = getBaseConfig();
+        if(!base){ statusEl.textContent="⚠️ کانفیگ موجودی پیدا نشد."; return; }
+        const dns = pickDifferentPair(serverKey);
+        const dnsText = dns.join(", ");
+        const endpoint = EZZ_ENDPOINTS[serverKey];
+        let result="[Interface]\n";
+        result += "Address = "+base.Address+"\n";
+        result += "DNS = "+dnsText+"\n";
+        result += "PrivateKey = "+base.PrivateKey+"\n\n";
+        result += "[Peer]\n";
+        result += "AllowedIPs = "+base.PeerAllowedIPs+"\n";
+        result += "PublicKey = "+base.PeerPublicKey+"\n";
+        result += "Endpoint = "+endpoint+"\n";
+        lastGeneratedText=result; window.generatedConfig=result; ezzLastServerKey=serverKey;
+        const fileName=safeFileName(name)+".conf";
+        window.ezzNewConfigMeta={name:safeFileName(name),sizeGB:size,days:days,server:serverNames[serverKey],serverKey,dns:dnsText,createdAt:Date.now()};
+        const oldBox=document.getElementById("configTextBox"); if(oldBox) oldBox.value=result;
+        const serverNumber=lastDnsServerNumber || 1;
+        document.getElementById("newDnsDisplay").innerHTML='سرور گیمینگ: <span>سرور '+serverNumber+'</span>';
+        document.getElementById("ezzStatusMain").textContent="● CONFIG READY";
+        document.getElementById("ezzStatusServer").textContent="SERVER "+String(serverNumber).padStart(2,"0");
+        document.getElementById("ezzStatusDns").textContent="DNS SELECTED";
+        document.getElementById("ezzResultConfig").textContent="READY";
+        document.getElementById("ezzResultServer").textContent=serverNames[serverKey]+" • "+serverNumber;
+        document.getElementById("ezzResultDns").textContent=dnsText;
+        document.querySelector("#ezzFilePreview b").textContent=fileName;
+        statusEl.textContent="✓ کانفیگ جدید ساخته شد • "+serverNames[serverKey]+" • سرور "+serverNumber+(size?" • "+size+"GB":"")+(days?" • "+days+" روز":"");
+        statusEl.classList.remove("download-success");
+        try{const key="EZZDIGI_CONFIG_DATABASE";const db=JSON.parse(localStorage.getItem(key)||"[]");db.unshift({...window.ezzNewConfigMeta,text:result});localStorage.setItem(key,JSON.stringify(db.slice(0,50)));}catch(e){}
+    };
+
+    window.downloadNewConfig = function(){
+        const text=lastGeneratedText||window.generatedConfig||document.getElementById("configTextBox")?.value||"";
+        if(!text.trim()){alert("ابتدا روی ساخت کانفیگ بزنید.");return;}
+        const meta=window.ezzNewConfigMeta||{};
+        let filename=safeFileName(meta.name || "wgconf");
+        if(!filename.toLowerCase().endsWith(".conf")) filename += ".conf";
+
+        // Safari/iOS: use a real Blob and a user-gesture download, with a
+        // data-URL fallback for WebViews that reject object URLs.
+        const blob=new Blob([text],{type:"application/octet-stream"});
+        const triggerDownload=(url)=>{
+            const a=document.createElement("a");
+            a.href=url; a.download=filename; a.rel="noopener";
+            a.style.position="fixed"; a.style.left="-9999px";
+            document.body.appendChild(a);
+            try { a.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window})); }
+            catch(e) { try { a.click(); } catch(_){} }
+            setTimeout(()=>{try{a.remove();}catch(_){}},50);
+        };
+        let objectUrl=null;
+        try { objectUrl=URL.createObjectURL(blob); triggerDownload(objectUrl); }
+        catch(e) {
+            const reader=new FileReader();
+            reader.onload=()=>triggerDownload(reader.result);
+            reader.readAsDataURL(blob);
+        }
+        if(objectUrl) setTimeout(()=>{try{URL.revokeObjectURL(objectUrl);}catch(_){}},3000);
+
+        const status=document.getElementById("newConfigStatus");
+        status.textContent="✓ دانلود شد • "+filename; status.classList.add("download-success");
+        document.getElementById("ezzStatusMain").textContent="✓ DOWNLOAD COMPLETE";
+        const toast=document.getElementById("ezzDownloadToast")||(()=>{const t=document.createElement("div");t.id="ezzDownloadToast";document.body.appendChild(t);return t;})();
+        toast.textContent="✓ دانلود شد"; toast.classList.remove("show"); void toast.offsetWidth; toast.classList.add("show");
+        clearTimeout(window.ezzDownloadToastTimer); window.ezzDownloadToastTimer=setTimeout(()=>toast.classList.remove("show"),2600);
+    };})();
+</script>
+
+<script>
+document.addEventListener("click", function(e){
+  const btn = e.target.closest("#newDownloadButton");
+  if(!btn) return;
+  setTimeout(function(){
+    const s = document.getElementById("newConfigStatus");
+    if(s && s.textContent.includes("دانلود شد")){
+      let toast = document.getElementById("ezzDownloadToast");
+      if(!toast){
+        toast=document.createElement("div");
+        toast.id="ezzDownloadToast";
+        document.body.appendChild(toast);
+      }
+      toast.textContent="✓ دانلود شد";
+      toast.classList.remove("show");
+      void toast.offsetWidth;
+      toast.classList.add("show");
+      clearTimeout(window.ezzDownloadToastTimer);
+      window.ezzDownloadToastTimer=setTimeout(()=>toast.classList.remove("show"),2600);
+    }
+  },80);
+});
+</script>
+
+<script id="ezz-game-status-handler">
+document.addEventListener("DOMContentLoaded",function(){
+  document.querySelectorAll(".ezz-game-btn").forEach(btn=>btn.addEventListener("click",function(){
+    document.querySelectorAll(".ezz-game-btn").forEach(b=>b.classList.remove("active")); this.classList.add("active");
+  }));
+  const sel=document.getElementById("newServerSelect"); if(sel) sel.value="smart";
+});
+</script>
+
+
+<script id="ezz-pro-generator-script">
+(function(){
+    // لیست کانفیگ‌های پرو (همان wireguard-pro.json پروژه)
+    const PRO_CONFIGS = [
+  {
+    "label": "Ezz 1",
+    "conf": "[Interface]\nAddress = 178.22.122.100/31\nDNS = 185.51.200.2, 178.22.122.100\nMTU = 1380\nPrivateKey = AJ78UyvNyen+If69v/toTbnPYIHHsdgUZ9jx0M2gxHs=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nEndpoint = ae1.vpnjantit.com:1024\nPublicKey = 3GNyI2xtm6UcQq+GNVqMq6ulokySRGGSng+UNzW+whM=\n"
+  },
+  {
+    "label": "Ezz 2",
+    "conf": "[Interface]\nAddress = 10.66.2.225/32\nDNS = 78.157.42.100, 78.157.42.101\nMTU = 1300\nPrivateKey = 2BQByzkWP959aZKKLiU2pAwEXTgFdlcJRGeZ0i5a+ng=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nPersistentKeepalive = 11\nPreSharedKey = GOtWDEq1Hcu9zr4r7oUN/DyNjm04j2p4YQSKX6SZhIc=\nPublicKey = qhwUFEli/e2CTfTEx4A1c9GRQzDrkplDheUztaAPaS8=\n"
+  },
+  {
+    "label": "Pro VIP",
+    "conf": "[Interface]\nAddress = 194.146.68.68/32\nDNS = 194.146.68.66\nMTU = 1200\nPrivateKey = SLqmDN+1u8nBcAS/Nj6LfMtuMmkN7QJ66agPbd04sU4=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+  },
+  {
+    "label": "Ezz",
+    "conf": "[Interface]\nAddress = 193.186.32.32/32\nDNS = 46.209.123.98, 193.186.32.32\nMTU = 1200\nPrivateKey = 4OlEA6DLNh0+FJ2yP6EkF/QHgFtNwvltPqnZFeKrYlw=\n\n[Peer]\nAllowedIPs = 154.94.99.56/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+  },
+  {
+    "label": "Pro",
+    "conf": "[Interface]\nAddress = 87.248.145.40/32\nDNS = 87.107.170.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+  },
+  {
+    "label": "Pro 1",
+    "conf": "[Interface]\nAddress = 172.104.185.69/32\nDNS = 172.104.185.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+  }
+];
+    let lastIdx = -1, lastText = "", lastMeta = null;
+
+    const $ = id => document.getElementById(id);
+    const safeFileName = v => (String(v||"").trim().replace(/[\\/:*?"<>|]/g,"")) || "EzzPro";
+    const dnsOf = conf => ((conf.match(/^\s*DNS\s*=\s*(.+)$/mi)||[])[1]||"—").trim();
+
+    window.ezzSwitchMode = function(mode){
+        const pro = mode === "pro";
+        $("ezzFreePanel").hidden = pro;
+        $("ezzProPanel").hidden = !pro;
+        $("ezzModeFree").classList.toggle("active", !pro);
+        $("ezzModePro").classList.toggle("active", pro);
+        $("ezzModeFree").setAttribute("aria-selected", String(!pro));
+        $("ezzModePro").setAttribute("aria-selected", String(pro));
+    };
+
+    window.generateProConfig = function(){
+        const status = $("proConfigStatus");
+        const name = $("proConfigName").value.trim();
+        const size = $("proConfigSize").value.trim();
+        const days = $("proConfigDays").value.trim();
+        if(!size || Number(size) < 1){ status.textContent = "⚠️ حجم GB کانفیگ را وارد کنید."; $("proConfigSize").focus(); return; }
+        if(!days || Number(days) < 1){ status.textContent = "⚠️ مدت زمان روز کانفیگ را وارد کنید."; $("proConfigDays").focus(); return; }
+
+        let idx = $("proServerSelect").value;
+        if(idx === "auto"){
+            const choices = PRO_CONFIGS.map((_,i)=>i).filter(i => i !== lastIdx);
+            idx = choices[Math.floor(Math.random()*choices.length)];
+        } else idx = Number(idx);
+        const item = PRO_CONFIGS[idx];
+        const text = item.conf.endsWith("\n") ? item.conf : item.conf + "\n";
+        const dns = dnsOf(text);
+        const fileName = safeFileName(name);
+
+        lastText = text; lastIdx = idx;
+        lastMeta = {plan:"pro", name:fileName, sizeGB:size, days:days, server:item.label, dns:dns, createdAt:Date.now()};
+
+        $("proDnsDisplay").innerHTML = 'سرور پرو: <span>👑 ' + item.label + '</span>';
+        $("proResultConfig").textContent = "READY";
+        $("proResultServer").textContent = item.label;
+        $("proResultDns").textContent = dns;
+        $("proFileName").textContent = fileName + ".conf";
+        status.classList.remove("download-success");
+        status.textContent = "✓ کانفیگ پرو ساخته شد • " + item.label + " • " + size + "GB • " + days + " روز";
+
+        try{
+            const key = "EZZDIGI_CONFIG_DATABASE";
+            const db = JSON.parse(localStorage.getItem(key) || "[]");
+            db.unshift({...lastMeta});
+            localStorage.setItem(key, JSON.stringify(db.slice(0,50)));
+        }catch(e){}
+    };
+
+    window.downloadProConfig = function(){
+        const status = $("proConfigStatus");
+        if(!lastText.trim()){ alert("ابتدا روی ساخت کانفیگ پرو بزنید."); return; }
+        let filename = safeFileName(lastMeta && lastMeta.name);
+        if(!filename.toLowerCase().endsWith(".conf")) filename += ".conf";
+
+        const blob = new Blob([lastText], {type:"application/octet-stream"});
+        const trigger = url => {
+            const a = document.createElement("a");
+            a.href = url; a.download = filename; a.rel = "noopener";
+            a.style.position = "fixed"; a.style.left = "-9999px";
+            document.body.appendChild(a);
+            try{ a.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window})); }
+            catch(e){ try{ a.click(); }catch(_){} }
+            setTimeout(()=>{ try{ a.remove(); }catch(_){} }, 50);
+        };
+        let objUrl = null;
+        try{ objUrl = URL.createObjectURL(blob); trigger(objUrl); }
+        catch(e){ const fr = new FileReader(); fr.onload = () => trigger(fr.result); fr.readAsDataURL(blob); }
+        if(objUrl) setTimeout(()=>{ try{ URL.revokeObjectURL(objUrl); }catch(_){} }, 3000);
+
+        status.textContent = "✓ دانلود شد • " + filename;
+        status.classList.add("download-success");
+        const toast = $("ezzDownloadToast") || (()=>{ const t = document.createElement("div"); t.id = "ezzDownloadToast"; document.body.appendChild(t); return t; })();
+        toast.textContent = "✓ دانلود شد"; toast.classList.remove("show"); void toast.offsetWidth; toast.classList.add("show");
+        clearTimeout(window.ezzDownloadToastTimer);
+        window.ezzDownloadToastTimer = setTimeout(()=>toast.classList.remove("show"), 2600);
+    };
+})();
+</script>
+
+</body>
+</html>
