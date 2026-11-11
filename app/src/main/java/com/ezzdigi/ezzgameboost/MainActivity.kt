@@ -178,11 +178,13 @@ class MainActivity : Activity() {
     internal val accentNames = arrayOf("قرمز", "فیروزه‌ای", "بنفش", "سبز", "نارنجی")
     internal var accent = accents[0]
 
-    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊", "🚀", "⚡")
-    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار", "EzzGaming", "Pro Gaming")
+    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊", "🚀", "⚡", "🛠️")
+    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار", "EzzGaming", "Pro Gaming", "ساخت کانفیگ")
     // The Home (0) and Gaming server (3) tabs are removed from the app. Indices stay the same so the
     // other tabs keep working; those two are neither shown nor built.
-    internal val visibleTabs = intArrayOf(1, 2, 4, 6, 7, 5)
+    // "ساخت کانفیگ" (8) is a Pro-subscription tab: it appears only while an account is logged in.
+    internal val visibleTabs: IntArray
+        get() = if (subToken().isNotEmpty()) intArrayOf(1, 2, 4, 6, 7, 8, 5) else intArrayOf(1, 2, 4, 6, 7, 5)
 
     internal var dnsCache: List<DnsProvider>? = null
     internal val dnsProviders: List<DnsProvider>
@@ -496,6 +498,7 @@ class MainActivity : Activity() {
             4 -> buildSubscription()
             6 -> buildSubV2()
             7 -> buildSubWg()
+            8 -> buildSubMake()
             else -> buildStats()
         }
         scroll.scrollTo(0, 0)
@@ -799,6 +802,9 @@ class MainActivity : Activity() {
         } else if (requestCode == 4740) {
             val uri = data?.data
             if (resultCode == Activity.RESULT_OK && uri != null) importV2FromUri(uri)
+        } else if (requestCode == 4770) {
+            val uri = data?.data
+            if (resultCode == Activity.RESULT_OK && uri != null) saveMadeConfig(uri) else madeConfPending = ""
         }
     }
 }

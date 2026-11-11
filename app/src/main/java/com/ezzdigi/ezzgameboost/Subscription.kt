@@ -496,7 +496,7 @@ internal fun MainActivity.syncSubscription(manual: Boolean, onDone: ((String) ->
             if (sessionLost && subToken() == token) {
                 logoutSub()
                 toast(msg)
-                if (tab == 4 || tab == 6 || tab == 7) showTab(tab)
+                if (tab == 4 || tab == 6 || tab == 7 || tab == 8) showTab(tab)
             }
             vpnRender?.invoke()
             if (manual && onDone != null) onDone(msg)
