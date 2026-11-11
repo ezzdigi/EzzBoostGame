@@ -1,6 +1,6 @@
 [
   {
-    "name": "Ezz 1",
+    "name": "سرور گیمینگ",
     "conf": [
       "[Interface]",
       "Address = 178.22.122.100/31",
@@ -15,7 +15,7 @@
     ]
   },
   {
-    "name": "Ezz 2",
+    "name": "سرور گیمینگ",
     "conf": [
       "[Interface]",
       "Address = 10.66.2.225/32",
@@ -31,7 +31,7 @@
     ]
   },
   {
-    "name": "Pro VIP",
+    "name": "سرور گیمینگ",
     "conf": [
       "[Interface]",
       "Address = 194.146.68.68/32",
@@ -46,7 +46,7 @@
     ]
   },
   {
-    "name": "Ezz",
+    "name": "سرور گیمینگ",
     "conf": [
       "[Interface]",
       "Address = 193.186.32.32/32",
@@ -61,7 +61,7 @@
     ]
   },
   {
-    "name": "Pro",
+    "name": "سرور گیمینگ",
     "conf": [
       "[Interface]",
       "Address = 87.248.145.40/32",
@@ -76,7 +76,7 @@
     ]
   },
   {
-    "name": "Pro 1",
+    "name": "سرور گیمینگ",
     "conf": [
       "[Interface]",
       "Address = 172.104.185.69/32",
