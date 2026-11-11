@@ -10,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import org.json.JSONObject
 
 private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -18,9 +17,25 @@ private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 // ----- "ساخت کانفیگ" tab (Pro subscription only) ---------------------------------
 //
 // Shown in the tab bar only while an account is logged in (see MainActivity.visibleTabs),
-// like "Pro Gaming". The user picks one of the account's Pro servers (or "smart" = random),
-// optionally one of the account's X-PRO DNS entries, names the file and gets a standard
-// WireGuard .conf that can be copied, saved as a file or shared.
+// like "Pro Gaming". The server is picked automatically from the account's Pro servers (no
+// server picker), the user optionally picks one of the account's X-PRO DNS entries, names the
+// file and gets a standard WireGuard .conf that can be copied, saved as a file or shared.
+
+// Each account may build at most MK_DAILY_LIMIT configs per (device-local) day. The counter is kept in
+// SharedPreferences, so it is per device: clearing app data or changing the clock resets it.
+private const val MK_DAILY_LIMIT = 4
+
+private fun MainActivity.mkKey(): String = "mkDaily_" + subToken().hashCode()
+
+private fun MainActivity.mkUsedToday(): Int {
+    val parts = (prefs.getString(mkKey(), "") ?: "").split("|")
+    if (parts.size != 2 || parts[0] != java.time.LocalDate.now().toString()) return 0
+    return parts[1].toIntOrNull() ?: 0
+}
+
+private fun MainActivity.mkAddUse() {
+    prefs.edit().putString(mkKey(), java.time.LocalDate.now().toString() + "|" + (mkUsedToday() + 1)).apply()
+}
 
 // Text waiting for the "save as" file picker (request code 4770 in MainActivity.onActivityResult).
 @Volatile
@@ -36,15 +51,6 @@ internal fun MainActivity.saveMadeConfig(uri: Uri) {
     } catch (_: Exception) {
         toast("ذخیره نشد.")
     }
-}
-
-private fun MainActivity.makeTitle(base: String): String {
-    val dn = try {
-        JSONObject(prefs.getString("subWgMeta", "{}") ?: "{}").optJSONObject(base)?.optString("displayName", "") ?: ""
-    } catch (_: Throwable) {
-        ""
-    }
-    return dn.ifBlank { base }
 }
 
 internal fun MainActivity.buildSubMake() {
@@ -71,7 +77,6 @@ internal fun MainActivity.buildSubMake() {
 
     val servers = subWgList()
     val dnsItems = subDnsList()
-    var selServer = "auto"
     var selDns = ""
     var lastBase = ""
     var lastText = ""
@@ -84,21 +89,16 @@ internal fun MainActivity.buildSubMake() {
     nameIn.textDirection = View.TEXT_DIRECTION_LTR
     form.addView(nameIn, vlp(0, 10))
 
-    form.addView(label("سرور پرو", 12f, muted), vlp(0, 6))
-    val sScroll = HorizontalScrollView(this)
-    sScroll.isHorizontalScrollBarEnabled = false
-    val sRow = LinearLayout(this)
-    sRow.orientation = LinearLayout.HORIZONTAL
-    sScroll.addView(sRow)
-    form.addView(sScroll, vlp(0, 10))
-
     form.addView(label("DNS (اختیاری)", 12f, muted), vlp(0, 6))
     val dScroll = HorizontalScrollView(this)
     dScroll.isHorizontalScrollBarEnabled = false
     val dRow = LinearLayout(this)
     dRow.orientation = LinearLayout.HORIZONTAL
     dScroll.addView(dRow)
-    form.addView(dScroll, vlp(0, 12))
+    form.addView(dScroll, vlp(0, 10))
+
+    val limitLbl = label("", 12f, muted, false, false)
+    form.addView(limitLbl, vlp(0, 10))
 
     val result = LinearLayout(this)
     result.orientation = LinearLayout.VERTICAL
@@ -110,16 +110,18 @@ internal fun MainActivity.buildSubMake() {
     }
 
     fun paintPickers() {
-        sRow.removeAllViews()
         dRow.removeAllViews()
-        addChip(sRow, "⚡ هوشمند", selServer == "auto", true) { selServer = "auto"; paintPickers() }
-        for (b in servers) {
-            addChip(sRow, makeTitle(b), selServer == b, false) { selServer = b; paintPickers() }
-        }
         addChip(dRow, "پیش‌فرض کانفیگ", selDns.isEmpty(), true) { selDns = ""; paintPickers() }
         for (d in dnsItems) {
             addChip(dRow, d.name, selDns == d.name, false) { selDns = d.name; paintPickers() }
         }
+    }
+
+    fun paintLimit() {
+        val left = (MK_DAILY_LIMIT - mkUsedToday()).coerceAtLeast(0)
+        limitLbl.text = if (Tr.en) "Today: $left of $MK_DAILY_LIMIT config builds left"
+        else "امروز $left از $MK_DAILY_LIMIT ساخت باقی مانده است"
+        limitLbl.setTextColor(if (left == 0) bad else muted)
     }
 
     fun paintResult() {
@@ -182,8 +184,16 @@ internal fun MainActivity.buildSubMake() {
             toast("هنوز کانفیگی نیست.")
             return
         }
-        var base = if (selServer == "auto" || !servers.contains(selServer)) servers.random() else selServer
-        if (selServer == "auto" && servers.size > 1) {
+        if (mkUsedToday() >= MK_DAILY_LIMIT) {
+            paintLimit()
+            toast(
+                if (Tr.en) "Daily limit of $MK_DAILY_LIMIT config builds reached. Try again tomorrow."
+                else "سقف $MK_DAILY_LIMIT بار ساخت کانفیگ در روز تمام شده؛ فردا دوباره امتحان کن."
+            )
+            return
+        }
+        var base = servers.random()
+        if (servers.size > 1) {
             var guard = 0
             while (base == lastBase && guard < 8) {
                 base = servers.random()
@@ -204,6 +214,8 @@ internal fun MainActivity.buildSubMake() {
         lastBase = base
         lastText = text.replace("\r", "").trim() + "\n"
         lastName = nameIn.text.toString().replace(Regex("[^a-zA-Z0-9_+=.-]"), "").take(15).ifEmpty { "EzzPro" }
+        mkAddUse()
+        paintLimit()
         paintResult()
     }
 
@@ -215,4 +227,23 @@ internal fun MainActivity.buildSubMake() {
         content.addView(label("هنوز سروری برای حساب تو همگام نشده؛ از «اشتراک ویژه» دکمه به‌روزرسانی را بزن.", 12f, muted), vlp(6, 0))
     }
     paintPickers()
+    paintLimit()
+
+    val notes = card()
+    notes.addView(label(if (Tr.en) "Notes" else "توضیحات", 13f, accent, true, false), vlp(0, 8))
+    val noteLines = if (Tr.en) listOf(
+        "Each user can build up to $MK_DAILY_LIMIT configs per day.",
+        "Enter a short Latin name (max 15 characters); the file is saved with that name.",
+        "DNS is optional; if you pick none, the config's own DNS is used.",
+        "After building, copy, save or share the config and import it into WireGuard.",
+        "If a config does not connect, build again to get a different server."
+    ) else listOf(
+        "هر کاربر در هر روز حداکثر $MK_DAILY_LIMIT بار می‌تواند کانفیگ بسازد.",
+        "نام کانفیگ را کوتاه و لاتین (حداکثر ۱۵ حرف) وارد کن؛ فایل با همین نام ساخته می‌شود.",
+        "DNS اختیاری است؛ اگر انتخاب نکنی همان DNS خود کانفیگ استفاده می‌شود.",
+        "بعد از ساخت، کانفیگ را کپی، ذخیره یا ارسال کن و در WireGuard وارد کن.",
+        "اگر کانفیگ وصل نشد، دوباره بساز تا سرور دیگری انتخاب شود."
+    )
+    for (l in noteLines) notes.addView(label("• $l", 12f, muted, false, false), vlp(0, 4))
+    content.addView(notes, vlp(8, 4))
 }
