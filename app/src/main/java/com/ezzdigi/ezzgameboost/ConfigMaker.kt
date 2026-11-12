@@ -54,7 +54,7 @@ internal fun MainActivity.saveMadeConfig(uri: Uri) {
 }
 
 internal fun MainActivity.buildSubMake() {
-    section("ساخت کانفیگ")
+    section("ساخت سرور گیمینگ")
 
     if (subToken().isEmpty()) {
         val c = card()
@@ -119,7 +119,7 @@ internal fun MainActivity.buildSubMake() {
 
     fun paintLimit() {
         val left = (MK_DAILY_LIMIT - mkUsedToday()).coerceAtLeast(0)
-        limitLbl.text = if (Tr.en) "Today: $left of $MK_DAILY_LIMIT config builds left"
+        limitLbl.text = if (Tr.en) "Today: $left of $MK_DAILY_LIMIT builds left"
         else "امروز $left از $MK_DAILY_LIMIT ساخت باقی مانده است"
         limitLbl.setTextColor(if (left == 0) bad else muted)
     }
@@ -128,17 +128,8 @@ internal fun MainActivity.buildSubMake() {
         result.removeAllViews()
         if (lastText.isEmpty()) return
         val rc = card()
-        rc.addView(label("✓ " + Tr.t("کانفیگ ساخته شد") + ": $lastName.conf", 13.5f, good, true, false), vlp(0, 8))
-        // the private key stays hidden on screen; copy / save / share use the full text
-        val shown = lastText.lines().joinToString("\n") {
-            val k = it.substringBefore("=").trim().lowercase()
-            if (k == "privatekey" || k == "presharedkey") it.substringBefore("=").trim() + " = ••••••••" else it
-        }
-        val pv = label(shown, 11f, muted, false, false)
-        pv.typeface = Typeface.MONOSPACE
-        pv.textDirection = View.TEXT_DIRECTION_LTR
-        pv.setTextIsSelectable(false)
-        rc.addView(pv, vlp(0, 10))
+        rc.addView(label("✓ " + Tr.t("سرور گیمینگ ساخته شد") + ": $lastName.conf", 13.5f, good, true, false), vlp(0, 8))
+        // config details are never shown on screen; copy / save / share use the full text
 
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
@@ -187,8 +178,8 @@ internal fun MainActivity.buildSubMake() {
         if (mkUsedToday() >= MK_DAILY_LIMIT) {
             paintLimit()
             toast(
-                if (Tr.en) "Daily limit of $MK_DAILY_LIMIT config builds reached. Try again tomorrow."
-                else "سقف $MK_DAILY_LIMIT بار ساخت کانفیگ در روز تمام شده؛ فردا دوباره امتحان کن."
+                if (Tr.en) "Daily limit of $MK_DAILY_LIMIT gaming server builds reached. Try again tomorrow."
+                else "سقف $MK_DAILY_LIMIT بار ساخت سرور گیمینگ در روز تمام شده؛ فردا دوباره امتحان کن."
             )
             return
         }
@@ -219,7 +210,7 @@ internal fun MainActivity.buildSubMake() {
         paintResult()
     }
 
-    form.addView(button("🛠️ ساخت کانفیگ", true) { build() }, vlp(0, 0))
+    form.addView(button("🛠️ ساخت سرور گیمینگ", true) { build() }, vlp(0, 0))
     content.addView(form, vlp(0, 4))
     content.addView(result, vlp(0, 4))
 
@@ -232,13 +223,13 @@ internal fun MainActivity.buildSubMake() {
     val notes = card()
     notes.addView(label(if (Tr.en) "Notes" else "توضیحات", 13f, accent, true, false), vlp(0, 8))
     val noteLines = if (Tr.en) listOf(
-        "Each user can build up to $MK_DAILY_LIMIT configs per day.",
+        "Each user can build up to $MK_DAILY_LIMIT gaming servers per day.",
         "Enter a short Latin name (max 15 characters); the file is saved with that name.",
         "DNS is optional; if you pick none, the config's own DNS is used.",
         "After building, copy, save or share the config and import it into WireGuard.",
         "If a config does not connect, build again to get a different server."
     ) else listOf(
-        "هر کاربر در هر روز حداکثر $MK_DAILY_LIMIT بار می‌تواند کانفیگ بسازد.",
+        "هر کاربر در هر روز حداکثر $MK_DAILY_LIMIT بار می‌تواند سرور گیمینگ بسازد.",
         "نام کانفیگ را کوتاه و لاتین (حداکثر ۱۵ حرف) وارد کن؛ فایل با همین نام ساخته می‌شود.",
         "DNS اختیاری است؛ اگر انتخاب نکنی همان DNS خود کانفیگ استفاده می‌شود.",
         "بعد از ساخت، کانفیگ را کپی، ذخیره یا ارسال کن و در WireGuard وارد کن.",
