@@ -179,7 +179,7 @@ class MainActivity : Activity() {
     internal var accent = accents[0]
 
     internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊", "🚀", "⚡", "🛠️")
-    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار", "EzzGaming", "Pro Gaming", "ساخت کانفیگ")
+    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار", "EzzGaming", "Pro Gaming", "سرور گیمینگ")
     // The Home (0) and Gaming server (3) tabs are removed from the app. Indices stay the same so the
     // other tabs keep working; those two are neither shown nor built.
     // "ساخت کانفیگ" (8) is a Pro-subscription tab: it appears only while an account is logged in.
