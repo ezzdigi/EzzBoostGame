@@ -116,6 +116,9 @@ object Tr {
     private val EXACT: Map<String, String> = mapOf(
         "وارد حساب نشده‌ای" to "You are not logged in",
         "ساخت کانفیگ" to "Create config",
+        "ساخت سرور گیمینگ" to "Create gaming server",
+        "🛠️ ساخت سرور گیمینگ" to "🛠️ Create gaming server",
+        "سرور گیمینگ ساخته شد" to "Gaming server created",
         "🛠️ ساخت کانفیگ" to "🛠️ Create config",
         "کانفیگ ساخته شد" to "Config created",
         "برای ساخت کانفیگ اول وارد «اشتراک ویژه» شو." to "Sign in under “Premium” first to create a config.",
