@@ -289,18 +289,7 @@ class V2VpnService : VpnService() {
             b.setSession("EzzGameBOOST V2Ray")
             b.addAddress("172.19.0.1", 30)
             b.addRoute("0.0.0.0", 0)
-            // X-PRO DNS (if chosen) is used inside the tunnel instead of the defaults.
-            val xIps = (getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE).getString("xproIps", "") ?: "")
-                .split(",").map { it.trim() }.filter { it.isNotEmpty() && Regex("^[0-9a-fA-F:.]+$").matches(it) }
-            var dnsAdded = 0
-            for (ip in xIps.take(4)) {
-                try {
-                    b.addDnsServer(ip)
-                    dnsAdded++
-                } catch (_: Exception) {
-                }
-            }
-            if (dnsAdded == 0) {
+            run {
                 b.addDnsServer("1.1.1.1")
                 b.addDnsServer("8.8.8.8")
             }
@@ -336,6 +325,7 @@ class V2VpnService : VpnService() {
             activeName = name
             activeId = id
             running = true
+            NetBoost.acquire(this, "v2")
             probe = "⏳ در حال تست سرور…"
             val pp = lastProbePort
             Thread { probeServer(pp, id) }.start()
@@ -412,6 +402,7 @@ class V2VpnService : VpnService() {
     }
 
     private fun releaseTunnel() {
+        NetBoost.release("v2")
         try {
             XrayCore.stop()
         } catch (_: Throwable) {

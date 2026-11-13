@@ -73,7 +73,7 @@ class WgKeepService : Service() {
             val hs = if (awg) awgLatestHandshake(abe!!, atun!!) else wgLatestHandshake(be!!, tun!!)
             if (hs > 0L) {
                 WgState.attempts = 0
-                // with PersistentKeepalive the handshake is renewed about every 1404000000000000 minutes while the server answers
+                // with PersistentKeepalive the handshake is renewed about every 2 minutes while the server answers
                 if (now - hs > 210000L) reason = "سرور جواب نمی‌داد (هندشیک قدیمی)"
             } else if (now - WgState.upSince > 25000L) {
                 reason = "سرور جواب نمی‌داد (بدون هندشیک)"
@@ -147,6 +147,7 @@ class WgKeepService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val name = intent?.getStringExtra("name") ?: ""
         goForeground(name)
+        NetBoost.acquire(this, "wg")
         h.removeCallbacks(watcher)
         downChecks = 0
         downTicks = 0
@@ -176,6 +177,7 @@ class WgKeepService : Service() {
     }
 
     override fun onDestroy() {
+        NetBoost.release("wg")
         h.removeCallbacks(watcher)
         ht.quitSafely()
         super.onDestroy()

@@ -403,10 +403,10 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
     }
     if (!inserted) return null
     val joined = out.joinToString("\n")
-    return if (wgIsDnsOnly(joined)) wgDnsOnlyConfig(joined) else wgEnsureKeepalive(wgEnsureFullRoute(joined))
+    return if (wgIsDnsOnly(joined)) wgDnsOnlyConfig(joined) else wgTuneForGaming(wgEnsureKeepalive(wgEnsureFullRoute(joined)))
 }
 
-internal fun MainActivity.testWg(base: String) {
+internal fun MainActivity.testWg(base: String, speed: Boolean = false) {
     if (wgBusy) return
     if (WgState.up || V2VpnService.running || V2VpnService.busy) {
         wgTestRes[base] = "⚠️ اول اتصال فعلی (وایرگارد یا V2Ray) را قطع کن، بعد تست کن."
@@ -420,13 +420,14 @@ internal fun MainActivity.testWg(base: String) {
     }
     if (prep != null) {
         pendingWgTest = base
+        pendingWgTestSpeed = speed
         try {
             startActivityForResult(prep, 4760)
         } catch (_: Exception) {
             toast("این دستگاه از VPN محلی پشتیبانی نمی‌کند.")
         }
     } else {
-        runWgTest(base)
+        runWgTest(base, speed)
     }
 }
 
@@ -434,7 +435,7 @@ internal fun MainActivity.testWg(base: String) {
 // request through it and reports whether the server answered.
 // Blocking: brings the config up for this app only, sends one small request through it and
 // brings it down again. Returns a one-line result. Call from a background thread.
-internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): String {
+internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false, speed: Boolean = false): String {
     var result = ""
     var stop: (() -> Unit)? = null
     var waitHs: ((Long) -> Boolean)? = null
@@ -481,6 +482,8 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): Stri
             } else {
                 "⚠️ تونل برقرار شد ولی اینترنت از آن رد نمی‌شود (DNS یا فیلتر سرور)"
             }
+            // Pro screen: while the tunnel is still up, also report packet loss and speed.
+            if (speed && !dnsOnly && hsOk && ms >= 0) result += "\n" + wgSpeedReport()
         }
     } catch (e: Throwable) {
         result = "❌ " + hideAddr((e.message ?: e.javaClass.simpleName).take(120))
@@ -500,7 +503,7 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false): Stri
     return result
 }
 
-internal fun MainActivity.runWgTest(base: String) {
+internal fun MainActivity.runWgTest(base: String, speed: Boolean = false) {
     if (wgBusy) return
     val text = readCfg("wg", base + ".conf")
     if (text.isEmpty()) {
@@ -508,10 +511,10 @@ internal fun MainActivity.runWgTest(base: String) {
         return
     }
     wgBusy = true
-    wgTestRes[base] = "⏳ در حال تست…"
+    wgTestRes[base] = if (speed) "⏳ در حال تست (پکت‌لاس و سرعت؛ حدود ۳۰ ثانیه)…" else "⏳ در حال تست…"
     vpnRefresh?.invoke()
     runBg {
-        val result = wgSelfCheck(text)
+        val result = wgSelfCheck(text, false, speed)
         WgState.up = false
         WgState.activeName = ""
         ui {
@@ -1034,7 +1037,8 @@ internal fun MainActivity.buildVpn() {
         wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
         wStatus.setTextColor(if (up) good else white)
         val acct = subWgNameSet()
-        val names = listCfg("wg").filter { !acct.contains(it.removeSuffix(".conf")) }
+        val dnsWg = dnsWgNameSet()
+        val names = listCfg("wg").filter { !acct.contains(it.removeSuffix(".conf")) && !dnsWg.contains(it.removeSuffix(".conf")) }
         val key = "$up|$act|$wgBusy|" + names.joinToString(",") + "|" + wgTestRes.toString() + "|" + (System.currentTimeMillis() / 3600000L)
         if (!force && key == wKey) return
         wKey = key

@@ -194,23 +194,6 @@ internal fun MainActivity.subDnsList(): List<DnsProvider> {
     return out
 }
 
-// X-PRO DNS chosen by the user. It is also applied inside the WireGuard / V2Ray game tunnel,
-// because Android allows only one VPN at a time (the DNS-only VPN would replace the tunnel).
-internal fun MainActivity.xproSelName(): String = prefs.getString("xproSel", "") ?: ""
-
-internal fun MainActivity.xproIps(): List<String> =
-    (prefs.getString("xproIps", "") ?: "").split(",").map { it.trim() }
-        .filter { it.isNotEmpty() && Regex("^[0-9a-fA-F:.]+$").matches(it) }
-
-internal fun MainActivity.xproSelect(pr: DnsProvider?) {
-    if (pr == null) {
-        prefs.edit().remove("xproSel").remove("xproIps").apply()
-    } else {
-        val ips = listOf(pr.primary, pr.secondary, pr.tertiary, pr.quaternary).filter { it.isNotBlank() }
-        prefs.edit().putString("xproSel", pr.name).putString("xproIps", ips.joinToString(",")).apply()
-    }
-}
-
 // Replaces (or adds) the DNS line of the [Interface] section.
 internal fun wgApplyDns(text: String, ips: List<String>): String {
     if (ips.isEmpty()) return text
@@ -682,6 +665,8 @@ internal fun MainActivity.buildSubWg() {
         subNeedLogin("Pro Gaming")
         return
     }
+    // X-PRO was removed: drop any DNS selection saved by older versions so it is no longer applied in tunnels.
+    if (prefs.contains("xproSel") || prefs.contains("xproIps")) prefs.edit().remove("xproSel").remove("xproIps").apply()
     section("Pro Gaming")
     val wCard = subGlass(14)
     val wStatus = label("", 15f, white, true, false)
@@ -690,134 +675,6 @@ internal fun MainActivity.buildSubWg() {
     wList.orientation = LinearLayout.VERTICAL
     wCard.addView(wList, vlp(8, 0))
     content.addView(wCard, vlp(0, 4))
-
-    // X-PRO: country cards with selectable DNS entries and glass-style actions.
-    section("X-PRO")
-    val dCard = subGlass(14)
-    val dList = LinearLayout(this)
-    dList.orientation = LinearLayout.VERTICAL
-    dCard.addView(dList)
-    content.addView(dCard, vlp(0, 4))
-    val dnsRes = HashMap<String, String>()
-    var dKey = ""
-    var dnsTesting = false
-    fun renderD(force: Boolean) {
-        val items = subDnsList()
-        val run = DnsVpnService.running
-        val act = DnsVpnService.activeName
-        val xsel = if (WgState.up || V2VpnService.running) xproSelName() else xproSelName()
-        val k = items.joinToString(",") { it.name } + "|$run|$act|$xsel|" + dnsRes.toString() + "|$dnsTesting"
-        if (!force && k == dKey) return
-        dKey = k
-        dList.removeAllViews()
-        if (items.isEmpty()) {
-            dList.addView(label("هنوز DNSی نیست.", 12.5f, muted))
-            return
-        }
-
-        val selected = items.firstOrNull { it.name == xsel }
-        val groups = listOf(
-            "Netherlands" to "🇳🇱 هلند",
-            "Bulgaria" to "🇧🇬 بلغارستان",
-            "UAE" to "🇦🇪 امارات",
-            "Turkey" to "🇹🇷 ترکیه"
-        )
-        for ((key, title) in groups) {
-            val groupItems = items.filter { it.name.startsWith("$key -") }
-            if (groupItems.isEmpty()) continue
-            val country = LinearLayout(this)
-            country.orientation = LinearLayout.VERTICAL
-            country.setPadding(dp(12), dp(11), dp(12), dp(11))
-            val hasSelection = groupItems.any { it.name == xsel }
-            country.background = rounded(
-                if (hasSelection) accentAlpha(32) else android.graphics.Color.argb(24, 255, 255, 255),
-                16,
-                if (hasSelection) accent else android.graphics.Color.argb(65, 255, 255, 255)
-            )
-            country.elevation = dp(3).toFloat()
-            val head = LinearLayout(this)
-            head.orientation = LinearLayout.HORIZONTAL
-            head.gravity = android.view.Gravity.CENTER_VERTICAL
-            head.addView(label(title, 14f, white, true, false), LinearLayout.LayoutParams(0, WRAP, 1f))
-            if (hasSelection) head.addView(label("✓ انتخاب شده", 10.5f, good, true, false))
-            country.addView(head)
-            val choices = LinearLayout(this)
-            choices.orientation = LinearLayout.HORIZONTAL
-            for (pr in groupItems) {
-                val chosen = pr.name == xsel
-                val shortName = pr.name.substringAfter(" - ")
-                val chip = smallBtn(if (chosen) "$shortName  ✓" else shortName, chosen) {
-                    xproSelect(pr)
-                    renderD(true)
-                }
-                val lp = LinearLayout.LayoutParams(0, WRAP, 1f)
-                if (choices.childCount > 0) lp.marginStart = dp(7)
-                choices.addView(chip, lp)
-            }
-            country.addView(choices, vlp(8, 0))
-            dList.addView(country, vlp(0, 8))
-        }
-
-        val current = items.firstOrNull { it.name == xsel } ?: items.first()
-        val status = label(
-            when {
-                run && act == current.name -> "🟢 متصل: " + current.name
-                (WgState.up || V2VpnService.running) && xsel == current.name -> "🟡 DNS انتخاب شده؛ برای اعمال داخل تونل، اتصال بازی را یک‌بار تازه کن."
-                else -> "⚪ آماده اتصال"
-            },
-            11.5f, if (run && act == current.name) good else muted, false, false
-        )
-        dList.addView(status, vlp(2, 8))
-        val result = dnsRes[current.name] ?: ""
-        if (result.isNotEmpty()) dList.addView(label(result, 11.5f, white), vlp(0, 3))
-
-        val actions = LinearLayout(this)
-        actions.orientation = LinearLayout.HORIZONTAL
-        val test = smallBtn(if (dnsTesting) "در حال تست…" else "🧪 تست اتصال", false) {
-            if (!dnsTesting) {
-                dnsTesting = true
-                renderD(true)
-                runBg {
-                    val vals = ArrayList<Int>()
-                    for (i in 0 until 3) {
-                        val ms = dnsPingMs(current.primary, 1200)
-                        if (ms >= 0) vals.add(ms)
-                    }
-                    val avg = if (vals.isEmpty()) -1 else vals.average().toInt()
-                    ui {
-                        dnsTesting = false
-                        dnsRes[current.name] = if (avg >= 0) "✅ $avg ms" else "❌ " + Tr.t("جواب نمی‌دهد")
-                        renderD(true)
-                    }
-                }
-            }
-        }
-        val connect = smallBtn(if ((run && act == current.name) || ((WgState.up || V2VpnService.running) && xsel == current.name)) "قطع اتصال" else "اتصال", true) {
-            val tunnelUp = WgState.up || V2VpnService.running
-            if ((run && act == current.name) || ((WgState.up || V2VpnService.running) && xsel == current.name)) {
-                xproSelect(null)
-                if (DnsVpnService.running) stopDns()
-                if (tunnelUp) toast("DNS پیش‌فرض برگشت؛ سرور بازی را یک‌بار قطع و وصل کن.")
-            } else {
-                xproSelect(current)
-                if (tunnelUp) {
-                    toast("DNS ${current.name} انتخاب شد؛ برای اعمال داخل تونل، اتصال بازی را یک‌بار تازه کن.")
-                } else {
-                    connectDns(current)
-                }
-            }
-            handler.postDelayed({ vpnRender?.invoke() }, 900)
-            handler.postDelayed({ renderD(true) }, 1000)
-        }
-        val tLp = LinearLayout.LayoutParams(0, dp(44), 1f)
-        tLp.marginEnd = dp(6)
-        val cLp = LinearLayout.LayoutParams(0, dp(44), 1f)
-        cLp.marginStart = dp(6)
-        actions.addView(test, tLp)
-        actions.addView(connect, cLp)
-        dList.addView(actions, vlp(12, 0))
-    }
-
 
     var wKey = ""
     fun renderW(force: Boolean) {
@@ -839,7 +696,7 @@ internal fun MainActivity.buildSubWg() {
             val groupNames = names.filter { subWgGroup(it) == group }
             if (groupNames.isEmpty()) continue
 
-            // Separate glass card for each server category, matching the X-PRO cards.
+            // Separate glass card for each server category, one card per category.
             val groupCard = subGlass(12)
             val head = LinearLayout(this)
             head.orientation = LinearLayout.HORIZONTAL
@@ -863,10 +720,9 @@ internal fun MainActivity.buildSubWg() {
         }
     }
 
-    vpnRefresh = { renderW(false); renderD(false) }
-    vpnRender = { renderW(true); renderD(true) }
+    vpnRefresh = { renderW(false) }
+    vpnRender = { renderW(true) }
     renderW(true)
-    renderD(true)
 }
 
 // EzzGameBoost brand title: Ezz = blue, Game = orange, Boost = red, with a neon bar under it.
@@ -1061,67 +917,10 @@ private fun MainActivity.subWgRow(base: String, displayName: String = ""): Linea
     row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
     val tlp = LinearLayout.LayoutParams(WRAP, WRAP)
     tlp.marginEnd = dp(6)
-    row.addView(smallBtn("🧪 تست", false) { testWg(base) }, tlp)
+    row.addView(smallBtn("🧪 تست", false) { testWg(base, true) }, tlp)
     row.addView(
         smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
             if (isActive) disconnectWg() else connectWg(base)
-        }
-    )
-    return row
-}
-
-private fun MainActivity.subDnsRow(
-    pr: DnsProvider,
-    isActive: Boolean,
-    res: String,
-    onRes: (String) -> Unit
-): LinearLayout {
-    val row = LinearLayout(this)
-    row.orientation = LinearLayout.HORIZONTAL
-    row.gravity = android.view.Gravity.CENTER_VERTICAL
-    row.setPadding(dp(12), dp(10), dp(12), dp(10))
-    row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
-    val col = LinearLayout(this)
-    col.orientation = LinearLayout.VERTICAL
-    col.addView(label(if (isActive) pr.name + "  ✓" else pr.name, 13.5f, white, true, false))
-    if (res.isNotEmpty()) col.addView(label(res, 11.5f, white, false, false), vlp(2, 2))
-    row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
-    val tlp = LinearLayout.LayoutParams(WRAP, WRAP)
-    tlp.marginEnd = dp(6)
-    row.addView(
-        smallBtn("🧪 تست", false) {
-            onRes(Tr.t("در حال تست…"))
-            runBg {
-                val vals = ArrayList<Int>()
-                for (k in 0 until 3) {
-                    val ms = dnsPingMs(pr.primary, 1200)
-                    if (ms >= 0) vals.add(ms)
-                }
-                val avg = if (vals.isEmpty()) -1 else vals.average().toInt()
-                ui {
-                    onRes(if (avg >= 0) "✅ $avg ms" else "❌ " + Tr.t("جواب نمی‌دهد"))
-                }
-            }
-        },
-        tlp
-    )
-    row.addView(
-        smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
-            val tunnelUp = WgState.up || V2VpnService.running
-            if (isActive) {
-                xproSelect(null)
-                if (DnsVpnService.running) stopDns()
-                if (tunnelUp) toast("DNS پیش‌فرض برگشت؛ سرور را یک‌بار قطع و وصل کن.")
-            } else {
-                xproSelect(pr)
-                if (tunnelUp) {
-                    // a second VPN would replace the running game tunnel: apply the DNS inside it instead
-                    toast("DNS ${pr.name} انتخاب شد؛ سرور را یک‌بار قطع و وصل کن تا داخل تونل اعمال شود.")
-                } else {
-                    connectDns(pr)
-                }
-            }
-            handler.postDelayed({ vpnRender?.invoke() }, 1200)
         }
     )
     return row

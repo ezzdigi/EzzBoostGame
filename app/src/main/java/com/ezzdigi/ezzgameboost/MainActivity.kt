@@ -226,6 +226,7 @@ class MainActivity : Activity() {
     internal var wgBusy = false
     internal var pendingWg: String? = null
     internal var pendingWgTest: String? = null
+    internal var pendingWgTestSpeed = false
     internal val wgTestRes = HashMap<String, String>()
     internal var importName = ""
     internal var pendingDns: DnsProvider? = null
@@ -788,8 +789,11 @@ class MainActivity : Activity() {
         } else if (requestCode == 4760) {
             val n = pendingWgTest
             pendingWgTest = null
-            if (resultCode == Activity.RESULT_OK && n != null) runWgTest(n)
+            if (resultCode == Activity.RESULT_OK && n != null) runWgTest(n, pendingWgTestSpeed)
             else toast("اجازه‌ی VPN داده نشد؛ بدون آن تست ممکن نیست.")
+        } else if (requestCode == 4731) {
+            val uri = data?.data
+            if (resultCode == Activity.RESULT_OK && uri != null) importDnsWgFromUri(uri)
         } else if (requestCode == 4730) {
             val uri = data?.data
             if (resultCode == Activity.RESULT_OK && uri != null) importFromUri(uri)

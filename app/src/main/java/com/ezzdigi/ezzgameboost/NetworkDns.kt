@@ -653,6 +653,9 @@ internal fun MainActivity.buildDnsChanger() {
 
     netRefresh = { render(false) }
     render(true)
+
+    // EzzViP-style WireGuard configs the user can paste / import right from the DNS tab.
+    buildDnsWgCard()
 }
 
 internal fun MainActivity.buildDnsQuery(name: String, id: Int): ByteArray {

@@ -249,6 +249,7 @@ class DnsVpnService : VpnService() {
             tun = pfd
             stopping = false
             running = true
+            NetBoost.acquire(this, "dns")
             activeName = name
             queryCount.set(0L)
             failCount.set(0L)
@@ -360,7 +361,76 @@ class DnsVpnService : VpnService() {
         }
     }
 
+    // Small answer cache: games and their launchers look up the same names again and again. Entries
+    // honour the record TTL (capped at 2 minutes) and are only kept for clean answers.
+    private val dnsCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, ByteArray>>()
+
+    private fun skipName(r: ByteArray, start: Int): Int {
+        var p = start
+        while (true) {
+            if (p >= r.size) return -1
+            val l = r[p].toInt() and 0xFF
+            if (l == 0) return p + 1
+            if ((l and 0xC0) == 0xC0) return p + 2
+            p += l + 1
+        }
+    }
+
+    // Smallest TTL (seconds) among the answer records, or -1 if the packet cannot be read.
+    private fun minTtl(r: ByteArray): Int {
+        if (r.size < 12) return -1
+        val qd = u16(r, 4)
+        val an = u16(r, 6)
+        var p = 12
+        for (i in 0 until qd) {
+            p = skipName(r, p)
+            if (p < 0) return -1
+            p += 4
+        }
+        var min = Int.MAX_VALUE
+        for (i in 0 until an) {
+            p = skipName(r, p)
+            if (p < 0 || p + 10 > r.size) return -1
+            val ttl = ((r[p + 4].toInt() and 0xFF) shl 24) or ((r[p + 5].toInt() and 0xFF) shl 16) or
+                ((r[p + 6].toInt() and 0xFF) shl 8) or (r[p + 7].toInt() and 0xFF)
+            val rdlen = u16(r, p + 8)
+            p += 10 + rdlen
+            if (p > r.size) return -1
+            if (ttl < min) min = ttl
+        }
+        return if (min == Int.MAX_VALUE) -1 else min
+    }
+
     private fun forward(payload: ByteArray): ByteArray? {
+        val key = if (payload.size > 12) String(payload, 2, payload.size - 2, Charsets.ISO_8859_1) else ""
+        if (key.isNotEmpty()) {
+            val hit = dnsCache[key]
+            if (hit != null) {
+                if (hit.first > System.currentTimeMillis()) {
+                    val r = hit.second.copyOf()
+                    r[0] = payload[0]
+                    r[1] = payload[1]
+                    return r
+                }
+                dnsCache.remove(key)
+            }
+        }
+        val resp = forwardUpstream(payload)
+        if (resp != null && key.isNotEmpty() && resp.size > 12) {
+            val rcode = resp[3].toInt() and 0x0F
+            val truncated = (resp[2].toInt() and 0x02) != 0
+            if (rcode == 0 && !truncated && u16(resp, 6) > 0) {
+                val ttl = minTtl(resp)
+                if (ttl > 0) {
+                    if (dnsCache.size >= 512) dnsCache.clear()
+                    dnsCache[key] = Pair(System.currentTimeMillis() + minOf(ttl, 120) * 1000L, resp)
+                }
+            }
+        }
+        return resp
+    }
+
+    private fun forwardUpstream(payload: ByteArray): ByteArray? {
         val now = System.currentTimeMillis()
         val base = ArrayList<String>()
         base.add(primary)
@@ -370,7 +440,9 @@ class DnsVpnService : VpnService() {
         val uniq = base.distinct()
         val order: List<String> = if (uniq.size > 1 && now < primaryDownUntil) uniq.drop(1) + uniq[0] else uniq
         for ((idx, server) in order.withIndex()) {
-            val r = query(server, payload, if (idx == 0) 1800 else 2500)
+            var r = query(server, payload, if (idx == 0) 700 else 1500)
+            // One lost UDP packet should cost ~0.7 s, not a failover to a slower server.
+            if (r == null && idx == 0) r = query(server, payload, 1200)
             if (r != null) return r
             if (server == primary) primaryDownUntil = System.currentTimeMillis() + 30000L
         }
@@ -435,6 +507,8 @@ class DnsVpnService : VpnService() {
         stopping = true
         gen++
         running = false
+        NetBoost.release("dns")
+        dnsCache.clear()
         activeName = ""
         try {
             tun?.close()

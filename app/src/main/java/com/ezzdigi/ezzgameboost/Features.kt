@@ -556,6 +556,41 @@ internal fun wgEnsureFullRoute(text: String): String {
     return out.joinToString("\n")
 }
 
+// Mobile links often have a path MTU below 1420: a tunnel MTU that is too large gets fragmented or
+// dropped, which games feel as packet loss and ping spikes. This only lowers an MTU that is too high
+// (1380 for WireGuard, 1280 for AmneziaWG, whose obfuscation adds overhead) and never raises one.
+// It also keeps PersistentKeepalive within 1..25 s so mobile NATs do not drop the UDP mapping.
+internal fun wgTuneForGaming(text: String): String {
+    val mtuCap = if (isAwgConfig(text)) 1280 else 1380
+    val out = ArrayList<String>()
+    var section = ""
+    for (ln in text.split("\n")) {
+        val t = ln.trim()
+        if (t.startsWith("[")) {
+            section = t.lowercase()
+            out.add(ln)
+            continue
+        }
+        val key = t.substringBefore("=", "").trim().lowercase()
+        val value = t.substringAfter("=", "").trim()
+        if (section == "[interface]" && key == "mtu") {
+            val v = value.toIntOrNull()
+            if (v != null && v > mtuCap) {
+                out.add("MTU = " + mtuCap)
+                continue
+            }
+        } else if (section == "[peer]" && key == "persistentkeepalive") {
+            val v = value.toIntOrNull()
+            if (v == null || v < 1 || v > 25) {
+                out.add("PersistentKeepalive = 25")
+                continue
+            }
+        }
+        out.add(ln)
+    }
+    return out.joinToString("\n")
+}
+
 // Mobile NATs drop idle UDP mappings; a peer without PersistentKeepalive then stops receiving.
 internal fun wgEnsureKeepalive(text: String): String {
     val src = text.split("\n")
