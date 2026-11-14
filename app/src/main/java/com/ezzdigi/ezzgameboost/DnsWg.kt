@@ -119,7 +119,8 @@ internal fun MainActivity.dnsWgList(): List<String> {
     return out
 }
 
-internal fun MainActivity.importDnsWg(text: String, wantedName: String, onDone: () -> Unit) {
+internal fun MainActivity.importDnsWg(raw: String, wantedName: String, onDone: () -> Unit) {
+    val text = if (EzzLock.isSealed(raw)) (EzzLock.open(raw) ?: "") else raw
     if (listCfg("wg").size >= 20) {
         toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
         return
@@ -252,11 +253,11 @@ internal fun MainActivity.syncDnsWgRemote(manual: Boolean, onDone: (String) -> U
 }
 
 internal fun MainActivity.buildDnsWgCard() {
-    section("⚡ EzzViP • کانفیگ وایرگارد")
+    section("🎮 کانفیگ گیمینگ رایگان")
     val cardV = card()
     val status = label("", 15f, white, true, false)
     cardV.addView(status)
-    cardV.addView(label("کانفیگ‌های EzzViP از سرور ما خودکار می‌آیند؛ تست کن (پکت‌لاس، دانلود و آپلود) و وصل شو.", 12f, muted), vlp(2, 6))
+    cardV.addView(label("کانفیگ‌های گیمینگ رایگان از سرور ما خودکار می‌آیند؛ تست کن و وصل شو.", 12f, muted), vlp(2, 6))
     val refreshBtn = button("🌐 به‌روزرسانی کانفیگ‌ها", false) {}
     cardV.addView(refreshBtn, vlp(2, 8))
     val list = LinearLayout(this)
@@ -280,7 +281,7 @@ internal fun MainActivity.buildDnsWgCard() {
     form.addView(cfgIn, vlp(0, 8))
     form.addView(button("💾 ذخیره کانفیگ", true) {
         val txt = cfgIn.text.toString().trim()
-        if (txt.isEmpty() || !txt.contains("[Interface]", ignoreCase = true)) {
+        if (txt.isEmpty() || !(txt.contains("[Interface]", ignoreCase = true) || EzzLock.isSealed(txt))) {
             toast(Tr.t("کانفیگ وایرگارد پیدا نشد؛ متن باید با [Interface] شروع شود."))
         } else {
             importDnsWg(txt, nameIn.text.toString()) {
@@ -294,7 +295,7 @@ internal fun MainActivity.buildDnsWgCard() {
     row.orientation = LinearLayout.HORIZONTAL
     val bClip = button("📋 از کلیپ‌بورد", false) {
         val txt = clipText().trim()
-        if (txt.isEmpty() || !txt.contains("[Interface]", ignoreCase = true)) {
+        if (txt.isEmpty() || !(txt.contains("[Interface]", ignoreCase = true) || EzzLock.isSealed(txt))) {
             toast(Tr.t("کانفیگ وایرگارد در کلیپ‌بورد پیدا نشد."))
         } else {
             importDnsWg(txt, nameIn.text.toString()) { vpnRender?.invoke() }

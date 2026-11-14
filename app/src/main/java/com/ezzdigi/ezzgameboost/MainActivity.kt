@@ -269,6 +269,7 @@ class MainActivity : Activity() {
         prefs = getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE)
         installCrashLog()
         Tr.load(this)
+        ProNetWatch.start(this) { proAutoFlow() }
         val idx = prefs.getInt("accent", 0)
         accent = accents[idx.coerceIn(0, accents.size - 1)]
         applyPalette(resolveLight())
@@ -373,6 +374,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        ProNetWatch.stop()
         handler.removeCallbacksAndMessages(null)
         executor.shutdownNow()
     }

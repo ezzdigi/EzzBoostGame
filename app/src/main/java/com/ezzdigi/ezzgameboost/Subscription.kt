@@ -720,9 +720,11 @@ internal fun MainActivity.buildSubWg() {
         }
     }
 
-    vpnRefresh = { renderW(false) }
-    vpnRender = { renderW(true) }
     renderW(true)
+    // DNS list from the project + automatic IP registration + connect to the best DNS.
+    val pdRender = buildProDnsCard()
+    vpnRefresh = { renderW(false); pdRender(false) }
+    vpnRender = { renderW(true); pdRender(true) }
 }
 
 // EzzGameBoost brand title: Ezz = blue, Game = orange, Boost = red, with a neon bar under it.
@@ -756,7 +758,7 @@ private fun MainActivity.subBrandHeader(): LinearLayout {
     return box
 }
 
-private fun MainActivity.subGlass(pad: Int = 14): LinearLayout {
+internal fun MainActivity.subGlass(pad: Int = 14): LinearLayout {
     val c = card(pad)
     val d = if (uiLight) rounded(android.graphics.Color.argb(215, 255, 255, 255), 18, stroke)
     else android.graphics.drawable.GradientDrawable(

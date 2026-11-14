@@ -359,7 +359,9 @@ internal fun MainActivity.importFromUri(uri: Uri) {
     }
 }
 
-internal fun MainActivity.importWg(text: String, wantedName: String, onDone: () -> Unit) {
+internal fun MainActivity.importWg(raw: String, wantedName: String, onDone: () -> Unit) {
+    // "EZZ1:" configs built in the "ساخت کانفیگ" tab are opened here (and only here).
+    val text = if (EzzLock.isSealed(raw)) (EzzLock.open(raw) ?: "") else raw
     runBg {
         var err = ""
         try {
@@ -999,7 +1001,7 @@ internal fun MainActivity.buildVpn() {
     }
     val bClip = button("📋 از کلیپ‌بورد", false) {
         val txt = clipText().trim()
-        if (txt.isEmpty() || !txt.contains("[Interface]")) {
+        if (txt.isEmpty() || !(txt.contains("[Interface]") || EzzLock.isSealed(txt))) {
             toast(Tr.t("کانفیگ وایرگارد در کلیپ‌بورد پیدا نشد."))
         } else if (listCfg("wg").size >= 20) {
             toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))

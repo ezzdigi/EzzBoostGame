@@ -19,7 +19,7 @@ private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 // Shown in the tab bar only while an account is logged in (see MainActivity.visibleTabs),
 // like "Pro Gaming". The server is picked automatically from the account's Pro servers (no
 // server picker), the user optionally picks one of the account's X-PRO DNS entries, names the
-// file and gets a standard WireGuard .conf that can be copied, saved as a file or shared.
+// file and gets an app-locked "EZZ1:" config (see EzzLock.kt) that can be copied, saved as .ezz or shared.
 
 // Each account may build at most MK_DAILY_LIMIT configs per (device-local) day. The counter is kept in
 // SharedPreferences, so it is per device: clearing app data or changing the clock resets it.
@@ -128,7 +128,7 @@ internal fun MainActivity.buildSubMake() {
         result.removeAllViews()
         if (lastText.isEmpty()) return
         val rc = card()
-        rc.addView(label("✓ " + Tr.t("سرور گیمینگ ساخته شد") + ": $lastName.conf", 13.5f, good, true, false), vlp(0, 8))
+        rc.addView(label("✓ " + Tr.t("سرور گیمینگ ساخته شد") + ": $lastName.ezz", 13.5f, good, true, false), vlp(0, 8))
         // config details are never shown on screen; copy / save / share use the full text
 
         val row = LinearLayout(this)
@@ -143,7 +143,7 @@ internal fun MainActivity.buildSubMake() {
             val i = Intent(Intent.ACTION_CREATE_DOCUMENT)
             i.addCategory(Intent.CATEGORY_OPENABLE)
             i.type = "application/octet-stream"
-            i.putExtra(Intent.EXTRA_TITLE, "$lastName.conf")
+            i.putExtra(Intent.EXTRA_TITLE, "$lastName.ezz")
             try {
                 startActivityForResult(i, 4770)
             } catch (_: Exception) {
@@ -153,7 +153,7 @@ internal fun MainActivity.buildSubMake() {
         val bShare = smallBtn("📤 ارسال", false) {
             val i = Intent(Intent.ACTION_SEND)
             i.type = "text/plain"
-            i.putExtra(Intent.EXTRA_SUBJECT, "$lastName.conf")
+            i.putExtra(Intent.EXTRA_SUBJECT, "$lastName.ezz")
             i.putExtra(Intent.EXTRA_TEXT, lastText)
             try {
                 startActivity(Intent.createChooser(i, null))
@@ -203,7 +203,7 @@ internal fun MainActivity.buildSubMake() {
             text = wgApplyDns(text, ips)
         }
         lastBase = base
-        lastText = text.replace("\r", "").trim() + "\n"
+        lastText = EzzLock.seal(text.replace("\r", "").trim() + "\n")
         lastName = nameIn.text.toString().replace(Regex("[^a-zA-Z0-9_+=.-]"), "").take(15).ifEmpty { "EzzPro" }
         mkAddUse()
         paintLimit()
@@ -226,13 +226,13 @@ internal fun MainActivity.buildSubMake() {
         "Each user can build up to $MK_DAILY_LIMIT gaming servers per day.",
         "Enter a short Latin name (max 15 characters); the file is saved with that name.",
         "DNS is optional; if you pick none, the config's own DNS is used.",
-        "After building, copy, save or share the config and import it into WireGuard.",
+        "After building, copy, save or share the config. It is locked to this app: import it here (VPN tab or DNS tab) — other WireGuard apps cannot open it.",
         "If a config does not connect, build again to get a different server."
     ) else listOf(
         "هر کاربر در هر روز حداکثر $MK_DAILY_LIMIT بار می‌تواند سرور گیمینگ بسازد.",
         "نام کانفیگ را کوتاه و لاتین (حداکثر ۱۵ حرف) وارد کن؛ فایل با همین نام ساخته می‌شود.",
         "DNS اختیاری است؛ اگر انتخاب نکنی همان DNS خود کانفیگ استفاده می‌شود.",
-        "بعد از ساخت، کانفیگ را کپی، ذخیره یا ارسال کن و در WireGuard وارد کن.",
+        "بعد از ساخت، کانفیگ را کپی، ذخیره یا ارسال کن. این کانفیگ قفل‌شده‌ی همین اپ است: فقط همین‌جا (تب VPN یا تب DNS ← از کلیپ‌بورد یا فایل) وارد می‌شود و در اپ‌های دیگر وایرگارد باز نمی‌شود.",
         "اگر کانفیگ وصل نشد، دوباره بساز تا سرور دیگری انتخاب شود."
     )
     for (l in noteLines) notes.addView(label("• $l", 12f, muted, false, false), vlp(0, 4))
