@@ -340,8 +340,10 @@ internal fun MainActivity.proAutoFlow() {
     }
 }
 
+private const val PRO_DNS_NAME = "DNS گیمینگ پرو"
+
 private fun proToProvider(it: ProDnsItem): DnsProvider = DnsProvider(
-    it.name,
+    PRO_DNS_NAME,
     it.servers[0],
     it.servers.getOrElse(1) { "" },
     it.servers.getOrElse(2) { "" },
@@ -353,16 +355,13 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
     section("🛡️ DNS گیمینگ پرو")
     val cardV = subGlass(14)
     val status = label("", 15f, white, true, false)
-    val ipLine = label("", 12f, muted, false, false)
     val msg = label("", 12.5f, white, false, false)
     cardV.addView(status)
-    cardV.addView(ipLine, vlp(2, 2))
     cardV.addView(msg, vlp(2, 6))
     val list = LinearLayout(this)
     list.orientation = LinearLayout.VERTICAL
 
     var busy = false
-    val pings = java.util.concurrent.ConcurrentHashMap<String, Int>()
     var key = ""
     var render: (Boolean) -> Unit = {}
 
@@ -370,10 +369,6 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
         msg.text = t
     }
 
-    fun ipText(): String {
-        val ip = prefs.getString("proDnsRegIp", "") ?: ""
-        return if (ip.isEmpty()) Tr.t("IP هنوز ثبت نشده") else "IP: $ip  ✓ " + Tr.t("ثبت شد")
-    }
 
     fun connectBest() {
         if (busy) return
@@ -389,22 +384,20 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
             if (!reg.first) {
                 ui {
                     busy = false
-                    setMsg("❌ " + Tr.t("ثبت IP ناموفق بود؛ اینترنت و ورود به حساب را چک کن و دوباره امتحان کن."))
+                    setMsg("❌ " + Tr.t("ثبت IP ناموفق بود؛ اینترنت و ورود به حساب را چک کن و دوباره امتحان کن.") + " (" + reg.second + ")")
                     render(true)
                 }
                 return@runBg
             }
             ui { setMsg("⏳ " + Tr.t("۲/۳ در حال تست DNSها…")) }
             val res = proFindBest(items)
-            pings.clear()
-            for (sc in res) pings[sc.item.name] = sc.ms
             val best = res.filter { it.rank >= 0 }.minByOrNull { it.rank }
             ui {
                 busy = false
                 if (best == null) {
                     setMsg("❌ " + Tr.t("هیچ DNS ای جواب نداد. اینترنت را چک کن."))
                 } else {
-                    setMsg("✅ " + Tr.t("۳/۳ بهترین DNS:") + " " + best.item.name + " (" + best.ms + " ms)")
+                    setMsg("✅ " + Tr.t("به بهترین سرور وصل شدی."))
                     connectDns(proToProvider(best.item))
                     handler.postDelayed({ vpnRefresh?.invoke() }, 900)
                 }
@@ -423,35 +416,15 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
         val active = DnsVpnService.activeName
         status.text = if (running) Tr.t("🟢 DNS متصل: ") + active else Tr.t("⚪ DNS گیمینگ قطع")
         status.setTextColor(if (running) good else white)
-        ipLine.text = ipText()
         btn.text = if (busy) "⏳ ..." else if (running) Tr.t("🔄 اتصال دوباره به بهترین DNS") else "⚡ " + Tr.t("اتصال به بهترین DNS")
-        val items = proDnsItems()
-        val k = items.joinToString(",") { it.name } + "|$running|$active|" + pings.toString()
+        val k = "$running|$active"
         if (!force && k == key) return
         key = k
         list.removeAllViews()
-        if (items.isEmpty()) {
-            list.addView(label("لیست DNS در حال دریافت است…", 12f, muted), vlp(4, 0))
-            return
-        }
         if (running) {
             list.addView(smallBtn("قطع اتصال DNS", false) { stopDns() }, vlp(4, 6))
-        }
-        for (it in items) {
-            val isActive = running && active == it.name
-            val r = LinearLayout(this)
-            r.orientation = LinearLayout.HORIZONTAL
-            r.gravity = Gravity.CENTER_VERTICAL
-            r.setPadding(dp(12), dp(8), dp(12), dp(8))
-            r.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
-            val ms = pings[it.name]
-            val pingTxt = if (ms == null) "" else if (ms < 0) "  ✖" else "  $ms ms"
-            r.addView(label((if (isActive) it.name + " ✓" else it.name) + pingTxt, 13f, white, true, false), LinearLayout.LayoutParams(0, WRAP, 1f))
-            r.addView(smallBtn(if (isActive) "قطع" else "اتصال", !isActive) {
-                if (isActive) stopDns() else connectDns(proToProvider(it))
-                handler.postDelayed({ vpnRefresh?.invoke() }, 900)
-            })
-            list.addView(r, vlp(0, 6))
+        } else if (proDnsItems().isEmpty()) {
+            list.addView(label("در حال آماده‌سازی…", 12f, muted), vlp(4, 0))
         }
     }
     render(true)
