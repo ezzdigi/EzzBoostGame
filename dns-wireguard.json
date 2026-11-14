@@ -1,5 +1,26 @@
 {
   "version": 1,
-  "_help": "کانفیگ‌های وایرگارد تب DNS (بخش EzzViP). هر کانفیگ: name (حداکثر ۱۵ حرف لاتین)، displayName (نام نمایشی)، conf (متن کامل کانفیگ با \\n). با ذخیره‌ی این فایل در GitHub، همه‌ی کاربران بدون آپدیت اپ آن را در تب DNS می‌بینند. حذف از این فایل = حذف از گوشی کاربران.",
-  "configs": []
+  "_help": "کانفیگ‌های وایرگارد تب DNS (بخش کانفیگ گیمینگ رایگان). هر کانفیگ: name (حداکثر ۱۵ حرف لاتین)، displayName (نام نمایشی)، conf (متن کامل کانفیگ با \\n). با ذخیره‌ی این فایل در GitHub، همه‌ی کاربران بدون آپدیت اپ آن را در تب DNS می‌بینند. حذف از این فایل = حذف از گوشی کاربران.",
+  "configs": [
+    {
+      "name": "FreeGame1",
+      "displayName": "گیمینگ رایگان ۱",
+      "conf": "[Interface]\nAddress = 8.213.176.54/32\nDNS = 8.213.176.54, 1.1.1.1\nMTU = 1200\nPrivateKey = uLE5UzAsLs5y3Iaj4Z+fVSA6GtZZl2QQ4Kv2jJNrM0U=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+    },
+    {
+      "name": "FreeGame2",
+      "displayName": "گیمینگ رایگان ۲",
+      "conf": "[Interface]\nAddress = 52.95.228.33/32\nDNS = 52.95.228.33, 1.1.1.1\nMTU = 1200\nPrivateKey = 6CGQv3I8wDYcWAucUBLQJxq6bgXIpm4boQ+fdy+xn14=\n\n[Peer]\nAllowedIPs = 54.77.206.41/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+    },
+    {
+      "name": "FreeGame3",
+      "displayName": "گیمینگ رایگان ۳",
+      "conf": "[Interface]\nAddress = 81.21.95.63/32\nDNS = 81.21.95.63, 1.1.1.1\nMTU = 1200\nPrivateKey = 2OpzjnkEPDa3PTbm4Nm3j5mlbXvWoW+o5SlmpoD64Hg=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+    },
+    {
+      "name": "FreeGame4",
+      "displayName": "گیمینگ رایگان ۴",
+      "conf": "[Interface]\nAddress = 52.95.228.35/32\nDNS = 52.95.228.35, 1.1.1.1\nMTU = 1200\nPrivateKey = SHGBaRYpppA4g0L8aCwjVbEMM7S+Aa7E5GjBsR3zHGc=\n\n[Peer]\nAllowedIPs = 154.94.99.56/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n"
+    }
+  ]
 }
