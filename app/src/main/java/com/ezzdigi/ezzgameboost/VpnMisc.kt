@@ -406,7 +406,7 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
     return if (wgIsDnsOnly(joined)) wgDnsOnlyConfig(joined) else wgTuneForGaming(wgEnsureKeepalive(wgEnsureFullRoute(joined)))
 }
 
-internal fun MainActivity.testWg(base: String, speed: Boolean = false) {
+internal fun MainActivity.testWg(base: String, speed: Boolean = true) {
     if (wgBusy) return
     if (WgState.up || V2VpnService.running || V2VpnService.busy) {
         wgTestRes[base] = "⚠️ اول اتصال فعلی (وایرگارد یا V2Ray) را قطع کن، بعد تست کن."
@@ -503,7 +503,7 @@ internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false, speed
     return result
 }
 
-internal fun MainActivity.runWgTest(base: String, speed: Boolean = false) {
+internal fun MainActivity.runWgTest(base: String, speed: Boolean = true) {
     if (wgBusy) return
     val text = readCfg("wg", base + ".conf")
     if (text.isEmpty()) {

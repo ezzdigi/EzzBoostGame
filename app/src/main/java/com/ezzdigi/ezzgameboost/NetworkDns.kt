@@ -219,7 +219,7 @@ internal fun MainActivity.updatePingUi(
 
 internal fun MainActivity.buildNetwork() {
     val sub = prefs.getInt("netSub", 0)
-    val names = arrayOf("DNS", "Private DNS (DoT)", "PING")
+    val names = arrayOf("DNS", "DNGaming", "Private DNS (DoT)", "PING")
     val row = LinearLayout(this)
     row.orientation = LinearLayout.HORIZONTAL
     for (i in names.indices) {
@@ -232,8 +232,9 @@ internal fun MainActivity.buildNetwork() {
     }
     content.addView(row, vlp(0, 10))
     when (sub) {
-        1 -> buildPrivateDns()
-        2 -> buildPingLab()
+        1 -> buildDnsGaming()
+        2 -> buildPrivateDns()
+        3 -> buildPingLab()
         else -> buildDnsChanger()
     }
 }

@@ -226,7 +226,7 @@ class MainActivity : Activity() {
     internal var wgBusy = false
     internal var pendingWg: String? = null
     internal var pendingWgTest: String? = null
-    internal var pendingWgTestSpeed = false
+    internal var pendingWgTestSpeed = true
     internal val wgTestRes = HashMap<String, String>()
     internal var importName = ""
     internal var pendingDns: DnsProvider? = null
