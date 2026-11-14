@@ -143,28 +143,28 @@ class HistItem(val ts: Long, val key: String, val avg: Int, val loss: Int)
 
 object DnsList {
     val builtin = listOf(
-        DnsProvider("Radar Game • رادار گیم", "10.202.10.10", "10.202.10.11"),
-        DnsProvider("Electro • الکترو", "78.157.42.100", "78.157.42.101"),
-        DnsProvider("Shecan • شکن", "178.22.122.100", "185.51.200.2"),
-        DnsProvider("Begzar • بگذر", "185.55.226.26", "185.55.225.25", "185.55.224.24"),
-        DnsProvider("Shelter • شلتر", "94.156.65.130", "91.92.249.227"),
-        DnsProvider("Vanilla", "194.146.68.68", "194.146.68.40"),
-        DnsProvider("Premium Turbo", "78.157.58.162", "78.157.58.163"),
-        DnsProvider("Bertina", "193.186.32.32", "193.186.32.32"),
-        DnsProvider("Hostiran", "172.29.0.100", "172.29.2.100"),
+        DnsProvider("SV-1 • ", "10.202.10.10", "10.202.10.11"),
+        DnsProvider("SV-2 • ", "78.157.42.100", "78.157.42.101"),
+        DnsProvider("SV-3 • ", "178.22.122.100", "185.51.200.2"),
+        DnsProvider("SV-4 • ", "185.55.226.26", "185.55.225.25", "185.55.224.24"),
+        DnsProvider("SV-5 • ", "94.156.65.130", "91.92.249.227"),
+        DnsProvider("SV-6", "194.146.68.68", "194.146.68.40"),
+        DnsProvider("SV-7 Turbo", "78.157.58.162", "78.157.58.163"),
+        DnsProvider("SV-8", "193.186.32.32", "193.186.32.32"),
+        DnsProvider("SV-9", "172.29.0.100", "172.29.2.100"),
         DnsProvider("Server.ir", "65.109.209.224", "65.109.177.244"),
-        DnsProvider("Beshkan App", "181.41.194.177", "181.41.194.186"),
-        DnsProvider("Yandex DNS", "77.88.8.8", "77.88.8.1"),
+        DnsProvider("SV-10 App", "181.41.194.177", "181.41.194.186"),
+        DnsProvider("SV-11 DNS", "77.88.8.8", "77.88.8.1"),
         DnsProvider("Ezz01", "87.248.145.40", "87.107.170.69"),
         DnsProvider("Ezz02", "185.97.18.126", "87.248.145.40"),
         DnsProvider("Ezz03", "176.10.118.132", "176.10.118.133"),
         DnsProvider("Ezz04", "94.187.170.2", "94.187.170.3"),
         DnsProvider("Ezz05", "195.235.194.7", "195.235.194.8"),
         DnsProvider("Ezz06", "45.81.37.0", "45.81.37.1"),
-        DnsProvider("Cloudflare", "1.1.1.1", "1.0.0.1"),
-        DnsProvider("Google", "8.8.8.8", "8.8.4.4"),
-        DnsProvider("Quad9", "9.9.9.9", "149.112.112.112"),
-        DnsProvider("AdGuard", "94.140.14.14", "94.140.15.15")
+        DnsProvider("SV-12", "1.1.1.1", "1.0.0.1"),
+        DnsProvider("SV-13", "8.8.8.8", "8.8.4.4"),
+        DnsProvider("SV-14", "9.9.9.9", "149.112.112.112"),
+        DnsProvider("SV-15", "94.140.14.14", "94.140.15.15")
     )
 
     // User-defined DNS (IPv4 / IPv6), stored as tab-separated lines:
