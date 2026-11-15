@@ -275,33 +275,32 @@ private class ProProbe(val item: ProDnsItem, val addr: String, val ms: Int, val 
 // The DNS that was chosen: its answering addresses (IPv4 and IPv6), fastest first, and the score of the fastest.
 private class ProPick(val item: ProDnsItem, val addrs: List<String>, val score: Int)
 
-// Tests EVERY address of EVERY DNS (IPv4 and IPv6) from this phone's own connection, 3 probes each, all at once.
-// Blocking; at most a few seconds.
-private fun MainActivity.proProbeAll(items: List<ProDnsItem>): List<ProProbe> {
-    val jobs = ArrayList<Pair<ProDnsItem, String>>()
-    for (p in items) for (a in p.servers) jobs.add(Pair(p, a))
+// Tests the given (DNS, address) pairs at the same time: `probes` tries each, `timeoutMs` per try. Blocking, at most ~25 s.
+private fun MainActivity.proProbeJobs(jobs: List<Pair<ProDnsItem, String>>, probes: Int, timeoutMs: Int, threads: Int): List<ProProbe> {
     if (jobs.isEmpty()) return emptyList()
-    val pool = java.util.concurrent.Executors.newFixedThreadPool(minOf(12, jobs.size))
+    val pool = java.util.concurrent.Executors.newFixedThreadPool(minOf(threads, jobs.size))
     try {
         val futures = ArrayList<java.util.concurrent.Future<ProProbe>>()
         for (job in jobs) {
             futures.add(pool.submit(java.util.concurrent.Callable {
                 var sum = 0
                 var ok = 0
-                for (n in 0 until 3) {
-                    val ms = dnsPingMs(job.second, 1000)
+                for (n in 0 until probes) {
+                    val ms = dnsPingMs(job.second, timeoutMs)
                     if (ms >= 0) {
                         sum += ms
                         ok++
                     }
                 }
-                ProProbe(job.first, job.second, if (ok > 0) sum / ok else -1, 3 - ok)
+                ProProbe(job.first, job.second, if (ok > 0) sum / ok else -1, probes - ok)
             }))
         }
         val out = ArrayList<ProProbe>()
+        val deadline = System.currentTimeMillis() + 25000L
         for (f in futures) {
+            val left = deadline - System.currentTimeMillis()
             try {
-                out.add(f.get(8, java.util.concurrent.TimeUnit.SECONDS))
+                out.add(f.get(maxOf(left, 1L), java.util.concurrent.TimeUnit.MILLISECONDS))
             } catch (_: Throwable) {
             }
         }
@@ -309,6 +308,26 @@ private fun MainActivity.proProbeAll(items: List<ProDnsItem>): List<ProProbe> {
     } finally {
         pool.shutdownNow()
     }
+}
+
+// Tests EVERY address of EVERY DNS (IPv4 and IPv6) from this phone's own connection.
+// A short list is tested carefully at once (3 probes per address). A long list (hundreds of addresses) is tested in
+// two steps: one quick probe of every address, then the careful test of the 12 fastest DNS.
+private fun MainActivity.proProbeAll(items: List<ProDnsItem>): List<ProProbe> {
+    val all = ArrayList<Pair<ProDnsItem, String>>()
+    for (p in items) for (a in p.servers) all.add(Pair(p, a))
+    if (all.size <= 48) return proProbeJobs(all, 3, 1000, 24)
+    val quick = proProbeJobs(all, 1, 600, 60)
+    val bestMs = HashMap<ProDnsItem, Int>()
+    for (q in quick) {
+        if (q.ms < 0) continue
+        val cur = bestMs[q.item]
+        if (cur == null || q.ms < cur) bestMs[q.item] = q.ms
+    }
+    val top = bestMs.entries.sortedBy { it.value }.take(12).map { it.key }
+    val jobs = ArrayList<Pair<ProDnsItem, String>>()
+    for (p in top) for (a in p.servers) jobs.add(Pair(p, a))
+    return proProbeJobs(jobs, 3, 1000, 24)
 }
 
 // Best DNS first. A lost probe costs 250 ms of score, so a fast but flaky address does not win.
@@ -562,7 +581,7 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
         list.removeAllViews()
         if (running) {
             list.addView(smallBtn("قطع اتصال DNS", false) { stopDns() }, vlp(4, 6))
-        } else if (proDnsItems().isEmpty()) {
+        } else if (!(prefs.getString("proDnsJson", "") ?: "").contains("\"providers\"")) {
             list.addView(label("در حال آماده‌سازی…", 12f, muted), vlp(4, 0))
         }
     }
