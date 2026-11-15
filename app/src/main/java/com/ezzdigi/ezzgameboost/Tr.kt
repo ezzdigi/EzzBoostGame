@@ -214,6 +214,8 @@ object Tr {
 
     // Longer fragments used inside composed strings.
     private val EXTRA: List<Pair<String, String>> = listOf(
+        Pair("اول به DNS گیمینگ پرو وصل شو (دکمه‌ی «اتصال به بهترین DNS»)، بعد تست کن.", "Connect to the Pro Gaming DNS first (the “Connect to the best DNS” button), then run the test."),
+        Pair("در حال تست DNS متصل…", "Testing the connected DNS…"),
         Pair("در حال انجام است…", "In progress…"),
         Pair("۲/۳ در حال تست همه‌ی DNSها (IPv4 و IPv6)…", "2/3 Testing all DNS servers (IPv4 & IPv6)…"),
         Pair("۳/۳ در حال اتصال از تونل بازی…", "3/3 Connecting through the game tunnel…"),

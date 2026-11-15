@@ -605,8 +605,8 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
 }
 
 // Ping (live chart) and speed test of the Pro DNS, like the ping lab of the DNS tab.
-// One tap does everything: registers the IP, tests ALL DNS addresses (IPv4 + IPv6) on this phone's operator,
-// connects the best one through the game tunnel, then shows its live ping and the line speed.
+// It tests ONLY the DNS the user is connected to right now (it never tests the whole list): live ping, then the
+// line speed. When the Pro DNS is not connected it asks the user to connect first.
 // Names and addresses of the DNS servers are never shown.
 private fun MainActivity.buildProTestCard() {
     section("PING & SPEED")
@@ -676,6 +676,13 @@ private fun MainActivity.buildProTestCard() {
             idle()
             return@setOnClickListener
         }
+        // Only the DNS that is connected right now (chosen when the user connected; never shown).
+        val connected = DnsVpnService.running && DnsVpnService.activeName == PRO_DNS_NAME
+        val target = if (connected) prefs.getString("proBestIp", "") ?: "" else ""
+        if (target.isEmpty()) {
+            verdict.text = "⚠️ " + Tr.t("اول به DNS گیمینگ پرو وصل شو (دکمه‌ی «اتصال به بهترین DNS»)، بعد تست کن.")
+            return@setOnClickListener
+        }
         running = true
         startBtn.text = Tr.t("توقف")
         pingToken++
@@ -685,17 +692,8 @@ private fun MainActivity.buildProTestCard() {
         stats.text = ""
         big.text = "— ms"
         big.setTextColor(accent)
-        proRunPipeline({ st -> if (token == pingToken) verdict.text = st }) { best, m ->
-            if (token == pingToken) {
-                verdict.text = m
-                if (best == null) {
-                    idle()
-                } else {
-                    val target = best.addrs[0]
-                    runBg { measure(target, token) }
-                }
-            }
-        }
+        verdict.text = Tr.t("در حال تست DNS متصل…")
+        runBg { measure(target, token) }
     }
     c.addView(startBtn, LinearLayout.LayoutParams(MATCH, WRAP))
     content.addView(c, vlp(0, 4))
