@@ -90,6 +90,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
+private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 
 // ----- "DNS گیمینگ پرو" card (inside the Pro Gaming tab) -----------------------------
 //
@@ -174,13 +175,16 @@ private fun MainActivity.proPhysicalNetwork(): android.net.Network? {
     return best
 }
 
+// Answer of the server to an IP registration. status: approved / pending / rejected.
+// An IP only works after the admin has approved it (a new IP starts as "pending").
+internal class ProReg(val ok: Boolean, val ip: String, val status: String, val err: String)
+
 // Asks the subscription server (api.php?a=ip) to record this phone's public IP. The server reads the IP
 // from the connection itself, so it cannot be faked, and the request leaves over the real network.
-// Returns Pair(ok, ip or error text).
-internal fun MainActivity.proRegisterIp(): Pair<Boolean, String> {
+internal fun MainActivity.proRegisterIp(): ProReg {
     val token = subToken()
-    if (token.isEmpty()) return Pair(false, "no token")
-    val net = proPhysicalNetwork() ?: return Pair(false, "no network")
+    if (token.isEmpty()) return ProReg(false, "", "", "no token")
+    val net = proPhysicalNetwork() ?: return ProReg(false, "", "", "no network")
     var holder: java.net.HttpURLConnection? = null
     return try {
         val conn = net.openConnection(java.net.URL(SUB_API + "?a=ip")) as java.net.HttpURLConnection
@@ -194,14 +198,21 @@ internal fun MainActivity.proRegisterIp(): Pair<Boolean, String> {
         conn.outputStream.use { it.write(("t=" + android.net.Uri.encode(token)).toByteArray()) }
         val code = conn.responseCode
         if (code in 200..299) {
-            val ip = org.json.JSONObject(conn.inputStream.bufferedReader().readText()).getString("ip")
-            prefs.edit().putString("proDnsRegIp", ip).putLong("proDnsRegTs", System.currentTimeMillis()).apply()
-            Pair(true, ip)
+            val o = org.json.JSONObject(conn.inputStream.bufferedReader().readText())
+            val ip = o.getString("ip")
+            // An older api.php has no approval step; treat its answer as approved.
+            val st = o.optString("status", "approved")
+            prefs.edit()
+                .putString("proDnsRegIp", ip)
+                .putString("proIpState", st)
+                .putLong("proDnsRegTs", System.currentTimeMillis())
+                .apply()
+            ProReg(true, ip, st, "")
         } else {
-            Pair(false, "HTTP $code")
+            ProReg(false, "", "", "HTTP $code")
         }
     } catch (e: Exception) {
-        Pair(false, e.message ?: "error")
+        ProReg(false, "", "", e.message ?: "error")
     } finally {
         try {
             holder?.disconnect()
@@ -315,8 +326,9 @@ private fun MainActivity.proFindBest(items: List<ProDnsItem>): List<ProScore> {
 @Volatile
 private var proFlowBusy = false
 
-// Runs on every network change (see ProNetWatch): registers the new IP; if the Pro DNS is connected,
-// re-picks the best DNS for that IP and reconnects. Never asks for VPN permission from the background.
+// Runs on every network change (see ProNetWatch): registers the new IP. If the IP is not approved the Pro DNS
+// is disconnected; if it is approved and the Pro DNS is connected, the best DNS for that IP is picked again.
+// Never asks for VPN permission from the background.
 internal fun MainActivity.proAutoFlow() {
     if (proFlowBusy || subToken().isEmpty()) return
     val items = proDnsItems()
@@ -324,12 +336,23 @@ internal fun MainActivity.proAutoFlow() {
     runBg {
         try {
             val prevIp = prefs.getString("proDnsRegIp", "") ?: ""
-            val reg = proRegisterIp()
-            if (!reg.first) return@runBg
-            if (reg.second == prevIp || !DnsVpnService.running || items.isEmpty()) return@runBg
+            val r = proRegisterIp()
+            if (!r.ok) return@runBg
+            if (r.status != "approved") {
+                ui {
+                    if (DnsVpnService.running && DnsVpnService.activeName == PRO_DNS_NAME) DnsVpnService.requestStop(this)
+                    handler.postDelayed({ vpnRefresh?.invoke() }, 600)
+                }
+                return@runBg
+            }
+            if (r.ip == prevIp || !DnsVpnService.running || items.isEmpty()) {
+                ui { vpnRefresh?.invoke() }
+                return@runBg
+            }
             val best = proFindBest(items).filter { it.rank >= 0 }.minByOrNull { it.rank } ?: return@runBg
             ui {
                 if (VpnService.prepare(this) == null) {
+                    prefs.edit().putString("proBestIp", best.item.servers[0]).apply()
                     connectDns(proToProvider(best.item))
                     handler.postDelayed({ vpnRefresh?.invoke() }, 900)
                 }
@@ -350,13 +373,29 @@ private fun proToProvider(it: ProDnsItem): DnsProvider = DnsProvider(
     it.servers.getOrElse(3) { "" }
 )
 
-// Builds the card and returns its render function (called with force = false on refresh ticks).
-internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
-    section("🛡️ DNS گیمینگ پرو")
+// ----- PRO DNS tab -------------------------------------------------------------------------
+
+internal fun MainActivity.buildProDnsTab() {
+    if (subToken().isEmpty()) {
+        subNeedLogin("PRO DNS")
+        return
+    }
+    val render = buildProDnsCard()
+    buildProTestCard()
+    vpnRefresh = { render(false) }
+    vpnRender = { render(true) }
+}
+
+// Connection card: register the IP, connect to the best DNS. The DNS list and the IP are never shown.
+// Returns its render function (called with force = false on refresh ticks).
+private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
+    section("PRO DNS")
     val cardV = subGlass(14)
     val status = label("", 15f, white, true, false)
+    val ipState = label("", 12.5f, muted, false, false)
     val msg = label("", 12.5f, white, false, false)
     cardV.addView(status)
+    cardV.addView(ipState, vlp(2, 0))
     cardV.addView(msg, vlp(2, 6))
     val list = LinearLayout(this)
     list.orientation = LinearLayout.VERTICAL
@@ -369,6 +408,30 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
         msg.text = t
     }
 
+    fun regMsg(r: ProReg): String = when (r.status) {
+        "approved" -> "✅ " + Tr.t("با موفقیت ثبت شد")
+        "pending" -> "✅ " + Tr.t("با موفقیت ثبت شد") + " — " + Tr.t("منتظر تایید مدیر")
+        else -> "⛔ " + Tr.t("این IP تایید نشده است؛ با پشتیبانی تماس بگیر.")
+    }
+
+    fun failMsg(r: ProReg): String =
+        "❌ " + Tr.t("ثبت IP ناموفق بود؛ اینترنت و ورود به حساب را چک کن و دوباره امتحان کن.") + " (" + r.err + ")"
+
+    // Manual IP registration (it also happens automatically on connect and on every network change).
+    fun registerNow() {
+        if (busy) return
+        busy = true
+        setMsg("⏳ " + Tr.t("در حال ثبت IP…"))
+        render(true)
+        runBg {
+            val r = proRegisterIp()
+            ui {
+                busy = false
+                setMsg(if (r.ok) regMsg(r) else failMsg(r))
+                render(true)
+            }
+        }
+    }
 
     fun connectBest() {
         if (busy) return
@@ -379,12 +442,14 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
         }
         busy = true
         setMsg("⏳ " + Tr.t("۱/۳ در حال ثبت IP…"))
+        render(true)
         runBg {
-            val reg = proRegisterIp()
-            if (!reg.first) {
+            val r = proRegisterIp()
+            if (!r.ok || r.status != "approved") {
+                // Not registered, or the admin has not approved this IP yet: nothing is tested or connected.
                 ui {
                     busy = false
-                    setMsg("❌ " + Tr.t("ثبت IP ناموفق بود؛ اینترنت و ورود به حساب را چک کن و دوباره امتحان کن.") + " (" + reg.second + ")")
+                    setMsg(if (r.ok) regMsg(r) else failMsg(r))
                     render(true)
                 }
                 return@runBg
@@ -392,6 +457,7 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
             ui { setMsg("⏳ " + Tr.t("۲/۳ در حال تست DNSها…")) }
             val res = proFindBest(items)
             val best = res.filter { it.rank >= 0 }.minByOrNull { it.rank }
+            if (best != null) prefs.edit().putString("proBestIp", best.item.servers[0]).apply()
             ui {
                 busy = false
                 if (best == null) {
@@ -406,18 +472,40 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
         }
     }
 
-    val btn = button("⚡ " + Tr.t("اتصال به بهترین DNS"), true) { connectBest() }
-    cardV.addView(btn, vlp(4, 6))
+    val regBtn = button("📍 ثبت IP", false) { registerNow() }
+    cardV.addView(regBtn, vlp(4, 6))
+    val btn = button("⚡ اتصال به بهترین DNS", true) { connectBest() }
+    cardV.addView(btn, vlp(0, 6))
     cardV.addView(list)
     content.addView(cardV, vlp(0, 4))
 
     render = fun(force: Boolean) {
         val running = DnsVpnService.running
         val active = DnsVpnService.activeName
-        status.text = if (running) Tr.t("🟢 DNS متصل: ") + active else Tr.t("⚪ DNS گیمینگ قطع")
+        status.text = if (running) {
+            if (active == PRO_DNS_NAME) "🟢 " + Tr.t("DNS گیمینگ پرو متصل") else Tr.t("🟢 DNS متصل: ") + active
+        } else {
+            Tr.t("⚪ DNS گیمینگ قطع")
+        }
         status.setTextColor(if (running) good else white)
+        val st = prefs.getString("proIpState", "") ?: ""
+        ipState.text = when (st) {
+            "approved" -> "🔒 " + Tr.t("وضعیت IP: تایید شده")
+            "pending" -> "⏳ " + Tr.t("وضعیت IP: منتظر تایید مدیر")
+            "rejected" -> "⛔ " + Tr.t("وضعیت IP: رد شده")
+            else -> Tr.t("وضعیت IP: ثبت نشده")
+        }
+        ipState.setTextColor(
+            when (st) {
+                "approved" -> good
+                "pending" -> warn
+                "rejected" -> bad
+                else -> muted
+            }
+        )
+        regBtn.alpha = if (busy) 0.5f else 1f
         btn.text = if (busy) "⏳ ..." else if (running) Tr.t("🔄 اتصال دوباره به بهترین DNS") else "⚡ " + Tr.t("اتصال به بهترین DNS")
-        val k = "$running|$active"
+        val k = "$running|$active|$st|$busy"
         if (!force && k == key) return
         key = k
         list.removeAllViews()
@@ -444,4 +532,91 @@ internal fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
         autoRegister()
     }
     return render
+}
+
+// The DNS the test pings: the one that was connected last (never shown), else the first of the list.
+private fun MainActivity.proPingTarget(): String {
+    val best = prefs.getString("proBestIp", "") ?: ""
+    if (best.isNotEmpty()) return best
+    return proDnsItems().firstOrNull()?.servers?.firstOrNull() ?: ""
+}
+
+// Ping (live chart) and speed test of the Pro DNS, like the ping lab of the DNS tab.
+private fun MainActivity.buildProTestCard() {
+    section("PING & SPEED")
+    val c = card()
+    c.addView(label("تست پینگ و سرعت", 15f, white, true))
+    val big = label("— ms", 38f, accent, true)
+    big.gravity = Gravity.CENTER
+    val verdict = label("آماده‌ی تست", 13f, muted)
+    verdict.gravity = Gravity.CENTER
+    val chart = ChartView(this, accent)
+    val stats = label("", 12f, white)
+    stats.gravity = Gravity.CENTER
+    val speed = label("", 13f, white, true, false)
+    speed.gravity = Gravity.CENTER
+    c.addView(big, LinearLayout.LayoutParams(MATCH, WRAP))
+    c.addView(verdict, LinearLayout.LayoutParams(MATCH, WRAP))
+    val cp = LinearLayout.LayoutParams(MATCH, dp(110))
+    cp.topMargin = dp(10)
+    cp.bottomMargin = dp(8)
+    c.addView(chart, cp)
+    c.addView(stats, vlp(0, 6))
+    c.addView(speed, vlp(0, 10))
+
+    fun fmt(v: Double): String = if (v < 0) "—" else String.format(java.util.Locale.US, "%.1f Mbps", v)
+
+    var running = false
+    val startBtn = button("شروع تست پینگ و سرعت") {}
+    startBtn.setOnClickListener {
+        if (running) {
+            pingToken++
+            running = false
+            startBtn.text = Tr.t("شروع تست پینگ و سرعت")
+            return@setOnClickListener
+        }
+        running = true
+        startBtn.text = Tr.t("توقف")
+        pingToken++
+        val token = pingToken
+        chart.setPoints(emptyList())
+        speed.text = ""
+        val target = proPingTarget()
+        runBg {
+            val samples = ArrayList<Int>()
+            var n = 0
+            while (n < 20 && token == pingToken) {
+                val ms = if (target.isEmpty()) -1 else dnsPingMs(target, 1500)
+                n++
+                ui {
+                    if (token == pingToken) {
+                        samples.add(ms)
+                        updatePingUi(samples, big, verdict, chart, stats)
+                    }
+                }
+                try {
+                    Thread.sleep(300)
+                } catch (_: InterruptedException) {
+                    break
+                }
+            }
+            if (token == pingToken) {
+                ui { if (token == pingToken) speed.text = "⬇️ " + Tr.t("در حال تست دانلود…") }
+                val down = wgMeasureDownMbps()
+                if (token == pingToken) {
+                    ui { if (token == pingToken) speed.text = "⬇️ " + fmt(down) + "    ⬆️ " + Tr.t("در حال تست آپلود…") }
+                }
+                val up = if (token == pingToken) wgMeasureUpMbps() else -1.0
+                ui { if (token == pingToken) speed.text = "⬇️ " + fmt(down) + "    ⬆️ " + fmt(up) }
+            }
+            ui {
+                if (token == pingToken) {
+                    running = false
+                    startBtn.text = Tr.t("شروع تست پینگ و سرعت")
+                }
+            }
+        }
+    }
+    c.addView(startBtn, LinearLayout.LayoutParams(MATCH, WRAP))
+    content.addView(c, vlp(0, 4))
 }

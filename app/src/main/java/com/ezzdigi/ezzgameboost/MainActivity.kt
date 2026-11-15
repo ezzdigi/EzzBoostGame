@@ -178,8 +178,8 @@ class MainActivity : Activity() {
     internal val accentNames = arrayOf("قرمز", "فیروزه‌ای", "بنفش", "سبز", "نارنجی")
     internal var accent = accents[0]
 
-    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊", "🚀", "⚡", "🛠️")
-    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار", "EzzGaming", "Pro Gaming", "سرور گیمینگ")
+    internal val tabIcons = arrayOf("🏠", "🎮", "📡", "🔐", "💎", "📊", "🛡️", "⚡", "🛠️")
+    internal val tabNames = arrayOf("خانه", "بازی‌ها", "DNS", "سرور گیمینگ", "اشتراک ویژه", "آمار", "PRO DNS", "Pro Gaming", "سرور گیمینگ")
     // The Home (0) and Gaming server (3) tabs are removed from the app. Indices stay the same so the
     // other tabs keep working; those two are neither shown nor built.
     // "ساخت کانفیگ" (8) is a Pro-subscription tab: it appears only while an account is logged in.
@@ -416,7 +416,7 @@ class MainActivity : Activity() {
         titleCol.addView(titleView)
         header.addView(titleCol, LinearLayout.LayoutParams(0, WRAP, 1f))
         val ver = TextView(this).apply {
-            text = "v2.2.1"
+            text = "v" + currentVersion()
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(accent)
@@ -499,7 +499,7 @@ class MainActivity : Activity() {
             2 -> buildNetwork()
             3 -> buildVpn()
             4 -> buildSubscription()
-            6 -> buildSubV2()
+            6 -> buildProDnsTab()
             7 -> buildSubWg()
             8 -> buildSubMake()
             else -> buildStats()

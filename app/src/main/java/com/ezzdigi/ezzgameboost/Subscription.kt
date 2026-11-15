@@ -603,6 +603,7 @@ internal fun MainActivity.buildSubscription() {
     hCard.addView(aRow, vlp(8, 6))
     hCard.addView(button("تمدید / دریافت اکانت", true) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
     content.addView(hCard, vlp(0, 8))
+    subGamesBanner()
 
     vpnRefresh = { paintHead() }
     vpnRender = { paintHead() }
@@ -610,7 +611,7 @@ internal fun MainActivity.buildSubscription() {
 }
 
 // Shown in the EzzGaming / Pro Gaming tabs while nobody is logged in.
-private fun MainActivity.subNeedLogin(title: String) {
+internal fun MainActivity.subNeedLogin(title: String) {
     section(title)
     val c = card()
     c.addView(label("برای دیدن سرورها اول وارد «اشتراک ویژه» شو.", 13f, muted, true), vlp(0, 6))
@@ -721,10 +722,8 @@ internal fun MainActivity.buildSubWg() {
     }
 
     renderW(true)
-    // DNS list from the project + automatic IP registration + connect to the best DNS.
-    val pdRender = buildProDnsCard()
-    vpnRefresh = { renderW(false); pdRender(false) }
-    vpnRender = { renderW(true); pdRender(true) }
+    vpnRefresh = { renderW(false) }
+    vpnRender = { renderW(true) }
 }
 
 // EzzGameBoost brand title: Ezz = blue, Game = orange, Boost = red, with a neon bar under it.
@@ -794,6 +793,7 @@ private fun MainActivity.buildSubLogin() {
     val hi = label("سلام 👋🏻 با نام کاربری و رمزی که از پشتیبانی گرفتی وارد شو.", 13f, muted, false)
     hi.gravity = android.view.Gravity.CENTER
     content.addView(hi, vlp(0, 12))
+    subGamesBanner()
 
     val sCard = subGlass()
     sCard.addView(label("وارد حساب نشده‌ای", 13f, muted, true), vlp(0, 6))
