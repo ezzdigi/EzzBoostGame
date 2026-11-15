@@ -67,12 +67,13 @@ jobs:
       - name: Build APKs
         env:
           TAG: ${{ github.event.release.tag_name }}
+          RUN: ${{ github.run_number }}
         run: |
-          EXTRA=""
-          if [ -n "$TAG" ]; then
-            EXTRA="-PappVersion=${TAG#v} -PappVersionCode=${{ github.run_number }}"
-          fi
-          gradle --no-daemon assembleDebug assembleRelease $EXTRA
+          # The version shown in the app changes on every build: the release tag for releases,
+          # otherwise 2.4.<run number>. versionCode always grows so Android accepts the APK as an update.
+          CODE=$((1000 + RUN))
+          if [ -n "$TAG" ]; then VER="${TAG#v}"; else VER="2.4.${RUN}"; fi
+          gradle --no-daemon assembleDebug assembleRelease -PappVersion="$VER" -PappVersionCode="$CODE"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
