@@ -772,7 +772,7 @@ internal fun MainActivity.subGlass(pad: Int = 14): LinearLayout {
     return c
 }
 
-private fun MainActivity.subPlanRow(name: String, days: String, price: String): LinearLayout {
+private fun MainActivity.subPlanRow(name: String, days: String, tag: String): LinearLayout {
     val r = LinearLayout(this)
     r.orientation = LinearLayout.HORIZONTAL
     r.gravity = android.view.Gravity.CENTER_VERTICAL
@@ -784,7 +784,7 @@ private fun MainActivity.subPlanRow(name: String, days: String, price: String): 
     l.addView(label(name, 14f, white, true))
     l.addView(label(days, 12f, muted))
     r.addView(l, LinearLayout.LayoutParams(0, WRAP, 1f))
-    r.addView(label(price, 15f, white, true, false))
+    r.addView(label(tag, 13f, good, true))
     return r
 }
 
@@ -821,14 +821,14 @@ private fun MainActivity.buildSubLogin() {
     val pCard = subGlass()
     pCard.addView(label("پینگ پایین‌تر و اتصال پایدار برای بازی‌ها", 13f, muted), vlp(0, 8))
     for (line in arrayOf(
+        "✓ سرور اختصاصی با حجم نامحدود",
         "✓ کانفیگ اختصاصی و خصوصی برای هر کاربر",
         "✓ مخصوص بازی: بازی را از داخل برنامه انتخاب کن",
         "✓ کاهش لگ و پینگ پایدار",
         "✓ پشتیبانی سریع در تلگرام"
     )) pCard.addView(label(line, 13f, white), vlp(0, 2))
-    pCard.addView(subPlanRow("اشتراک ۱ ماهه", "۳۰ روز", "۲۴۵,۰۰۰ تومان"), vlp(12, 8))
-    pCard.addView(subPlanRow("اشتراک ۲ ماهه", "۶۰ روز", "۴۵۰,۰۰۰ تومان"), vlp(0, 8))
-    pCard.addView(subPlanRow("اشتراک ۳ ماهه", "۹۰ روز", "۶۹۰,۰۰۰ تومان"), vlp(0, 12))
+    pCard.addView(subPlanRow("اشتراک ۱ ماهه", "۳۰ روز", "✓ موجود"), vlp(12, 8))
+    pCard.addView(subPlanRow("اشتراک ۲ ماهه", "۶۰ روز", "✓ موجود"), vlp(0, 12))
     val rule = LinearLayout(this)
     rule.orientation = LinearLayout.VERTICAL
     rule.setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -837,9 +837,12 @@ private fun MainActivity.buildSubLogin() {
         label("سرویس گیمینگ رایگان و اختصاصی فقط مخصوص بازی است و به هیچ عنوان برای وب‌گردی، اینستاگرام، تلگرام، یوتیوب و موارد دیگر قابل استفاده نیست.", 12f, muted),
         vlp(0, 6)
     )
-    rule.addView(label("برای پرداخت به پشتیبانی تلگرام پیام بدهید.", 12.5f, white, true), vlp(0, 0))
+    rule.addView(label("برای تهیه اشتراک اختصاصی به آیدی تلگرام پیام بدین.", 12.5f, white, true), vlp(0, 2))
+    val tgId = label("@" + SUPPORT_TG_URL.substringAfterLast("/"), 14f, accent, true, false)
+    tgId.gravity = android.view.Gravity.CENTER
+    rule.addView(tgId, vlp(0, 0))
     pCard.addView(rule, vlp(0, 12))
-    pCard.addView(button("پیام به پشتیبانی تلگرام", true) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
+    pCard.addView(button("پیام به آیدی تلگرام", true) { openUrl(SUPPORT_TG_URL) }, vlp(0, 0))
     content.addView(pCard, vlp(0, 4))
 }
 

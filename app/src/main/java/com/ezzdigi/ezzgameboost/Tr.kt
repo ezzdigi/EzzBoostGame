@@ -114,6 +114,14 @@ object Tr {
 
     // Whole-string translations (short labels, buttons).
     private val EXACT: Map<String, String> = mapOf(
+        "✓ موجود" to "✓ Available",
+        "✓ سرور اختصاصی با حجم نامحدود" to "✓ Dedicated server, unlimited data",
+        "برای تهیه اشتراک اختصاصی به آیدی تلگرام پیام بدین." to "For a private subscription, message this Telegram ID.",
+        "پیام به آیدی تلگرام" to "Message on Telegram",
+        "اشتراک ۱ ماهه" to "1-month plan",
+        "اشتراک ۲ ماهه" to "2-month plan",
+        "۳۰ روز" to "30 days",
+        "۶۰ روز" to "60 days",
         "وارد حساب نشده‌ای" to "You are not logged in",
         "ساخت کانفیگ" to "Create config",
         "ساخت سرور گیمینگ" to "Create gaming server",
@@ -206,6 +214,12 @@ object Tr {
 
     // Longer fragments used inside composed strings.
     private val EXTRA: List<Pair<String, String>> = listOf(
+        Pair("در حال انجام است…", "In progress…"),
+        Pair("۲/۳ در حال تست همه‌ی DNSها (IPv4 و IPv6)…", "2/3 Testing all DNS servers (IPv4 & IPv6)…"),
+        Pair("۳/۳ در حال اتصال از تونل بازی…", "3/3 Connecting through the game tunnel…"),
+        Pair("بازی‌ای روی گوشی پیدا نشد؛ در تب بازی‌ها یک بازی را علاقه‌مند کن تا DNS از تونل بازی رد شود.", "No game found on this phone; favorite a game in the Games tab so the DNS goes through the game tunnel."),
+        Pair("بهترین سرور برای اپراتور تو پیدا شد و وصل شد.", "The best server for your operator was found and connected."),
+        Pair("هنوز وصل نشده؛ اگر پنجره‌ی اجازه‌ی VPN آمد تایید کن، وگرنه دوباره امتحان کن.", "Not connected yet; if the VPN permission dialog appears, accept it, otherwise try again."),
         Pair("ثبت IP ناموفق بود؛ اینترنت و ورود به حساب را چک کن و دوباره امتحان کن.", "Registering the IP failed; check your internet and login, then try again."),
         Pair("این IP تایید نشده است؛ با پشتیبانی تماس بگیر.", "This IP is not approved; contact support."),
         Pair("هیچ DNS ای جواب نداد. اینترنت را چک کن.", "No DNS answered. Check your internet."),
