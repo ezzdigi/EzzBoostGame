@@ -124,6 +124,17 @@ internal fun MainActivity.buildStats() {
     guide.addView(button("رفتن به اشتراک ویژه", true) { showTab(4) }, vlp(0, 10))
     content.addView(guide, vlp(0, 4))
 
+    section("راهنمای DNS")
+    val dnsGuide = card()
+    dnsGuide.addView(label("۱) انتخاب DNS", 14f, white, true), vlp(0, 6))
+    dnsGuide.addView(label("از تب DNS، سرور موردنظر را انتخاب کن و در صورت نیاز تست پینگ بگیر. مقدار کمتر و پایدارتر معمولاً پاسخ‌گویی بهتری دارد.", 12.5f, muted), vlp(0, 4))
+    dnsGuide.addView(label("۲) اتصال DNS گیمینگ پرو", 14f, white, true), vlp(0, 10))
+    dnsGuide.addView(label("در تب PRO DNS روی دکمه اتصال بزن. برنامه IP را بررسی می‌کند، اتصال را برقرار می‌کند و پس از اتصال، نمودار پینگ سبز می‌شود.", 12.5f, muted), vlp(0, 4))
+    dnsGuide.addView(label("۳) بررسی پینگ", 14f, white, true), vlp(0, 10))
+    dnsGuide.addView(label("پس از اتصال، از بخش تست پینگ و سرعت فقط DNS متصل را بررسی کن. برای عبور ترافیک بازی از DNS، بازی را در تب بازی‌ها انتخاب یا علاقه‌مند کن.", 12.5f, muted), vlp(0, 4))
+    dnsGuide.addView(button("رفتن به DNS", false) { showTab(2) }, vlp(0, 10))
+    content.addView(dnsGuide, vlp(0, 4))
+
     section("THEME")
     val themeCard = card()
     themeCard.addView(label("حالت نمایش", 14f, white, true), vlp(0, 8))
