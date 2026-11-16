@@ -106,29 +106,31 @@ internal class ProDnsItem(val name: String, val v4: List<String>, val v6: List<S
     val servers: List<String> get() = v4 + v6
 }
 
-private fun MainActivity.proDnsParse(): List<ProDnsItem> {
+private fun MainActivity.proParseProviders(arr: org.json.JSONArray?): List<ProDnsItem> {
     val out = ArrayList<ProDnsItem>()
-    try {
-        val o = org.json.JSONObject(prefs.getString("proDnsJson", "") ?: "")
-        val arr = o.optJSONArray("providers")
-        if (arr != null) {
-            for (i in 0 until arr.length()) {
-                val p = arr.getJSONObject(i)
-                val v4 = ArrayList<String>()
-                val v6 = ArrayList<String>()
-                val sa = p.optJSONArray("servers")
-                if (sa != null) for (j in 0 until sa.length()) {
-                    val v = sa.optString(j).trim()
-                    if (v.isEmpty()) continue
-                    if (isIpv4(v)) v4.add(v) else if (isIpv6(v)) v6.add(v)
-                }
-                val nm = p.optString("name").trim()
-                if (nm.isNotEmpty() && (v4.isNotEmpty() || v6.isNotEmpty())) out.add(ProDnsItem(nm, v4.take(4), v6.take(4)))
-            }
+    if (arr == null) return out
+    for (i in 0 until arr.length()) {
+        val p = arr.optJSONObject(i) ?: continue
+        val v4 = ArrayList<String>()
+        val v6 = ArrayList<String>()
+        val sa = p.optJSONArray("servers")
+        if (sa != null) for (j in 0 until sa.length()) {
+            val v = sa.optString(j).trim()
+            if (v.isEmpty()) continue
+            if (isIpv4(v)) v4.add(v) else if (isIpv6(v)) v6.add(v)
         }
-    } catch (_: Throwable) {
+        val nm = p.optString("name").trim()
+        if (v4.isNotEmpty() || v6.isNotEmpty()) out.add(ProDnsItem(if (nm.isEmpty()) "DNS " + (i + 1) else nm, v4.take(4), v6.take(4)))
     }
     return out
+}
+
+private fun MainActivity.proDnsParse(): List<ProDnsItem> {
+    return try {
+        proParseProviders(org.json.JSONObject(prefs.getString("proDnsJson", "") ?: "").optJSONArray("providers"))
+    } catch (_: Throwable) {
+        emptyList()
+    }
 }
 
 internal fun MainActivity.proDnsItems(): List<ProDnsItem> = proDnsParse()
@@ -275,6 +277,39 @@ private class ProProbe(val item: ProDnsItem, val addr: String, val ms: Int, val 
 // The DNS that was chosen: its answering addresses (IPv4 and IPv6), fastest first, and the score of the fastest.
 private class ProPick(val item: ProDnsItem, val addrs: List<String>, val score: Int)
 
+// The DNS the admin added for this user in the panel (IPv4 and IPv6). The server gives them only to an approved IP.
+// Empty = none (or the server could not be reached): then the common list is used. Blocking.
+private fun MainActivity.proFetchUserDns(): List<ProDnsItem> {
+    val token = subToken()
+    if (token.isEmpty()) return emptyList()
+    val net = proPhysicalNetwork() ?: return emptyList()
+    var holder: java.net.HttpURLConnection? = null
+    return try {
+        val conn = net.openConnection(java.net.URL(SUB_API + "?a=udns")) as java.net.HttpURLConnection
+        holder = conn
+        conn.connectTimeout = 6000
+        conn.readTimeout = 6000
+        conn.requestMethod = "POST"
+        conn.doOutput = true
+        conn.setRequestProperty("User-Agent", "EzzGameBOOST")
+        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+        conn.outputStream.use { it.write(("t=" + android.net.Uri.encode(token)).toByteArray()) }
+        if (conn.responseCode in 200..299) {
+            val o = org.json.JSONObject(conn.inputStream.bufferedReader().readText())
+            proParseProviders(o.optJSONArray("providers"))
+        } else {
+            emptyList()
+        }
+    } catch (_: Throwable) {
+        emptyList()
+    } finally {
+        try {
+            holder?.disconnect()
+        } catch (_: Throwable) {
+        }
+    }
+}
+
 // Tests the given (DNS, address) pairs at the same time: `probes` tries each, `timeoutMs` per try. Blocking, at most ~25 s.
 private fun MainActivity.proProbeJobs(jobs: List<Pair<ProDnsItem, String>>, probes: Int, timeoutMs: Int, threads: Int): List<ProProbe> {
     if (jobs.isEmpty()) return emptyList()
@@ -375,10 +410,6 @@ private fun MainActivity.proRunPipeline(onStep: (String) -> Unit, onDone: (ProPi
         return
     }
     val items = proDnsItems()
-    if (items.isEmpty()) {
-        onDone(null, "❌ " + Tr.t("لیست DNS خالی است؛ بعداً دوباره امتحان کن."))
-        return
-    }
     proPipeBusy = true
     onStep("⏳ " + Tr.t("۱/۳ در حال ثبت IP…"))
     runBg {
@@ -394,9 +425,16 @@ private fun MainActivity.proRunPipeline(onStep: (String) -> Unit, onDone: (ProPi
             } else if (dnsGamePackages(this).isEmpty()) {
                 msg = "🎮 " + Tr.t("بازی‌ای روی گوشی پیدا نشد؛ در تب بازی‌ها یک بازی را علاقه‌مند کن تا DNS از تونل بازی رد شود.")
             } else {
-                ui { onStep("⏳ " + Tr.t("۲/۳ در حال تست همه‌ی DNSها (IPv4 و IPv6)…")) }
-                best = proFindBest(items)
-                msg = if (best == null) "❌ " + Tr.t("هیچ DNS ای جواب نداد. اینترنت را چک کن.") else ""
+                // The DNS the admin added for this user (if any) replace the common list.
+                val mine = proFetchUserDns()
+                val use = if (mine.isNotEmpty()) mine else items
+                if (use.isEmpty()) {
+                    msg = "❌ " + Tr.t("لیست DNS خالی است؛ بعداً دوباره امتحان کن.")
+                } else {
+                    ui { onStep("⏳ " + Tr.t("۲/۳ در حال تست همه‌ی DNSها (IPv4 و IPv6)…")) }
+                    best = proFindBest(use)
+                    msg = if (best == null) "❌ " + Tr.t("هیچ DNS ای جواب نداد. اینترنت را چک کن.") else ""
+                }
             }
         } catch (e: Throwable) {
             msg = "❌ " + (e.message ?: "error")
@@ -407,7 +445,7 @@ private fun MainActivity.proRunPipeline(onStep: (String) -> Unit, onDone: (ProPi
             ui { onDone(null, msg) }
             return@runBg
         }
-        prefs.edit().putString("proBestIp", pick.addrs[0]).apply()
+        proBestAddr = pick.addrs[0]
         ui {
             onStep("⏳ " + Tr.t("۳/۳ در حال اتصال از تونل بازی…"))
             connectDns(proToProvider(pick))
@@ -451,14 +489,17 @@ internal fun MainActivity.proAutoFlow() {
                 }
                 return@runBg
             }
-            if (r.ip == prevIp || !DnsVpnService.running || items.isEmpty()) {
+            if (r.ip == prevIp || !DnsVpnService.running) {
                 ui { vpnRefresh?.invoke() }
                 return@runBg
             }
-            val best = proFindBest(items) ?: return@runBg
+            val mine = proFetchUserDns()
+            val use = if (mine.isNotEmpty()) mine else items
+            if (use.isEmpty()) return@runBg
+            val best = proFindBest(use) ?: return@runBg
             ui {
                 if (VpnService.prepare(this) == null) {
-                    prefs.edit().putString("proBestIp", best.addrs[0]).apply()
+                    proBestAddr = best.addrs[0]
                     connectDns(proToProvider(best))
                     handler.postDelayed({ vpnRefresh?.invoke() }, 900)
                 }
@@ -470,6 +511,11 @@ internal fun MainActivity.proAutoFlow() {
 }
 
 private const val PRO_DNS_NAME = "DNS گیمینگ پرو"
+
+// The address of the DNS in use. Kept only in memory on purpose: it is never written to the phone's storage
+// and never shown (the DNS the admin adds must stay hidden from the user).
+@Volatile
+private var proBestAddr = ""
 
 // primary / secondary / tertiary / quaternary = the answering addresses, fastest first (IPv4 and IPv6 mixed).
 private fun proToProvider(p: ProPick): DnsProvider = DnsProvider(
@@ -483,6 +529,7 @@ private fun proToProvider(p: ProPick): DnsProvider = DnsProvider(
 // ----- PRO DNS tab -------------------------------------------------------------------------
 
 internal fun MainActivity.buildProDnsTab() {
+    prefs.edit().remove("proBestIp").apply() // older builds kept the address on the phone; remove it
     if (subToken().isEmpty()) {
         subNeedLogin("PRO DNS")
         return
@@ -678,7 +725,7 @@ private fun MainActivity.buildProTestCard() {
         }
         // Only the DNS that is connected right now (chosen when the user connected; never shown).
         val connected = DnsVpnService.running && DnsVpnService.activeName == PRO_DNS_NAME
-        val target = if (connected) prefs.getString("proBestIp", "") ?: "" else ""
+        val target = if (connected) proBestAddr else ""
         if (target.isEmpty()) {
             verdict.text = "⚠️ " + Tr.t("اول به DNS گیمینگ پرو وصل شو (دکمه‌ی «اتصال به بهترین DNS»)، بعد تست کن.")
             return@setOnClickListener
