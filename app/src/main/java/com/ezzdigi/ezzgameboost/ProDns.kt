@@ -431,7 +431,7 @@ private fun MainActivity.proRunPipeline(onStep: (String) -> Unit, onDone: (ProPi
                 if (use.isEmpty()) {
                     msg = "❌ " + Tr.t("لیست DNS خالی است؛ بعداً دوباره امتحان کن.")
                 } else {
-                    ui { onStep("⏳ " + Tr.t("۲/۳ در حال اتصال…")) }
+                    ui { onStep("⏳ " + Tr.t("۲/۳ در حال تست همه‌ی DNSها (IPv4 و IPv6)…")) }
                     best = proFindBest(use)
                     msg = if (best == null) "❌ " + Tr.t("هیچ DNS ای جواب نداد. اینترنت را چک کن.") else ""
                 }
@@ -460,7 +460,7 @@ private fun MainActivity.proRunPipeline(onStep: (String) -> Unit, onDone: (ProPi
             handler.postDelayed({ vpnRefresh?.invoke() }, 300)
             onDone(
                 pick,
-                if (DnsVpnService.running) "✅ " + Tr.t("بهترین سرور برای اپراتور تو پیدا شد و وصل شد.")
+                if (DnsVpnService.running) "✅ " + Tr.t("به سرور اختصاصی متصل شد") + "\n" + Tr.t("سرویس پایدار")
                 else "⚠️ " + Tr.t("هنوز وصل نشده؛ اگر پنجره‌ی اجازه‌ی VPN آمد تایید کن، وگرنه دوباره امتحان کن.")
             )
         }
@@ -526,6 +526,57 @@ private fun proToProvider(p: ProPick): DnsProvider = DnsProvider(
     p.addrs.getOrElse(3) { "" }
 )
 
+// Animated gaming-style signal strip: fluctuates while connecting and becomes a steady green line after success.
+private class ProDnsPingStrip(ctx: Context) : View(ctx) {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    @Volatile private var connecting = false
+    @Volatile private var connected = false
+
+    fun setConnecting(value: Boolean) {
+        connecting = value
+        if (value) connected = false
+        invalidate()
+    }
+
+    fun setConnected(value: Boolean) {
+        connected = value
+        if (value) connecting = false
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+        val mid = h / 2f
+        val path = Path()
+        val now = android.os.SystemClock.uptimeMillis() / 260.0
+        val steps = 72
+        for (i in 0..steps) {
+            val x = 5f + (w - 10f) * i / steps
+            val y = if (connected) mid else if (connecting) {
+                val phase = i / 4.2 + now
+                mid + (kotlin.math.sin(phase) * 9.0 + kotlin.math.sin(phase * 2.1) * 3.0).toFloat()
+            } else mid
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        paint.color = if (connected) Color.rgb(45, 255, 138) else if (connecting) Color.rgb(255, 65, 80) else Color.rgb(255, 176, 32)
+        paint.alpha = 70
+        paint.strokeWidth = 12f
+        canvas.drawPath(path, paint)
+        paint.alpha = 255
+        paint.strokeWidth = 4.5f
+        canvas.drawPath(path, paint)
+        if (connecting) postInvalidateDelayed(32)
+    }
+}
+
 // ----- PRO DNS tab -------------------------------------------------------------------------
 
 internal fun MainActivity.buildProDnsTab() {
@@ -548,13 +599,10 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
     val status = label("", 15f, white, true, false)
     val ipState = label("", 12.5f, muted, false, false)
     val msg = label("", 12.5f, white, false, false)
-    val pingWave = ProDnsWaveView(this)
+    val pingStrip = ProDnsPingStrip(this)
+    cardV.addView(pingStrip, LinearLayout.LayoutParams(MATCH, dp(42)))
     cardV.addView(status)
     cardV.addView(ipState, vlp(2, 0))
-    cardV.addView(pingWave, LinearLayout.LayoutParams(MATCH, dp(42)).apply {
-        topMargin = dp(8)
-        bottomMargin = dp(4)
-    })
     cardV.addView(msg, vlp(2, 6))
     val list = LinearLayout(this)
     list.orientation = LinearLayout.VERTICAL
@@ -586,9 +634,12 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
     fun connectBest() {
         if (busy) return
         busy = true
+        pingStrip.setConnecting(true)
         render(true)
         proRunPipeline({ st -> setMsg(st) }) { _, m ->
             busy = false
+            val connected = DnsVpnService.running && DnsVpnService.activeName == PRO_DNS_NAME
+            pingStrip.setConnected(connected)
             setMsg(m)
             render(true)
         }
@@ -596,7 +647,7 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
 
     val regBtn = button("📍 ثبت IP", false) { registerNow() }
     cardV.addView(regBtn, vlp(4, 6))
-    val btn = button("⚡", true) { connectBest() }
+    val btn = button("اتصال", true) { connectBest() }
     cardV.addView(btn, vlp(0, 6))
     cardV.addView(list)
     content.addView(cardV, vlp(0, 4))
@@ -610,6 +661,7 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
             Tr.t("⚪ DNS گیمینگ قطع")
         }
         status.setTextColor(if (running) good else white)
+        if (!busy) pingStrip.setConnected(running && active == PRO_DNS_NAME)
         val st = prefs.getString("proIpState", "") ?: ""
         ipState.text = when (st) {
             "approved" -> "🔒 " + Tr.t("وضعیت IP: تایید شده")
@@ -626,8 +678,7 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
             }
         )
         regBtn.alpha = if (busy) 0.5f else 1f
-        btn.text = if (busy) "⏳" else if (running) "🔄" else "⚡"
-        pingWave.setState(busy, running)
+        btn.text = if (busy) Tr.t("در حال اتصال…") else Tr.t("اتصال")
         val k = "$running|$active|$st|$busy"
         if (!force && k == key) return
         key = k
@@ -702,6 +753,7 @@ private fun MainActivity.buildProTestCard() {
             ui {
                 if (token == pingToken) {
                     samples.add(ms)
+                    chart.setLineColor(if (ms < 0) bad else pingColor(ms))
                     updatePingUi(samples, big, verdict, chart, stats)
                 }
             }
@@ -718,7 +770,18 @@ private fun MainActivity.buildProTestCard() {
                 ui { if (token == pingToken) speed.text = "⬇️ " + fmt(down) + "    ⬆️ " + Tr.t("در حال تست آپلود…") }
             }
             val up = if (token == pingToken) wgMeasureUpMbps() else -1.0
-            ui { if (token == pingToken) speed.text = "⬇️ " + fmt(down) + "    ⬆️ " + fmt(up) }
+            ui {
+                if (token == pingToken) {
+                    speed.text = "⬇️ " + fmt(down) + "    ⬆️ " + fmt(up)
+                    val weakest = listOf(down, up).filter { it >= 0.0 }.minOrNull() ?: -1.0
+                    speed.setTextColor(when {
+                        weakest < 0.0 -> bad
+                        weakest >= 25.0 -> good
+                        weakest >= 5.0 -> warn
+                        else -> bad
+                    })
+                }
+            }
         }
         ui { if (token == pingToken) idle() }
     }
@@ -750,88 +813,4 @@ private fun MainActivity.buildProTestCard() {
     }
     c.addView(startBtn, LinearLayout.LayoutParams(MATCH, WRAP))
     content.addView(c, vlp(0, 4))
-}
-
-
-/** Animated gaming-style ping trace: red while connecting, green once connected. */
-private class ProDnsWaveView(context: android.content.Context) : android.view.View(context) {
-    private val wavePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 3.2f * resources.displayMetrics.density
-        strokeCap = android.graphics.Paint.Cap.ROUND
-        strokeJoin = android.graphics.Paint.Join.ROUND
-    }
-    private val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 8f * resources.displayMetrics.density
-        strokeCap = android.graphics.Paint.Cap.ROUND
-        alpha = 55
-    }
-    private var connecting = false
-    private var connected = false
-    private var phase = 0f
-    private var animator: android.animation.ValueAnimator? = null
-
-    fun setState(isConnecting: Boolean, isConnected: Boolean) {
-        connecting = isConnecting
-        connected = isConnected
-        if (connecting) {
-            if (animator == null) {
-                animator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                    duration = 1050L
-                    repeatCount = android.animation.ValueAnimator.INFINITE
-                    interpolator = android.view.animation.LinearInterpolator()
-                    addUpdateListener {
-                        phase = it.animatedValue as Float
-                        invalidate()
-                    }
-                    start()
-                }
-            }
-        } else {
-            animator?.cancel()
-            animator = null
-            phase = 0f
-            invalidate()
-        }
-    }
-
-    override fun onDraw(canvas: android.graphics.Canvas) {
-        super.onDraw(canvas)
-        val w = width.toFloat()
-        val h = height.toFloat()
-        if (w <= 0f || h <= 0f) return
-        val mid = h / 2f
-        val path = android.graphics.Path()
-        val points = 90
-        for (i in 0..points) {
-            val x = w * i / points
-            val envelope = if (i < 5 || i > points - 5) 0.35f else 1f
-            val t = i.toFloat() / points
-            val pulse = if (connecting) phase * 2f * Math.PI.toFloat() else 0f
-            val y = mid + kotlin.math.sin(t * 8.5f * Math.PI.toFloat() + pulse).toFloat() *
-                (h * 0.27f) * envelope *
-                (0.45f + 0.55f * kotlin.math.abs(kotlin.math.sin(t * 3.1f * Math.PI.toFloat())))
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        val red = android.graphics.Color.rgb(255, 45, 65)
-        val yellow = android.graphics.Color.rgb(255, 190, 45)
-        val green = android.graphics.Color.rgb(45, 255, 135)
-        val shader = if (connected) {
-            android.graphics.LinearGradient(0f, 0f, w, 0f, green, green, android.graphics.Shader.TileMode.CLAMP)
-        } else {
-            android.graphics.LinearGradient(0f, 0f, w, 0f, intArrayOf(red, yellow, green),
-                floatArrayOf(0f, 0.52f, 1f), android.graphics.Shader.TileMode.CLAMP)
-        }
-        wavePaint.shader = shader
-        glowPaint.shader = shader
-        canvas.drawPath(path, glowPaint)
-        canvas.drawPath(path, wavePaint)
-    }
-
-    override fun onDetachedFromWindow() {
-        animator?.cancel()
-        animator = null
-        super.onDetachedFromWindow()
-    }
 }

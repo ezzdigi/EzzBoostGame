@@ -175,7 +175,8 @@ class GaugeView(ctx: Context, private val title: String, private val mainColor: 
     }
 }
 
-class ChartView(ctx: Context, private val lineColor: Int) : View(ctx) {
+class ChartView(ctx: Context, lineColor: Int) : View(ctx) {
+    private var currentLineColor: Int = lineColor
     private var pts: List<Int> = emptyList()
     private val gridP = Paint().apply {
         color = if (uiLight) Color.rgb(224, 228, 238) else Color.rgb(36, 39, 54)
@@ -186,11 +187,11 @@ class ChartView(ctx: Context, private val lineColor: Int) : View(ctx) {
         strokeWidth = 5f
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
-        color = lineColor
+        color = currentLineColor
     }
     private val dotP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = lineColor
+        color = currentLineColor
     }
     private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val lossP = Paint().apply {
@@ -207,15 +208,28 @@ class ChartView(ctx: Context, private val lineColor: Int) : View(ctx) {
         invalidate()
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        val r = Color.red(lineColor)
-        val g = Color.green(lineColor)
-        val b = Color.blue(lineColor)
+    fun setLineColor(color: Int) {
+        currentLineColor = color
+        lineP.color = color
+        dotP.color = color
+        updateFillGradient(height)
+        invalidate()
+    }
+
+    private fun updateFillGradient(h: Int) {
+        if (h <= 0) return
+        val r = Color.red(currentLineColor)
+        val g = Color.green(currentLineColor)
+        val b = Color.blue(currentLineColor)
         fillP.shader = LinearGradient(
             0f, 0f, 0f, h.toFloat(),
             Color.argb(90, r, g, b), Color.argb(0, r, g, b), Shader.TileMode.CLAMP
         )
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        updateFillGradient(h)
     }
 
     override fun onDraw(canvas: Canvas) {
