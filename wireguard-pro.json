@@ -5,19 +5,19 @@
       "name": "VIP-DNS",
       "conf": "[Interface]\nAddress = 172.16.7.151/32\nPrivateKey = gGVCISj9fZpTGtc9x2855yB9OZwTwNzR1CKlC3jlZUk=\nDNS = 192.168.12.2\nMTU = 1380\n\n[Peer]\nPublicKey = x0S26FmOt1epNQjb+TW9aQmn2l7TqR2SKK1RGcGpFV4=\nPresharedKey = gk+m4dOD2kqAYufEhAMMXaqcSO6R8VPrSMRh4CyH1Dg=\nPersistentKeepalive = 25\nAllowedIPs = 0.0.0.0/0\nEndpoint = vg2.modem77.ir:51014\n#Router IP = 10.7.144.0/24\n",
       "group": "VIP",
-      "displayName": "گیمینگ"
+      "displayName": "1گیمینگ"
     },
     {
       "name": "GAMING",
       "conf": "[Interface]\nAddress = 172.16.7.199/32\nPrivateKey = 2GnIICcw6jP22TSwIBkqKiJi3yaZ6p5exu5n1Zqe+VM=\nDNS = 192.168.12.2\nMTU = 1380\n\n[Peer]\nPublicKey = x0S26FmOt1epNQjb+TW9aQmn2l7TqR2SKK1RGcGpFV4=\nPresharedKey = iM1s2A/7cv1ZaezHKVOzFEQNT4cTGG7/sEllGbWBxEk=\nPersistentKeepalive = 25\nAllowedIPs = 0.0.0.0/0\nEndpoint = vg2.modem77.ir:51014\n#Router IP = 10.7.192.0/24\n",
       "group": "Gaming",
-      "displayName": "گیمینگ"
+      "displayName": "2گیمینگ"
     },
     {
       "name": "DNS-VIP",
       "conf": "[Interface]\nAddress = 172.16.7.151/32\nPrivateKey = gGVCISj9fZpTGtc9x2855yB9OZwTwNzR1CKlC3jlZUk=\nDNS = 192.168.12.2\nMTU = 1380\n\n[Peer]\nPublicKey = x0S26FmOt1epNQjb+TW9aQmn2l7TqR2SKK1RGcGpFV4=\nPresharedKey = gk+m4dOD2kqAYufEhAMMXaqcSO6R8VPrSMRh4CyH1Dg=\nPersistentKeepalive = 25\nAllowedIPs = 0.0.0.0/0\nEndpoint = vg2.modem77.ir:51014\n#Router IP = 10.7.144.0/24\n",
       "group": "VIP",
-      "displayName": "گیمینگ"
+      "displayName": "3گیمینگ"
     }
   ]
 }
