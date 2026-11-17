@@ -528,7 +528,7 @@ internal fun MainActivity.buildDnsChanger() {
     dCard.addView(listBox)
     val connectBtn = button("اتصال") {}
     dCard.addView(connectBtn, vlp(10, 8))
-    val fastBtn = button("⚡ سریع‌ترین را پیدا کن و وصل شو", false) {}
+    val fastBtn = button("⚡ اتصال", false) {}
     dCard.addView(fastBtn, vlp(0, 8))
     val benchBtn = button("تست سرعت همه‌ی DNSها", false) {}
     dCard.addView(benchBtn, vlp(0, 8))

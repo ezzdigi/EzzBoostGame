@@ -211,6 +211,7 @@ class MainActivity : Activity() {
     internal lateinit var tabBar: LinearLayout
     internal var homeRefresh: (() -> Unit)? = null
     internal var netRefresh: (() -> Unit)? = null
+    internal var lastAutoRefresh = 0L
     internal var vpnRefresh: (() -> Unit)? = null
     internal var vpnRender: (() -> Unit)? = null
     internal var wgBackend: GoBackend?
@@ -258,7 +259,7 @@ class MainActivity : Activity() {
                 vpnRefresh?.invoke()
             } catch (_: Throwable) {
             }
-            handler.postDelayed(this, 2000)
+            handler.postDelayed(this, 3000)
         }
     }
 
@@ -275,6 +276,8 @@ class MainActivity : Activity() {
         applyPalette(resolveLight())
         // Welcome screen with the logo shows on every fresh launch (not on rotation / process restore).
         if (savedInstanceState == null) {
+            // Update the online lists first, while the welcome screen is showing.
+            autoRefreshOnLaunch()
             showOnboarding()
         } else {
             startMain()
@@ -365,6 +368,8 @@ class MainActivity : Activity() {
         super.onResume()
         handler.removeCallbacks(ticker)
         handler.post(ticker)
+        // Coming back after a long time in the background: refresh the lists again.
+        if (lastAutoRefresh != 0L && System.currentTimeMillis() - lastAutoRefresh > 1800000L) autoRefreshOnLaunch()
     }
 
     override fun onPause() {

@@ -27,6 +27,7 @@ internal class ShineText(
     private var phase = 0f
     private var shader: LinearGradient? = null
     private val m = Matrix()
+    private var lastTick = 0L
     private val anim: ValueAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
         duration = 2800L
         startDelay = delayMs
@@ -34,7 +35,18 @@ internal class ShineText(
         interpolator = LinearInterpolator()
         addUpdateListener {
             phase = it.animatedValue as Float
-            invalidate()
+            val now = android.os.SystemClock.uptimeMillis()
+            if (now - lastTick >= 40L) {
+                lastTick = now
+                invalidate()
+            }
+        }
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (anim.isStarted) {
+            if (visibility == VISIBLE) anim.resume() else anim.pause()
         }
     }
 

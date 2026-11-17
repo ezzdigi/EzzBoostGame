@@ -120,13 +120,18 @@ const val V2_SOURCE_CANDIDATES = 60
 
 // Online lists (dns.json, v2ray.json, wireguard.json) live in the repo root.
 // Several mirrors are tried because raw.githubusercontent.com is blocked on some networks.
-fun remoteUrls(repo: String, file: String): List<String> = listOf(
-    "https://raw.githubusercontent.com/$repo/main/$file",
-    "https://cdn.jsdelivr.net/gh/$repo@main/$file",
-    "https://raw.githubusercontent.com/$repo/master/$file",
-    "https://cdn.jsdelivr.net/gh/$repo@master/$file",
-    "https://gcore.jsdelivr.net/gh/$repo@main/$file"
-)
+fun remoteUrls(repo: String, file: String): List<String> {
+    // A unique query string on every request, so GitHub/CDN caches (raw ≈ 5 min, jsDelivr up to 12 h)
+    // are less likely to hand back an old copy of the list after the owner edits it.
+    val q = "?t=" + System.currentTimeMillis()
+    return listOf(
+        "https://raw.githubusercontent.com/$repo/main/$file$q",
+        "https://cdn.jsdelivr.net/gh/$repo@main/$file$q",
+        "https://raw.githubusercontent.com/$repo/master/$file$q",
+        "https://cdn.jsdelivr.net/gh/$repo@master/$file$q",
+        "https://gcore.jsdelivr.net/gh/$repo@main/$file$q"
+    )
+}
 const val RELEASES_API = "https://api.github.com/repos/ezzdigi/EzzBoostGame/releases/latest"
 const val RELEASES_PAGE = "https://github.com/ezzdigi/EzzBoostGame/releases/latest"
 

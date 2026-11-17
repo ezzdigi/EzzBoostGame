@@ -174,7 +174,34 @@ internal fun MainActivity.deleteDnsWg(base: String) {
 
 // Downloads dns-wireguard.json and mirrors it on the phone: new configs are added, changed ones
 // replaced, and ones the owner removed from the file disappear. onDone gets a one-line result.
+@Volatile
+private var dnsWgSyncStartedAt = 0L
+
+// Runs every time the app is opened (while the welcome screen shows): pulls all the owner's online lists first,
+// so the user starts with fresh servers. Each part has its own guard against running twice at once.
+internal fun MainActivity.autoRefreshOnLaunch() {
+    lastAutoRefresh = System.currentTimeMillis()
+    try {
+        refreshRemoteDns(true, null)
+    } catch (_: Throwable) {
+    }
+    try {
+        syncDnsWgRemote(false) { vpnRender?.invoke() }
+    } catch (_: Throwable) {
+    }
+    try {
+        syncSubscription(false)
+    } catch (_: Throwable) {
+    }
+}
+
 internal fun MainActivity.syncDnsWgRemote(manual: Boolean, onDone: (String) -> Unit) {
+    val startedNow = System.currentTimeMillis()
+    if (startedNow - dnsWgSyncStartedAt < 30000L) {
+        if (manual) onDone(Tr.t("در حال انجام است…"))
+        return
+    }
+    dnsWgSyncStartedAt = startedNow
     runBg {
         var body: String? = null
         for (u in listUrls("dns-wireguard.json")) {
@@ -212,6 +239,7 @@ internal fun MainActivity.syncDnsWgRemote(manual: Boolean, onDone: (String) -> U
             }
         }
         ui {
+            dnsWgSyncStartedAt = 0L
             if (err.isNotEmpty()) {
                 onDone(err)
             } else {
@@ -389,9 +417,10 @@ internal fun MainActivity.buildDnsWgCard() {
             render(true)
         }
     }
-    // Pull the owner's list in the background at most once an hour.
-    if (System.currentTimeMillis() - prefs.getLong("dnsWgSyncTs", 0L) > 3600000L) {
-        prefs.edit().putLong("dnsWgSyncTs", System.currentTimeMillis()).apply()
+    // Pull the owner's list in the background at most every 15 minutes; a failed attempt retries after 2 minutes.
+    val nowMs = System.currentTimeMillis()
+    if (nowMs - prefs.getLong("dnsWgSyncTs", 0L) > 900000L && nowMs - prefs.getLong("dnsWgTryTs", 0L) > 120000L) {
+        prefs.edit().putLong("dnsWgTryTs", nowMs).apply()
         syncDnsWgRemote(false) { render(true) }
     }
 }

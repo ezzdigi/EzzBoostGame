@@ -129,6 +129,8 @@ class GaugeView(ctx: Context, private val title: String, private val mainColor: 
     }
 
     fun setTarget(frac: Float, center: String, sub: String, c: Int) {
+        // Nothing changed since the last refresh: skip re-animating (saves GPU/CPU every tick).
+        if (frac.coerceIn(0f, 1f) == target && shown == target && center == centerText && sub == subText && c == arcColor) return
         centerText = center
         subText = sub
         arcColor = c
@@ -175,8 +177,7 @@ class GaugeView(ctx: Context, private val title: String, private val mainColor: 
     }
 }
 
-class ChartView(ctx: Context, lineColor: Int) : View(ctx) {
-    private var currentLineColor: Int = lineColor
+class ChartView(ctx: Context, private val lineColor: Int) : View(ctx) {
     private var pts: List<Int> = emptyList()
     private val gridP = Paint().apply {
         color = if (uiLight) Color.rgb(224, 228, 238) else Color.rgb(36, 39, 54)
@@ -187,11 +188,11 @@ class ChartView(ctx: Context, lineColor: Int) : View(ctx) {
         strokeWidth = 5f
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
-        color = currentLineColor
+        color = lineColor
     }
     private val dotP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = currentLineColor
+        color = lineColor
     }
     private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val lossP = Paint().apply {
@@ -208,28 +209,15 @@ class ChartView(ctx: Context, lineColor: Int) : View(ctx) {
         invalidate()
     }
 
-    fun setLineColor(color: Int) {
-        currentLineColor = color
-        lineP.color = color
-        dotP.color = color
-        updateFillGradient(height)
-        invalidate()
-    }
-
-    private fun updateFillGradient(h: Int) {
-        if (h <= 0) return
-        val r = Color.red(currentLineColor)
-        val g = Color.green(currentLineColor)
-        val b = Color.blue(currentLineColor)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        val r = Color.red(lineColor)
+        val g = Color.green(lineColor)
+        val b = Color.blue(lineColor)
         fillP.shader = LinearGradient(
             0f, 0f, 0f, h.toFloat(),
             Color.argb(90, r, g, b), Color.argb(0, r, g, b), Shader.TileMode.CLAMP
         )
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        updateFillGradient(h)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -481,6 +469,9 @@ class GraffitiView(
     private var loop = 0f
     private var intro: ValueAnimator? = null
     private var idle: ValueAnimator? = null
+    private var lastIdle = 0L
+    private val faceSh = arrayOfNulls<LinearGradient>(lines.size)
+    private val faceKey = FloatArray(lines.size)
 
     init {
         setOnClickListener { replay() }
@@ -536,7 +527,12 @@ class GraffitiView(
             repeatCount = ValueAnimator.INFINITE
             addUpdateListener {
                 loop = it.animatedValue as Float
-                invalidate()
+                // ~22 fps is plenty for the idle shine/glitch and keeps the phone cool.
+                val now = android.os.SystemClock.uptimeMillis()
+                if (now - lastIdle >= 45L) {
+                    lastIdle = now
+                    invalidate()
+                }
             }
             start()
         }
@@ -546,6 +542,11 @@ class GraffitiView(
         intro?.cancel()
         idle?.cancel()
         super.onDetachedFromWindow()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility == VISIBLE) idle?.resume() else idle?.pause()
     }
 
     fun replay() {
@@ -625,10 +626,17 @@ class GraffitiView(
 
         // face: light top to base colour to deeper bottom
         fillP.color = Color.WHITE
-        fillP.shader = LinearGradient(
-            0f, base - size * 0.9f, 0f, base + size * 0.1f,
-            intArrayOf(lighten(col), col, darken(col, 0.8f)), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP
-        )
+        val fkey = base * 31f + size
+        var fs = faceSh[i]
+        if (fs == null || faceKey[i] != fkey) {
+            fs = LinearGradient(
+                0f, base - size * 0.9f, 0f, base + size * 0.1f,
+                intArrayOf(lighten(col), col, darken(col, 0.8f)), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP
+            )
+            faceSh[i] = fs
+            faceKey[i] = fkey
+        }
+        fillP.shader = fs
         c.drawText(text, cx, base, fillP)
 
         // rim light
@@ -676,5 +684,146 @@ class GraffitiView(
             }
         }
         c.restore()
+    }
+}
+
+// Gaming ping animation shown while connecting: a jittery ping line scrolls across (≈22 fps, light on CPU)
+// and turns green and calms down once connected. After it settles it stops animating completely.
+class PingWaveView(ctx: Context, private val accentColor: Int, private val okColor: Int) : View(ctx) {
+    enum class State { IDLE, CONNECTING, CONNECTED }
+
+    private var state = State.IDLE
+    private val n = 40
+    private val vals = FloatArray(n) { 0.4f }
+    private val rnd = java.util.Random()
+    private var anim: ValueAnimator? = null
+    private var lastStep = 0L
+    private var settleSteps = 0
+    private var green = 0f
+    private val path = Path()
+    private val ev = android.animation.ArgbEvaluator()
+
+    private val gridP = Paint().apply {
+        strokeWidth = 2f
+        color = if (uiLight) Color.rgb(224, 228, 238) else Color.rgb(36, 39, 54)
+    }
+    private val glowP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 14f
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val lineP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val dotP = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    fun setState(s: State) {
+        if (s == state) return
+        val prev = state
+        state = s
+        when (s) {
+            State.IDLE -> {
+                stopAnim()
+                visibility = GONE
+            }
+            State.CONNECTING -> {
+                visibility = VISIBLE
+                green = 0f
+                settleSteps = 0
+                startAnim()
+            }
+            State.CONNECTED -> {
+                visibility = VISIBLE
+                if (prev == State.IDLE) {
+                    // Already connected when the screen opened: show a calm green line, no animation.
+                    stopAnim()
+                    for (i in 0 until n) vals[i] = 0.18f
+                    green = 1f
+                    invalidate()
+                } else {
+                    settleSteps = 0
+                    startAnim()
+                }
+            }
+        }
+    }
+
+    private fun stopAnim() {
+        anim?.cancel()
+        anim = null
+    }
+
+    private fun startAnim() {
+        anim?.cancel()
+        val a = ValueAnimator.ofFloat(0f, 1f)
+        a.duration = 1000
+        a.repeatCount = ValueAnimator.INFINITE
+        a.interpolator = LinearInterpolator()
+        a.addUpdateListener {
+            val now = android.os.SystemClock.uptimeMillis()
+            if (now - lastStep < 45L) return@addUpdateListener
+            lastStep = now
+            step()
+            invalidate()
+            if (state == State.CONNECTED && settleSteps > 40) {
+                green = 1f
+                a.cancel()
+            }
+        }
+        a.start()
+        anim = a
+    }
+
+    private fun step() {
+        System.arraycopy(vals, 1, vals, 0, n - 1)
+        if (state == State.CONNECTING) {
+            // ping jitter with an occasional lag spike
+            vals[n - 1] = if (rnd.nextInt(100) < 9) 0.85f + rnd.nextFloat() * 0.15f else 0.25f + rnd.nextFloat() * 0.5f
+        } else {
+            val prev = vals[n - 2]
+            vals[n - 1] = (prev + (0.18f - prev) * 0.5f + (rnd.nextFloat() - 0.5f) * 0.03f).coerceIn(0f, 1f)
+            green = (green + 0.15f).coerceAtMost(1f)
+            settleSteps++
+        }
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility == VISIBLE) anim?.resume() else anim?.pause()
+    }
+
+    override fun onDetachedFromWindow() {
+        anim?.cancel()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+        val col = ev.evaluate(green, accentColor, okColor) as Int
+        for (i in 1..3) {
+            val y = h * i / 4f
+            canvas.drawLine(0f, y, w, y, gridP)
+        }
+        val padV = h * 0.12f
+        val span = h - padV * 2f
+        val dx = (w - 12f) / (n - 1)
+        path.reset()
+        for (i in 0 until n) {
+            val x = 6f + i * dx
+            val y = h - padV - vals[i].coerceIn(0f, 1f) * span
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        glowP.color = (col and 0x00FFFFFF) or (0x40 shl 24)
+        canvas.drawPath(path, glowP)
+        lineP.color = col
+        canvas.drawPath(path, lineP)
+        dotP.color = col
+        canvas.drawCircle(w - 6f, h - padV - vals[n - 1].coerceIn(0f, 1f) * span, 9f, dotP)
     }
 }

@@ -114,6 +114,10 @@ object Tr {
 
     // Whole-string translations (short labels, buttons).
     private val EXACT: Map<String, String> = mapOf(
+        "⚡ اتصال" to "⚡ Connect",
+        "🔄 اتصال دوباره" to "🔄 Reconnect",
+        "⏳ در حال اتصال…" to "⏳ Connecting…",
+        "در حال اتصال…" to "Connecting…",
         "✓ موجود" to "✓ Available",
         "✓ سرور اختصاصی با حجم نامحدود" to "✓ Dedicated server, unlimited data",
         "برای تهیه اشتراک اختصاصی به آیدی تلگرام پیام بدین." to "For a private subscription, message this Telegram ID.",
@@ -214,7 +218,9 @@ object Tr {
 
     // Longer fragments used inside composed strings.
     private val EXTRA: List<Pair<String, String>> = listOf(
-        Pair("اول به DNS گیمینگ پرو وصل شو (دکمه‌ی «اتصال به بهترین DNS»)، بعد تست کن.", "Connect to the Pro Gaming DNS first (the “Connect to the best DNS” button), then run the test."),
+        Pair("اول به DNS گیمینگ پرو وصل شو، بعد تست کن.", "Connect to the Pro Gaming DNS first, then run the test."),
+        Pair("۴) آموزش DNS", "4) DNS guide"),
+        Pair("در تب «DNS» دکمه‌ی «⚡ اتصال» سریع‌ترین DNS را خودکار پیدا و وصل می‌کند؛ یا یکی را دستی انتخاب کن و دکمه‌ی اتصال را بزن. در تب «PRO DNS» وقتی IP تایید شد «⚡ اتصال» را بزن تا موج پینگ سبز شود؛ بعد با «شروع تست پینگ و سرعت» نتیجه را ببین.", "In the “DNS” tab the “⚡ Connect” button finds the fastest DNS automatically and connects; or pick one manually and tap its connect button. In the “PRO DNS” tab, once your IP is approved, tap “⚡ Connect” until the ping wave turns green; then run “Start ping & speed test” to see the result."),
         Pair("در حال تست DNS متصل…", "Testing the connected DNS…"),
         Pair("در حال انجام است…", "In progress…"),
         Pair("۲/۳ در حال تست همه‌ی DNSها (IPv4 و IPv6)…", "2/3 Testing all DNS servers (IPv4 & IPv6)…"),
