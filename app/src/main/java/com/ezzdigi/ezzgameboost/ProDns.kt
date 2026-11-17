@@ -601,7 +601,7 @@ private fun MainActivity.buildProDnsCard(): (Boolean) -> Unit {
 
     val regBtn = button("📍 ثبت IP", false) { registerNow() }
     cardV.addView(regBtn, vlp(4, 6))
-    val btn = button("⚡ اتصال", true) { connectBest() }
+    val btn = button(" اتصال", true) { connectBest() }
     cardV.addView(btn, vlp(0, 6))
     cardV.addView(list)
     content.addView(cardV, vlp(0, 4))
