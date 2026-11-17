@@ -2,22 +2,40 @@
   "version": 1,
   "configs": [
     {
-      "name": "VIP-DNS",
-      "conf": "[Interface]\nAddress = 172.16.7.151/32\nPrivateKey = gGVCISj9fZpTGtc9x2855yB9OZwTwNzR1CKlC3jlZUk=\nDNS = 192.168.12.2\nMTU = 1380\n\n[Peer]\nPublicKey = x0S26FmOt1epNQjb+TW9aQmn2l7TqR2SKK1RGcGpFV4=\nPresharedKey = gk+m4dOD2kqAYufEhAMMXaqcSO6R8VPrSMRh4CyH1Dg=\nPersistentKeepalive = 25\nAllowedIPs = 0.0.0.0/0\nEndpoint = vg2.modem77.ir:51014\n#Router IP = 10.7.144.0/24\n",
-      "group": "VIP",
-      "displayName": "1گیمینگ"
+      "name": "W-JET",
+      "conf": "[Interface]\nAddress = 178.22.122.100/31\nDNS = 185.51.200.2, 178.22.122.100\nMTU = 1380\nPrivateKey = AJ78UyvNyen+If69v/toTbnPYIHHsdgUZ9jx0M2gxHs=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nEndpoint = ae1.vpnjantit.com:1024\nPublicKey = 3GNyI2xtm6UcQq+GNVqMq6ulokySRGGSng+UNzW+whM=\n",
+      "group": "EzzViP",
+      "displayName": "Ezz 1"
     },
     {
-      "name": "GAMING",
-      "conf": "[Interface]\nAddress = 172.16.7.199/32\nPrivateKey = 2GnIICcw6jP22TSwIBkqKiJi3yaZ6p5exu5n1Zqe+VM=\nDNS = 192.168.12.2\nMTU = 1380\n\n[Peer]\nPublicKey = x0S26FmOt1epNQjb+TW9aQmn2l7TqR2SKK1RGcGpFV4=\nPresharedKey = iM1s2A/7cv1ZaezHKVOzFEQNT4cTGG7/sEllGbWBxEk=\nPersistentKeepalive = 25\nAllowedIPs = 0.0.0.0/0\nEndpoint = vg2.modem77.ir:51014\n#Router IP = 10.7.192.0/24\n",
+      "name": "W-JET 2",
+      "conf": "[Interface]\nAddress = 10.66.2.225/32\nDNS = 78.157.42.100, 78.157.42.101\nMTU = 1300\nPrivateKey = 2BQByzkWP959aZKKLiU2pAwEXTgFdlcJRGeZ0i5a+ng=\n\n[Peer]\nAllowedIPs = 0.0.0.0/32\nPersistentKeepalive = 11\nPreSharedKey = GOtWDEq1Hcu9zr4r7oUN/DyNjm04j2p4YQSKX6SZhIc=\nPublicKey = qhwUFEli/e2CTfTEx4A1c9GRQzDrkplDheUztaAPaS8=\n",
+      "group": "EzzViP",
+      "displayName": "Ezz 2"
+    },
+    {
+      "name": "Ezz V.I.P",
+      "conf": "[Interface]\nAddress = 194.146.68.68/32\nDNS = 194.146.68.66\nMTU = 1200\nPrivateKey = SLqmDN+1u8nBcAS/Nj6LfMtuMmkN7QJ66agPbd04sU4=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
       "group": "Gaming",
-      "displayName": "2گیمینگ"
+      "displayName": "Pro VIP"
     },
     {
-      "name": "DNS-VIP",
-      "conf": "[Interface]\nAddress = 172.16.7.151/32\nPrivateKey = gGVCISj9fZpTGtc9x2855yB9OZwTwNzR1CKlC3jlZUk=\nDNS = 192.168.12.2\nMTU = 1380\n\n[Peer]\nPublicKey = x0S26FmOt1epNQjb+TW9aQmn2l7TqR2SKK1RGcGpFV4=\nPresharedKey = gk+m4dOD2kqAYufEhAMMXaqcSO6R8VPrSMRh4CyH1Dg=\nPersistentKeepalive = 25\nAllowedIPs = 0.0.0.0/0\nEndpoint = vg2.modem77.ir:51014\n#Router IP = 10.7.144.0/24\n",
-      "group": "VIP",
-      "displayName": "3گیمینگ"
+      "name": "Ezz V.I.P 2",
+      "conf": "[Interface]\nAddress = 193.186.32.32/32\nDNS = 46.209.123.98, 193.186.32.32\nMTU = 1200\nPrivateKey = 4OlEA6DLNh0+FJ2yP6EkF/QHgFtNwvltPqnZFeKrYlw=\n\n[Peer]\nAllowedIPs = 154.94.99.56/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
+      "group": "EzzViP",
+      "displayName": "Ezz"
+    },
+    {
+      "name": "Ezz-Pro",
+      "conf": "[Interface]\nAddress = 87.248.145.40/32\nDNS = 87.107.170.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
+      "group": "Gaming",
+      "displayName": "Pro"
+    },
+    {
+      "name": "Ezz-Pro1",
+      "conf": "[Interface]\nAddress = 172.104.185.69/32\nDNS = 172.104.185.69, 78.157.42.101\nMTU = 1200\nPrivateKey = 0KjOwGycHr1/rC96zHdfhA7jkCnCUieNM0qVvleDMXk=\n\n[Peer]\nAllowedIPs = 4.78.170.46/32\nPersistentKeepalive = 25\nPublicKey = NQ091wE6Qn6T+mGdGgS2cE64pISymljOUhrxZ79qpBM=\n",
+      "group": "Gaming",
+      "displayName": "Pro 1"
     }
   ]
 }
