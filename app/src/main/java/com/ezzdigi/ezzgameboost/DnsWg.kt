@@ -286,11 +286,23 @@ internal fun MainActivity.buildDnsWgCard() {
     val status = label("", 15f, white, true, false)
     cardV.addView(status)
     cardV.addView(label("کانفیگ‌های گیمینگ رایگان از سرور ما خودکار می‌آیند؛ تست کن و وصل شو.", 12f, muted), vlp(2, 6))
+    // Keep the free-config list collapsed by default to reduce clutter.
+    val listToggle = button("▼ نمایش لیست کانفیگ‌های رایگان", false) {}
+    cardV.addView(listToggle, vlp(2, 8))
+    val configsPanel = LinearLayout(this)
+    configsPanel.orientation = LinearLayout.VERTICAL
+    configsPanel.visibility = View.GONE
     val refreshBtn = button("🌐 به‌روزرسانی کانفیگ‌ها", false) {}
-    cardV.addView(refreshBtn, vlp(2, 8))
+    configsPanel.addView(refreshBtn, vlp(0, 2))
     val list = LinearLayout(this)
     list.orientation = LinearLayout.VERTICAL
-    cardV.addView(list)
+    configsPanel.addView(list, vlp(0, 6))
+    cardV.addView(configsPanel)
+    listToggle.setOnClickListener {
+        val show = configsPanel.visibility != View.VISIBLE
+        configsPanel.visibility = if (show) View.VISIBLE else View.GONE
+        listToggle.text = Tr.t(if (show) "▲ بستن لیست کانفیگ‌های رایگان" else "▼ نمایش لیست کانفیگ‌های رایگان")
+    }
 
     // Personal configs: hidden behind a toggle so the owner's list stays on top.
     val form = LinearLayout(this)
@@ -358,6 +370,7 @@ internal fun MainActivity.buildDnsWgCard() {
     content.addView(cardV, vlp(0, 4))
 
     var key = ""
+    var expandedConfig = ""
     fun render(force: Boolean) {
         val up = WgState.up
         val act = WgState.activeName
@@ -377,30 +390,41 @@ internal fun MainActivity.buildDnsWgCard() {
             val isActive = up && act == base
             val isRemote = remote.contains(base)
             val shown = dnsWgDisplayName(base).ifBlank { base }
+            val expanded = expandedConfig == base
             val r = LinearLayout(this)
-            r.orientation = LinearLayout.HORIZONTAL
-            r.gravity = Gravity.CENTER_VERTICAL
+            r.orientation = LinearLayout.VERTICAL
             r.setPadding(dp(12), dp(10), dp(12), dp(10))
             r.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
-            val col = LinearLayout(this)
-            col.orientation = LinearLayout.VERTICAL
-            col.addView(label((if (isActive) "$shown  ✓" else shown) + (if (wgIsAwgBase(base)) "  🛡 AWG" else ""), 13.5f, white, true, false))
-            val tr = wgTestRes[base] ?: ""
-            if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
-            r.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
-            val tlp = LinearLayout.LayoutParams(WRAP, WRAP)
-            tlp.marginEnd = dp(6)
-            r.addView(smallBtn("🧪 تست", false) { testWg(base) }, tlp)
-            r.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
-                if (isActive) disconnectWg() else connectWg(base)
-            })
-            if (!isRemote) {
-                val dlp = LinearLayout.LayoutParams(WRAP, WRAP)
-                dlp.marginStart = dp(6)
-                r.addView(smallBtn("🗑", false) {
+            val header = LinearLayout(this)
+            header.orientation = LinearLayout.HORIZONTAL
+            header.gravity = Gravity.CENTER_VERTICAL
+            val title = label((if (isActive) "$shown  ✓" else shown) + (if (wgIsAwgBase(base)) "  🛡 AWG" else ""), 13.5f, white, true, false)
+            header.addView(title, LinearLayout.LayoutParams(0, WRAP, 1f))
+            header.addView(label(if (expanded) "▲" else "▼", 13f, muted, true, false))
+            header.setOnClickListener {
+                expandedConfig = if (expanded) "" else base
+                render(true)
+            }
+            r.addView(header)
+            if (expanded) {
+                val tr = wgTestRes[base] ?: ""
+                if (tr.isNotEmpty()) r.addView(label(tr, 11.5f, white, false, false), vlp(2, 6))
+                val actions = LinearLayout(this)
+                actions.orientation = LinearLayout.HORIZONTAL
+                val testLp = LinearLayout.LayoutParams(0, WRAP, 1f)
+                testLp.marginEnd = dp(5)
+                val connectLp = LinearLayout.LayoutParams(0, WRAP, 1f)
+                connectLp.marginEnd = dp(5)
+                actions.addView(smallBtn("🧪 تست", false) { testWg(base) }, testLp)
+                actions.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
+                    if (isActive) disconnectWg() else connectWg(base)
+                }, connectLp)
+                if (!isRemote) actions.addView(smallBtn("🗑", false) {
                     deleteDnsWg(base)
+                    if (expandedConfig == base) expandedConfig = ""
                     render(true)
-                }, dlp)
+                })
+                r.addView(actions, vlp(8, 0))
             }
             list.addView(r, vlp(0, 6))
         }

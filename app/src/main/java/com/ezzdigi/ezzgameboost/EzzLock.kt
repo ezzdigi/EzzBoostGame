@@ -15,6 +15,13 @@ internal object EzzLock {
     private const val PREFIX = "EZZ1:"
     private val AAD = "EzzGameBOOST/config/v1".toByteArray(Charsets.UTF_8)
 
+    // Binary .ezz package format: ASCII "EZZ1" + 12-byte nonce + AES-GCM ciphertext/tag.
+    // This matches the three EzzDigi .ezz files supplied with the project.
+    private val packageKey: ByteArray by lazy {
+        val hex = "47a2c82934b55eb9c97b02c258e492e7fe2e649c31efdb11c1f27cd462e3ea8c"
+        ByteArray(hex.length / 2) { i -> hex.substring(i * 2, i * 2 + 2).toInt(16).toByte() }
+    }
+
     private fun key(): SecretKeySpec {
         val seed = "ezz" + "Lock" + "|" + "v1" + "|" + "gameboost" + "|" + "wg-config"
         return SecretKeySpec(MessageDigest.getInstance("SHA-256").digest(seed.toByteArray(Charsets.UTF_8)), "AES")
@@ -30,6 +37,29 @@ internal object EzzLock {
         c.updateAAD(AAD)
         val ct = c.doFinal(plain.toByteArray(Charsets.UTF_8))
         return PREFIX + Base64.encodeToString(iv + ct, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+    }
+
+    // Decrypts the binary EzzDigi .ezz container without changing its config contents.
+    fun openPackage(data: ByteArray): String? {
+        return try {
+            if (data.size < 4 + 12 + 16 ||
+                data[0] != 'E'.code.toByte() ||
+                data[1] != 'Z'.code.toByte() ||
+                data[2] != 'Z'.code.toByte() ||
+                data[3] != '1'.code.toByte()
+            ) {
+                null
+            } else {
+                val iv = data.copyOfRange(4, 16)
+                val encrypted = data.copyOfRange(16, data.size)
+                val c = Cipher.getInstance("AES/GCM/NoPadding")
+                c.init(Cipher.DECRYPT_MODE, SecretKeySpec(packageKey, "AES"), GCMParameterSpec(128, iv))
+                c.updateAAD("EZZ1".toByteArray(Charsets.US_ASCII))
+                String(c.doFinal(encrypted), Charsets.UTF_8)
+            }
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     // Returns the plain config, or null when the text is not a valid sealed config.

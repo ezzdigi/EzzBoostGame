@@ -275,7 +275,7 @@ internal fun MainActivity.deleteCfg(kind: String, file: String) {
 }
 
 internal fun MainActivity.cleanName(raw: String, fallback: String): String {
-    var n = raw.trim().substringBeforeLast(".conf").substringBeforeLast(".txt")
+    var n = raw.trim().substringBeforeLast(".conf").substringBeforeLast(".txt").substringBeforeLast(".ezz")
     n = n.replace(Regex("[^A-Za-z0-9_=+-]"), "_").trim('_')
     if (n.isEmpty()) n = fallback
     return n.take(15)
@@ -334,10 +334,10 @@ internal fun MainActivity.displayName(uri: Uri): String {
     return name
 }
 
-internal fun MainActivity.readUriText(uri: Uri): String? = try {
+internal fun MainActivity.readUriBytes(uri: Uri): ByteArray? = try {
     contentResolver.openInputStream(uri)?.use { st ->
         val bytes = st.readBytes()
-        if (bytes.size > 262144) null else String(bytes, Charsets.UTF_8)
+        if (bytes.size > 262144) null else bytes
     }
 } catch (_: Exception) {
     null
@@ -346,10 +346,25 @@ internal fun MainActivity.readUriText(uri: Uri): String? = try {
 internal fun MainActivity.importFromUri(uri: Uri) {
     val nm = displayName(uri)
     runBg {
-        val text = readUriText(uri)
+        val bytes = readUriBytes(uri)
+        val lowerName = nm.lowercase(java.util.Locale.ROOT)
+        val isEzz = lowerName.endsWith(".ezz") ||
+            (bytes != null && bytes.size >= 4 &&
+                bytes[0] == 'E'.code.toByte() && bytes[1] == 'Z'.code.toByte() &&
+                bytes[2] == 'Z'.code.toByte() && bytes[3] == '1'.code.toByte())
+        val text = if (bytes == null) null else if (isEzz) {
+            // Support both the binary EzzDigi package and the legacy textual EZZ1: export.
+            val binary = EzzLock.openPackage(bytes)
+            binary ?: try {
+                val legacy = String(bytes, Charsets.UTF_8)
+                if (EzzLock.isSealed(legacy)) EzzLock.open(legacy) else null
+            } catch (_: Exception) { null }
+        } else {
+            String(bytes, Charsets.UTF_8)
+        }
         ui {
             if (text == null || text.isBlank()) {
-                toast(Tr.t("فایل خوانده نشد یا خیلی بزرگ است."))
+                toast("فایل خوانده نشد، رمزگشایی نشد یا فرمت آن پشتیبانی نمی‌شود.")
             } else if (listCfg("wg").size >= 20) {
                 toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
             } else {
@@ -995,7 +1010,7 @@ internal fun MainActivity.buildVpn() {
     wCard.addView(nameIn, vlp(8, 8))
     val wRow = LinearLayout(this)
     wRow.orientation = LinearLayout.HORIZONTAL
-    val bFile = button("📁 افزودن فایل .conf", false) {
+    val bFile = button("📁 افزودن فایل .conf / .ezz", false) {
         importName = nameIn.text.toString()
         pickFile(4730)
     }
