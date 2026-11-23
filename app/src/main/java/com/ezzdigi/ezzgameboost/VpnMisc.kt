@@ -343,6 +343,26 @@ internal fun MainActivity.readUriBytes(uri: Uri): ByteArray? = try {
     null
 }
 
+// Shared text reader used by WireGuard, DNS WireGuard and V2 imports.
+// Supports ordinary text files plus EzzDigi's encrypted .ezz package.
+internal fun MainActivity.readUriText(uri: Uri): String? {
+    val bytes = readUriBytes(uri) ?: return null
+    val name = displayName(uri).lowercase(Locale.ROOT)
+    val isEzz = name.endsWith(".ezz") ||
+        (bytes.size >= 4 && bytes[0] == 'E'.code.toByte() && bytes[1] == 'Z'.code.toByte() &&
+            bytes[2] == 'Z'.code.toByte() && bytes[3] == '1'.code.toByte())
+    return if (isEzz) {
+        EzzLock.openPackage(bytes) ?: try {
+            val legacy = String(bytes, Charsets.UTF_8)
+            if (EzzLock.isSealed(legacy)) EzzLock.open(legacy) else null
+        } catch (_: Exception) {
+            null
+        }
+    } else {
+        String(bytes, Charsets.UTF_8)
+    }
+}
+
 internal fun MainActivity.importFromUri(uri: Uri) {
     val nm = displayName(uri)
     runBg {
