@@ -618,6 +618,98 @@ internal fun wgEnsureKeepalive(text: String): String {
 }
 
 
+// ----- Endpoint given as a hostname (e.g. vpnjantit: ae1.vpnjantit.com:1024) -----
+// The saved .conf keeps the hostname exactly as written. Only the in-memory runtime copy gets a numeric
+// Endpoint: the name is resolved here (IPv4 first, retried, then DNS-over-HTTPS when the phone's own
+// resolver cannot answer), so the tunnel does not depend on the resolver while it connects.
+// If nothing can be resolved the hostname is left as it was.
+internal fun wgHostEndpointParts(value: String): Pair<String, String>? {
+    val v = value.trim()
+    if (v.isEmpty() || v.startsWith("[")) return null
+    val i = v.lastIndexOf(':')
+    if (i <= 0 || i == v.length - 1) return null
+    val host = v.substring(0, i).trim()
+    val port = v.substring(i + 1).trim()
+    if (port.toIntOrNull() == null) return null
+    if (!Regex("^[A-Za-z0-9._-]+\$").matches(host)) return null
+    val p = host.split(".")
+    if (p.size == 4 && p.all { it.toIntOrNull() != null }) return null
+    return Pair(host, port)
+}
+
+internal fun wgHasHostEndpoint(text: String): Boolean {
+    for (ln in text.split("\n")) {
+        val t = ln.trim()
+        if (t.substringBefore("=", "").trim().lowercase() == "endpoint" &&
+            wgHostEndpointParts(t.substringAfter("=", "")) != null
+        ) return true
+    }
+    return false
+}
+
+internal fun wgLookupIpv4(host: String): String? {
+    for (k in 0 until 3) {
+        try {
+            for (a in InetAddress.getAllByName(host)) {
+                if (a is java.net.Inet4Address) {
+                    val ip = a.hostAddress
+                    if (ip != null) return ip
+                }
+            }
+        } catch (_: Throwable) {
+        }
+        try {
+            Thread.sleep(600)
+        } catch (_: Throwable) {
+        }
+    }
+    val urls = listOf(
+        "https://1.1.1.1/dns-query?name=" + host + "&type=A&ct=application/dns-json",
+        "https://8.8.8.8/resolve?name=" + host + "&type=A"
+    )
+    for (u in urls) {
+        val body = httpGet(u, 4000, 20000)
+        if (body == null) continue
+        try {
+            val ans = org.json.JSONObject(body).optJSONArray("Answer")
+            if (ans == null) continue
+            for (i in 0 until ans.length()) {
+                val o = ans.getJSONObject(i)
+                val d = o.optString("data")
+                if (o.optInt("type") == 1 && Regex("^\\d{1,3}(\\.\\d{1,3}){3}\$").matches(d)) return d
+            }
+        } catch (_: Throwable) {
+        }
+    }
+    return null
+}
+
+internal fun wgResolveEndpoints(text: String): String {
+    val out = ArrayList<String>()
+    var inPeer = false
+    for (ln in text.split("\n")) {
+        val t = ln.trim()
+        if (t.startsWith("[")) {
+            inPeer = t.equals("[Peer]", ignoreCase = true)
+            out.add(ln)
+            continue
+        }
+        if (inPeer && t.substringBefore("=", "").trim().lowercase() == "endpoint") {
+            val parts = wgHostEndpointParts(t.substringAfter("=", ""))
+            if (parts != null) {
+                val ip = wgLookupIpv4(parts.first)
+                if (ip != null) {
+                    out.add("Endpoint = " + ip + ":" + parts.second)
+                    continue
+                }
+            }
+        }
+        out.add(ln)
+    }
+    return out.joinToString("\n")
+}
+
+
 internal fun MainActivity.ghRepo(): String =
     prefs.getString("ghRepo", "ezzdigi/EzzBoostGame") ?: "ezzdigi/EzzBoostGame"
 
