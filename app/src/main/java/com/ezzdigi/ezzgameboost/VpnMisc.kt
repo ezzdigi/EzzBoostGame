@@ -396,27 +396,21 @@ internal fun MainActivity.importFromUri(uri: Uri) {
 
 internal fun MainActivity.importWg(raw: String, wantedName: String, onDone: () -> Unit) {
     // "EZZ1:" configs built in the "ساخت کانفیگ" tab are opened here (and only here).
-    val text = if (EzzLock.isSealed(raw)) (EzzLock.open(raw) ?: "") else raw
+    val text = wgNormalizeEndpointConfig(if (EzzLock.isSealed(raw)) (EzzLock.open(raw) ?: "") else raw)
     runBg {
         var err = ""
-        var useText = text.replace("\r", "").removePrefix("\uFEFF")
         try {
-            wgParseCheck(useText)
-        } catch (first: Throwable) {
-            val cleaned = wgSanitize(useText)
-            try {
-                wgParseCheck(cleaned)
-                useText = cleaned
-            } catch (second: Throwable) {
-                err = (second.message ?: first.message ?: second.javaClass.simpleName).take(120)
-            }
+            wgParseCheck(text)
+        } catch (e: Throwable) {
+            err = (e.message ?: e.javaClass.simpleName).take(120)
         }
         ui {
             if (err.isNotEmpty()) {
                 toast(Tr.t("کانفیگ وایرگارد نامعتبر است:") + " " + err)
             } else {
                 val file = uniqueFile("wg", cleanName(wantedName, "wg"), ".conf")
-                writeCfg("wg", file, useText)
+                // Store the normalized config so a hostname Endpoint is preserved consistently.
+                writeCfg("wg", file, text)
                 toast(Tr.t("کانفیگ ذخیره شد"))
                 onDone()
             }
@@ -607,22 +601,15 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                 for (i in 0 until arr.length()) {
                     val o = arr.getJSONObject(i)
                     val nm = o.optString("name")
-                    var text = o.optString("conf").replace("\\n", "\n")
+                    var text = wgNormalizeEndpointConfig(o.optString("conf").replace("\\n", "\n"))
                     val url = o.optString("url")
                     if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
                     if (!text.contains("[Interface]")) continue
-                    var useText = text.replace("\r", "").removePrefix("\uFEFF")
                     try {
-                        wgParseCheck(useText)
+                        wgParseCheck(text)
                     } catch (_: Throwable) {
-                        val cleaned = wgSanitize(useText)
-                        try {
-                            wgParseCheck(cleaned)
-                            useText = cleaned
-                        } catch (_: Throwable) {
-                            if (isAwgConfig(text)) awg++
-                            continue
-                        }
+                        if (isAwgConfig(text)) awg++
+                        continue
                     }
                     val base = cleanName(nm, "wg")
                     // never overwrite an account server with a free one of the same name
@@ -630,7 +617,7 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     listed.add(base)
                     val exists = java.io.File(cfgDir("wg"), base + ".conf").exists()
                     if (!exists && listCfg("wg").size >= 20) continue
-                    writeCfg("wg", base + ".conf", useText)
+                    writeCfg("wg", base + ".conf", text)
                     added++
                 }
             } catch (_: Throwable) {
@@ -722,8 +709,9 @@ internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDo
             var awgN = 0
             for (f in files) {
                 if (listCfg("wg").size >= 20) break
-                val text = httpGet(f.second, 10000, 262144)
-                if (text == null || !text.contains("[Interface]")) {
+                val downloaded = httpGet(f.second, 10000, 262144)
+                val text = downloaded?.let { wgNormalizeEndpointConfig(it) }
+                if (text == null || !text.contains("[Interface]", ignoreCase = true)) {
                     failed++
                     continue
                 }

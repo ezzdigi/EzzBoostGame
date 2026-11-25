@@ -286,7 +286,7 @@ internal fun MainActivity.fetchSubStatus(token: String): SubStatus {
 }
 
 // Drops comments, blank lines and keys the WireGuard library does not know; fixes spacing around "=".
-internal fun wgSanitize(text: String): String {
+private fun wgSanitize(text: String): String {
     val known = setOf(
         "privatekey", "publickey", "presharedkey", "address", "dns", "mtu", "listenport",
         "endpoint", "allowedips", "persistentkeepalive",
@@ -330,7 +330,7 @@ private fun MainActivity.parseWgEntries(body: String): List<SubWgEntry> {
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
             val nm = o.optString("name")
-            var text = o.optString("conf").replace("\\n", "\n")
+            var text = wgNormalizeEndpointConfig(o.optString("conf").replace("\\n", "\n"))
             val url = o.optString("url")
             if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
             if (text.isBlank()) continue

@@ -165,12 +165,28 @@ internal fun wgStripAwgKeys(text: String): String {
     return if (changed) out.joinToString("\n") else text
 }
 
+// Normalize Endpoint values without restricting them to a hard-coded server list. WireGuard
+// endpoints may be IPv4, IPv6 ([address]:port), or DNS hostnames (host:port). Keep the
+// hostname intact so the backend can resolve it when the tunnel starts.
+internal fun wgNormalizeEndpointConfig(text: String): String {
+    val clean = text.removePrefix("\uFEFF").replace("\r\n", "\n").replace("\r", "\n")
+    return clean.split("\n").joinToString("\n") { line ->
+        val trimmed = line.trim()
+        val eq = trimmed.indexOf('=')
+        if (eq > 0 && trimmed.substring(0, eq).trim().equals("Endpoint", ignoreCase = true))
+            "Endpoint = " + trimmed.substring(eq + 1).trim()
+        else line
+    }
+}
+
 // Validates a config with the engine that will actually run it. Throws when it is invalid.
+// Try the original first; then retry only harmless text normalization for arbitrary endpoints.
 internal fun wgParseCheck(text: String) {
-    if (isAwgConfig(text)) {
-        AwgEngine.parse(text)
+    val normalized = wgNormalizeEndpointConfig(text)
+    if (isAwgConfig(normalized)) {
+        AwgEngine.parse(normalized)
     } else {
-        com.wireguard.config.Config.parse(ByteArrayInputStream(wgStripAwgKeys(text).toByteArray(Charsets.UTF_8)))
+        com.wireguard.config.Config.parse(ByteArrayInputStream(wgStripAwgKeys(normalized).toByteArray(Charsets.UTF_8)))
     }
 }
 
