@@ -88,646 +88,1194 @@ import java.net.Socket
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import android.app.AlertDialog
-import java.net.HttpURLConnection
-import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import org.json.JSONObject
 
 private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
 
-// ----- Online DNS list, update check, WireGuard scope --------------------
+// ----- BRAND / ONBOARDING / MISC ----------------------------------------
 
-@Volatile
-var lastHttpErr = ""
+internal fun MainActivity.openUrl(url: String) {
+    try {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    } catch (_: Exception) {
+        toast("مرورگری برای باز کردن لینک پیدا نشد.")
+    }
+}
 
-internal fun httpPost(url: String, form: String, timeoutMs: Int = 10000): Pair<Int, String>? {
-    return try {
-        val c = URL(url).openConnection() as HttpURLConnection
-        c.requestMethod = "POST"
-        c.doOutput = true
-        c.connectTimeout = timeoutMs
-        c.readTimeout = timeoutMs
-        c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-        c.outputStream.use { it.write(form.toByteArray(Charsets.UTF_8)) }
-        val code = c.responseCode
-        val st = if (code in 200..299) c.inputStream else c.errorStream
-        val text = st?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
-        c.disconnect()
-        Pair(code, text.take(20000))
-    } catch (e: Exception) {
-        lastHttpErr = when (e) {
-            is java.net.UnknownHostException -> "آدرس پیدا نشد (اینترنت یا فیلتر)"
-            is java.net.SocketTimeoutException -> "timeout (احتمالاً فیلتر)"
-            else -> e.javaClass.simpleName
+private const val APP_APK_URL =
+    "https://github.com/ezzdigi/EzzBoostGame/releases/download/V2.2.0/EzzGameBOOST-V2.2.0.apk"
+
+internal fun MainActivity.shareApp() {
+    val i = Intent(Intent.ACTION_SEND)
+    i.type = "text/plain"
+    i.putExtra(
+        Intent.EXTRA_TEXT,
+        "EzzGameBOOST 🎮\n" +
+            Tr.t("بهترین پینگ، بهترین ریجستری، تجربه‌ی بهترین بازی") + " ⚡\n\n" +
+            Tr.t("دانلود:") + "\n" +
+            APP_APK_URL
+    )
+    try {
+        startActivity(Intent.createChooser(i, null))
+    } catch (_: Exception) {
+    }
+}
+
+internal fun MainActivity.setLang(l: String) {
+    prefs.edit().putString("lang", l).apply()
+    Tr.load(this)
+    buildShell()
+    showTab(tab)
+}
+
+@Suppress("DEPRECATION")
+internal fun MainActivity.showOnboarding() {
+    val rv = LinearLayout(this)
+    rv.orientation = LinearLayout.VERTICAL
+    rv.setBackgroundColor(bg0)
+    rv.layoutDirection = if (Tr.en) View.LAYOUT_DIRECTION_LTR else View.LAYOUT_DIRECTION_RTL
+    rv.setOnApplyWindowInsetsListener { v, insets ->
+        v.setPadding(0, insets.systemWindowInsetTop, 0, insets.systemWindowInsetBottom)
+        insets
+    }
+    val sv = ScrollView(this)
+    sv.isVerticalScrollBarEnabled = false
+    val col = LinearLayout(this)
+    col.orientation = LinearLayout.VERTICAL
+    col.gravity = Gravity.CENTER_HORIZONTAL
+    col.setPadding(dp(24), dp(28), dp(24), dp(24))
+
+    val logoImg = android.widget.ImageView(this)
+    logoImg.setImageResource(R.drawable.ezz_logo)
+    logoImg.adjustViewBounds = true
+    logoImg.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+    logoImg.alpha = 0f
+    logoImg.scaleX = 0.7f
+    logoImg.scaleY = 0.7f
+    col.addView(logoImg, LinearLayout.LayoutParams(MATCH, WRAP))
+    val floatAnim = android.animation.ObjectAnimator.ofFloat(logoImg, "translationY", 0f, -dp(8).toFloat()).apply {
+        duration = 1800
+        repeatCount = android.animation.ValueAnimator.INFINITE
+        repeatMode = android.animation.ValueAnimator.REVERSE
+        interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+    }
+    logoImg.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) {}
+        override fun onViewDetachedFromWindow(v: View) {
+            floatAnim.cancel()
         }
+    })
+    logoImg.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(700)
+        .setInterpolator(android.view.animation.OvershootInterpolator(1.4f))
+        .withEndAction { floatAnim.start() }
+        .start()
+    col.addView(label("", 8f, muted), vlp(0, 6))
+
+    val langRow = LinearLayout(this)
+    langRow.orientation = LinearLayout.HORIZONTAL
+    val l1 = LinearLayout.LayoutParams(WRAP, WRAP)
+    l1.marginEnd = dp(8)
+    langRow.addView(chip("فارسی", !Tr.en, false) {
+        prefs.edit().putString("lang", "fa").apply()
+        Tr.load(this)
+        showOnboarding()
+    }, l1)
+    langRow.addView(chip("English", Tr.en, false) {
+        prefs.edit().putString("lang", "en").apply()
+        Tr.load(this)
+        showOnboarding()
+    })
+    val lrp = LinearLayout.LayoutParams(WRAP, WRAP)
+    lrp.topMargin = dp(14)
+    col.addView(langRow, lrp)
+
+    val graffiti = GraffitiView(
+        this,
+        listOf(
+            Tr.t("نوسان پینگ پایین"),
+            Tr.t("ریجستر عالی"),
+            Tr.t("مناسب برای همه"),
+            Tr.t("بازی‌های آنلاین"),
+            Tr.t(" لذت بازی با"),
+            "EzzGameBoost"
+        ),
+        intArrayOf(
+            Color.rgb(0, 229, 255),
+            Color.rgb(255, 46, 147),
+            Color.rgb(255, 210, 31),
+            Color.rgb(255, 210, 31),
+            Color.rgb(57, 255, 20),
+            accent
+        ),
+        !Tr.en
+    )
+    val priv = label(
+        " برای بهبود بازیهای آنلاین تلاش میکنه تجربه بازی بهتری داشته باشید EzzGameBoost تیم سازنده: .",
+        11.5f, muted
+    )
+    priv.gravity = Gravity.CENTER
+    // The welcome text sits in a frosted-glass card: translucent gradient fill + thin light edge.
+    val lightTheme = resolveLight()
+    val glass = LinearLayout(this)
+    glass.orientation = LinearLayout.VERTICAL
+    glass.gravity = Gravity.CENTER_HORIZONTAL
+    val glassBg = android.graphics.drawable.GradientDrawable(
+        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+        if (lightTheme) intArrayOf(Color.argb(190, 255, 255, 255), Color.argb(100, 255, 255, 255))
+        else intArrayOf(Color.argb(64, 255, 255, 255), Color.argb(20, 255, 255, 255))
+    )
+    glassBg.cornerRadius = dp(22).toFloat()
+    glassBg.setStroke(dp(1), if (lightTheme) Color.argb(60, 0, 0, 0) else Color.argb(80, 255, 255, 255))
+    glass.background = glassBg
+    glass.setPadding(dp(14), dp(6), dp(14), dp(14))
+    glass.addView(graffiti, LinearLayout.LayoutParams(MATCH, WRAP))
+    glass.addView(priv, vlp(8, 0))
+    col.addView(glass, vlp(18, 14))
+    col.addView(button("شروع") {
+        prefs.edit().putBoolean("onboarded", true).apply()
+        startMain()
+    }, LinearLayout.LayoutParams(MATCH, WRAP))
+    sv.addView(col, ViewGroup.LayoutParams(MATCH, WRAP))
+    rv.addView(sv, LinearLayout.LayoutParams(MATCH, MATCH))
+    setContentView(rv)
+}
+
+// ----- VPN: WireGuard configs + custom DNS -----------------------------
+
+internal fun MainActivity.cfgDir(kind: String): java.io.File {
+    val d = java.io.File(filesDir, kind)
+    if (!d.exists()) d.mkdirs()
+    return d
+}
+
+internal fun MainActivity.listCfg(kind: String): List<String> {
+    val files = cfgDir(kind).listFiles() ?: return emptyList()
+    val names = ArrayList<String>()
+    for (f in files) if (f.isFile) names.add(f.name)
+    names.sort()
+    return names
+}
+
+internal fun MainActivity.readCfg(kind: String, file: String): String =
+    try {
+        java.io.File(cfgDir(kind), file).readText()
+    } catch (_: Exception) {
+        ""
+    }
+
+internal fun MainActivity.writeCfg(kind: String, file: String, text: String) {
+    java.io.File(cfgDir(kind), file).writeText(text)
+}
+
+internal fun MainActivity.deleteCfg(kind: String, file: String) {
+    try {
+        java.io.File(cfgDir(kind), file).delete()
+    } catch (_: Exception) {
+    }
+}
+
+internal fun MainActivity.cleanName(raw: String, fallback: String): String {
+    var n = raw.trim().substringBeforeLast(".conf").substringBeforeLast(".txt").substringBeforeLast(".ezz")
+    n = n.replace(Regex("[^A-Za-z0-9_=+-]"), "_").trim('_')
+    if (n.isEmpty()) n = fallback
+    return n.take(15)
+}
+
+internal fun MainActivity.uniqueFile(kind: String, base: String, ext: String): String {
+    var n = base
+    var i = 1
+    while (java.io.File(cfgDir(kind), n + ext).exists()) {
+        val suffix = i.toString()
+        n = base.take(15 - suffix.length - 1) + "_" + suffix
+        i++
+    }
+    return n + ext
+}
+
+internal fun MainActivity.wgEndpoint(text: String): String {
+    for (line in text.lines()) {
+        val l = line.trim()
+        if (l.startsWith("Endpoint", ignoreCase = true)) return l.substringAfter("=").trim()
+    }
+    return ""
+}
+
+internal fun MainActivity.clipText(): String {
+    return try {
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val c = cm.primaryClip
+        if (c != null && c.itemCount > 0) c.getItemAt(0).coerceToText(this).toString() else ""
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+internal fun MainActivity.pickFile(code: Int) {
+    val i = Intent(Intent.ACTION_OPEN_DOCUMENT)
+    i.addCategory(Intent.CATEGORY_OPENABLE)
+    i.type = "*/*"
+    try {
+        startActivityForResult(i, code)
+    } catch (_: Exception) {
+        toast("فایل‌منیجر پیدا نشد.")
+    }
+}
+
+internal fun MainActivity.displayName(uri: Uri): String {
+    var name = ""
+    try {
+        val c = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+        if (c != null) {
+            if (c.moveToFirst()) name = c.getString(0) ?: ""
+            c.close()
+        }
+    } catch (_: Exception) {
+    }
+    return name
+}
+
+internal fun MainActivity.readUriBytes(uri: Uri): ByteArray? = try {
+    contentResolver.openInputStream(uri)?.use { st ->
+        val bytes = st.readBytes()
+        if (bytes.size > 262144) null else bytes
+    }
+} catch (_: Exception) {
+    null
+}
+
+// Shared text reader used by WireGuard, DNS WireGuard and V2 imports.
+// Supports ordinary text files plus EzzDigi's encrypted .ezz package.
+internal fun MainActivity.readUriText(uri: Uri): String? {
+    val bytes = readUriBytes(uri) ?: return null
+    val name = displayName(uri).lowercase(Locale.ROOT)
+    val isEzz = name.endsWith(".ezz") ||
+        (bytes.size >= 4 && bytes[0] == 'E'.code.toByte() && bytes[1] == 'Z'.code.toByte() &&
+            bytes[2] == 'Z'.code.toByte() && bytes[3] == '1'.code.toByte())
+    return if (isEzz) {
+        EzzLock.openPackage(bytes) ?: try {
+            val legacy = String(bytes, Charsets.UTF_8)
+            if (EzzLock.isSealed(legacy)) EzzLock.open(legacy) else null
+        } catch (_: Exception) {
+            null
+        }
+    } else {
+        String(bytes, Charsets.UTF_8)
+    }
+}
+
+internal fun MainActivity.importFromUri(uri: Uri) {
+    val nm = displayName(uri)
+    runBg {
+        val bytes = readUriBytes(uri)
+        val lowerName = nm.lowercase(java.util.Locale.ROOT)
+        val isEzz = lowerName.endsWith(".ezz") ||
+            (bytes != null && bytes.size >= 4 &&
+                bytes[0] == 'E'.code.toByte() && bytes[1] == 'Z'.code.toByte() &&
+                bytes[2] == 'Z'.code.toByte() && bytes[3] == '1'.code.toByte())
+        val text = if (bytes == null) null else if (isEzz) {
+            // Support both the binary EzzDigi package and the legacy textual EZZ1: export.
+            val binary = EzzLock.openPackage(bytes)
+            binary ?: try {
+                val legacy = String(bytes, Charsets.UTF_8)
+                if (EzzLock.isSealed(legacy)) EzzLock.open(legacy) else null
+            } catch (_: Exception) { null }
+        } else {
+            String(bytes, Charsets.UTF_8)
+        }
+        ui {
+            if (text == null || text.isBlank()) {
+                toast("فایل خوانده نشد، رمزگشایی نشد یا فرمت آن پشتیبانی نمی‌شود.")
+            } else if (listCfg("wg").size >= 20) {
+                toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
+            } else {
+                importWg(text, if (importName.isNotBlank()) importName else nm) { vpnRender?.invoke() }
+            }
+        }
+    }
+}
+
+internal fun MainActivity.importWg(raw: String, wantedName: String, onDone: () -> Unit) {
+    // "EZZ1:" configs built in the "ساخت کانفیگ" tab are opened here (and only here).
+    val text = if (EzzLock.isSealed(raw)) (EzzLock.open(raw) ?: "") else raw
+    runBg {
+        var err = ""
+        try {
+            wgParseCheck(text)
+        } catch (e: Throwable) {
+            err = (e.message ?: e.javaClass.simpleName).take(120)
+        }
+        ui {
+            if (err.isNotEmpty()) {
+                toast(Tr.t("کانفیگ وایرگارد نامعتبر است:") + " " + err)
+            } else {
+                val file = uniqueFile("wg", cleanName(wantedName, "wg"), ".conf")
+                writeCfg("wg", file, text)
+                toast(Tr.t("کانفیگ ذخیره شد"))
+                onDone()
+            }
+        }
+    }
+}
+
+// ----- WireGuard config test ----------------------------------------------
+
+class WgTestTun : Tunnel {
+    override fun getName(): String = "ezztest"
+    override fun onStateChange(newState: Tunnel.State) {
+    }
+}
+
+internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): String? {
+    val out = ArrayList<String>()
+    var inserted = false
+    for (line in text.split("\n")) {
+        val t = line.trim()
+        val low = t.lowercase()
+        if (low.startsWith("includedapplications") || low.startsWith("excludedapplications")) continue
+        out.add(line)
+        if (!inserted && t.equals("[Interface]", ignoreCase = true)) {
+            out.add("IncludedApplications = " + pkgs.joinToString(", "))
+            inserted = true
+        }
+    }
+    if (!inserted) return null
+    val joined = out.joinToString("\n")
+    return if (wgIsDnsOnly(joined)) wgDnsOnlyConfig(joined) else wgTuneForGaming(wgEnsureKeepalive(wgEnsureFullRoute(joined)))
+}
+
+internal fun MainActivity.testWg(base: String, speed: Boolean = true) {
+    if (wgBusy) return
+    if (WgState.up || V2VpnService.running || V2VpnService.busy) {
+        wgTestRes[base] = "⚠️ اول اتصال فعلی (وایرگارد یا V2Ray) را قطع کن، بعد تست کن."
+        vpnRender?.invoke()
+        return
+    }
+    val prep = try {
+        VpnService.prepare(this)
+    } catch (_: Exception) {
         null
     }
-}
-
-internal fun httpGet(url: String, timeoutMs: Int = 8000, maxBytes: Int = 300000): String? {
-    var holder: HttpURLConnection? = null
-    try {
-        val c = URL(url).openConnection() as HttpURLConnection
-        holder = c
-        c.connectTimeout = timeoutMs
-        c.readTimeout = timeoutMs
-        c.requestMethod = "GET"
-        c.setRequestProperty("User-Agent", "EzzGameBOOST")
-        c.setRequestProperty("Accept", "*/*")
-        c.setRequestProperty("Cache-Control", "no-cache")
-        if (c.responseCode != 200) {
-            lastHttpErr = "HTTP " + c.responseCode
-            return null
-        }
-        val input = c.inputStream
-        val out = ByteArrayOutputStream()
-        val buf = ByteArray(8192)
-        var total = 0
-        while (true) {
-            val n = input.read(buf)
-            if (n < 0) break
-            total += n
-            if (total > maxBytes) return null
-            out.write(buf, 0, n)
-        }
-        input.close()
-        return out.toString("UTF-8").removePrefix("\uFEFF")
-    } catch (e: Exception) {
-        lastHttpErr = when (e) {
-            is java.net.UnknownHostException -> "آدرس پیدا نشد (اینترنت یا فیلتر)"
-            is java.net.SocketTimeoutException -> "timeout (احتمالاً فیلتر)"
-            else -> e.javaClass.simpleName
-        }
-        return null
-    } finally {
+    if (prep != null) {
+        pendingWgTest = base
+        pendingWgTestSpeed = speed
         try {
-            holder?.disconnect()
+            startActivityForResult(prep, 4760)
         } catch (_: Exception) {
+            toast("این دستگاه از VPN محلی پشتیبانی نمی‌کند.")
         }
+    } else {
+        runWgTest(base, speed)
     }
 }
 
-// ----- 1) Online DNS list ----------------------------------------------------
-
-internal fun MainActivity.applyRemoteDns(json: String): Int {
-    val obj = JSONObject(json)
-    val arr = obj.optJSONArray("providers") ?: return -1
-    val lines = ArrayList<String>()
-    for (i in 0 until minOf(arr.length(), 60)) {
-        val o = arr.optJSONObject(i) ?: continue
-        val name = o.optString("name", "").replace("\t", " ").replace("\n", " ").trim().take(40)
-        if (name.isEmpty()) continue
-        val sv = o.optJSONArray("servers") ?: continue
-        val ips = ArrayList<String>()
-        for (k in 0 until minOf(sv.length(), 4)) {
-            val ip = sv.optString(k, "").trim()
-            if (isIpv4(ip) || isIpv6(ip)) ips.add(ip)
+// Brings the tunnel up for this app only (never the whole phone), sends a small
+// request through it and reports whether the server answered.
+// Blocking: brings the config up for this app only, sends one small request through it and
+// brings it down again. Returns a one-line result. Call from a background thread.
+internal fun MainActivity.wgSelfCheck(text: String, fast: Boolean = false, speed: Boolean = false): String {
+    var result = ""
+    var stop: (() -> Unit)? = null
+    var waitHs: ((Long) -> Boolean)? = null
+    try {
+        val scoped = wgScopeToPackages(text, listOf(packageName))
+        if (scoped == null) {
+            result = "❌ کانفیگ ساختار معتبر ندارد."
+        } else {
+            if (isAwgConfig(scoped)) {
+                val cfg = AwgEngine.parse(scoped)
+                val be = AwgEngine.backend(applicationContext)
+                val tun = AwgTestTun()
+                be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
+                stop = { be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null) }
+                waitHs = { ms -> awgWaitHandshake(be, tun, ms) }
+            } else {
+                val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                val be = wgBackendGet()
+                val tun = WgTestTun()
+                be.setState(tun, Tunnel.State.UP, cfg)
+                stop = { be.setState(tun, Tunnel.State.DOWN, null) }
+                waitHs = { ms -> waitWgHandshake(be, tun, ms) }
+            }
+            // First tell apart "server never answered" from "tunnel is up but carries nothing".
+            // A DNS-only config has no server: it passes as soon as the tunnel is up.
+            val dnsOnly = wgIsDnsOnly(scoped)
+            val hsOk = dnsOnly || (waitHs?.invoke(if (isAwgConfig(scoped)) 12000L else 9000L) ?: false)
+            var ms = -1L
+            val urls = listOf("https://1.1.1.1/cdn-cgi/trace", "https://api.ipify.org")
+            for (u in (if (dnsOnly) emptyList() else urls)) {
+                val t0 = System.currentTimeMillis()
+                val b = httpGet(u, if (fast) 4000 else 6000, 4000)
+                if (b != null) {
+                    ms = System.currentTimeMillis() - t0
+                    break
+                }
+            }
+            result = if (dnsOnly) {
+                "✅ وصل است"
+            } else if (!hsOk) {
+                "❌ سرور جواب نمی‌دهد (هندشیک نشد: Endpoint، کلید یا پورت UDP را چک کن)"
+            } else if (ms >= 0) {
+                "✅ وصل است"
+            } else {
+                "⚠️ تونل برقرار شد ولی اینترنت از آن رد نمی‌شود (DNS یا فیلتر سرور)"
+            }
+            // Pro screen: while the tunnel is still up, also report packet loss and speed.
+            if (speed && !dnsOnly && hsOk && ms >= 0) result += "\n" + wgSpeedReport()
         }
-        if (ips.isEmpty()) continue
-        lines.add(name + "\t" + ips.joinToString("\t"))
+    } catch (e: Throwable) {
+        result = "❌ " + hideAddr((e.message ?: e.javaClass.simpleName).take(120))
     }
-    if (lines.isEmpty()) return -1
-    markNewKeys("dns", lines.map { it.substringBefore("\t") })
-    val oldSel = selectedDns().name
-    prefs.edit()
-        .putString("remoteDns", lines.joinToString("\n"))
-        .putLong("remoteDnsTs", System.currentTimeMillis())
-        .apply()
-    dnsCache = null
-    val idx = dnsProviders.indexOfFirst { it.name == oldSel }
-    prefs.edit().putInt("dnsSel", if (idx >= 0) idx else 0).apply()
-    return lines.size
+    val st = stop
+    if (st != null) {
+        try {
+            st()
+        } catch (_: Throwable) {
+        }
+        // give the VPN service time to shut down so it cannot tear down the next tunnel
+        try {
+            Thread.sleep(2000)
+        } catch (_: Throwable) {
+        }
+    }
+    return result
 }
 
-internal fun MainActivity.refreshRemoteDns(force: Boolean, onDone: ((Int) -> Unit)?) {
-    val last = prefs.getLong("remoteDnsTry", 0L)
-    if (!force && System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
-    prefs.edit().putLong("remoteDnsTry", System.currentTimeMillis()).apply()
+internal fun MainActivity.runWgTest(base: String, speed: Boolean = true) {
+    if (wgBusy) return
+    val text = readCfg("wg", base + ".conf")
+    if (text.isEmpty()) {
+        toast("کانفیگ پیدا نشد.")
+        return
+    }
+    wgBusy = true
+    wgTestRes[base] = if (speed) "⏳ در حال تست (پکت‌لاس و سرعت؛ حدود ۳۰ ثانیه)…" else "⏳ در حال تست…"
+    vpnRefresh?.invoke()
     runBg {
-        var got: String? = null
-        for (u in listUrls("dns.json")) {
-            val b = httpGet(u, 6000, 600000)
+        val result = wgSelfCheck(text, false, speed)
+        WgState.up = false
+        WgState.activeName = ""
+        ui {
+            wgBusy = false
+            wgTestRes[base] = result
+            vpnRender?.invoke()
+            homeRefresh?.invoke()
+        }
+    }
+}
+
+// AmneziaWG configs carry obfuscation keys (Jc, Jmin, S1, H1, I1 ...) that the standard
+// WireGuard library cannot parse; they run on the AmneziaWG backend (Awg.kt).
+internal fun isAwgConfig(text: String): Boolean {
+    val keys = setOf("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5", "j1", "j2", "j3", "itime")
+    for (ln in text.lines()) {
+        val k = ln.substringBefore('=').trim().lowercase()
+        if (ln.contains('=') && keys.contains(k)) return true
+    }
+    return false
+}
+
+// ----- Default online gaming-server list (wireguard.json in the repo) -----
+
+internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: () -> Unit) {
+    if (!silent) toast("در حال دریافت سرورهای گیمینگ…")
+    runBg {
+        var body: String? = null
+        for (u in listUrls("wireguard.json")) {
+            val b = httpGet(u, 6000, 1500000)
             if (b != null && b.trimStart().startsWith("{")) {
-                got = b
+                body = b
                 break
             }
             if (b != null) lastHttpErr = "فایل JSON نیست"
         }
-        val body = got
-        ui {
-            var n = -1
-            if (body != null) {
-                n = try {
-                    applyRemoteDns(body)
-                } catch (_: Exception) {
-                    -1
+        var added = 0
+        var awg = 0
+        var err = ""
+        val listed = ArrayList<String>()
+        if (body == null) {
+            err = "لیست سرورها دریافت نشد. (" + lastHttpErr + ")"
+        } else {
+            try {
+                val arr = org.json.JSONObject(body).getJSONArray("configs")
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val nm = o.optString("name")
+                    var text = o.optString("conf").replace("\\n", "\n")
+                    val url = o.optString("url")
+                    if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
+                    if (!text.contains("[Interface]")) continue
+                    try {
+                        wgParseCheck(text)
+                    } catch (_: Throwable) {
+                        if (isAwgConfig(text)) awg++
+                        continue
+                    }
+                    val base = cleanName(nm, "wg")
+                    // never overwrite an account server with a free one of the same name
+                    if (subWgNameSet().contains(base)) continue
+                    listed.add(base)
+                    val exists = java.io.File(cfgDir("wg"), base + ".conf").exists()
+                    if (!exists && listCfg("wg").size >= 20) continue
+                    writeCfg("wg", base + ".conf", text)
+                    added++
+                }
+            } catch (_: Throwable) {
+                err = "لیست سرورها معتبر نیست."
+            }
+            if (added == 0 && err.isEmpty()) {
+                err = if (awg > 0) {
+                    awg.toString() + " کانفیگ AmneziaWG پیدا شد ولی پارامترهای آن (Jc/S1/H1/…) معتبر نبود."
+                } else {
+                    "سرور گیمینگ معتبری پیدا نشد."
                 }
             }
-            netRefresh?.invoke()
-            onDone?.invoke(n)
-        }
-    }
-}
-
-internal fun MainActivity.remoteDnsStatus(): String {
-    val ts = prefs.getLong("remoteDnsTs", 0L)
-    if (ts == 0L) return "لیست آنلاین: هنوز به‌روز نشده"
-    val n = DnsList.remote(this).size
-    val d = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.US).format(Date(ts))
-    return "لیست آنلاین: $n DNS • آخرین به‌روزرسانی: $d"
-}
-
-// ----- 7) Update check -------------------------------------------------------
-
-internal fun MainActivity.currentVersion(): String = try {
-    packageManager.getPackageInfo(packageName, 0).versionName ?: "0"
-} catch (_: Exception) {
-    "0"
-}
-
-internal fun versionParts(v: String): List<Int>? {
-    val m = Regex("^[vV]?(\\d+(?:\\.\\d+)*)").find(v.trim()) ?: return null
-    return m.groupValues[1].split(".").map { it.toIntOrNull() ?: 0 }
-}
-
-internal fun isNewerVersion(remote: String, local: String): Boolean {
-    val a = versionParts(remote) ?: return false
-    val b = versionParts(local) ?: return false
-    val n = maxOf(a.size, b.size)
-    for (i in 0 until n) {
-        val x = a.getOrElse(i) { 0 }
-        val y = b.getOrElse(i) { 0 }
-        if (x != y) return x > y
-    }
-    return false
-}
-
-class ReleaseInfo(val tag: String, val url: String, val notes: String)
-
-private fun releaseFromJson(o: JSONObject): ReleaseInfo? {
-    val tag = o.optString("tag_name", "")
-    if (tag.isEmpty()) return null
-    var url = o.optString("html_url", RELEASES_PAGE)
-    val assets = o.optJSONArray("assets")
-    if (assets != null) {
-        for (i in 0 until assets.length()) {
-            val a = assets.optJSONObject(i) ?: continue
-            val u = a.optString("browser_download_url", "")
-            if (u.endsWith(".apk")) {
-                url = u
-                break
-            }
-        }
-    }
-    return ReleaseInfo(tag, url, o.optString("body", "").trim().take(500))
-}
-
-// Tries three sources in turn, because api.github.com is often blocked or rate-limited and
-// "releases/latest" returns 404 when the newest release is a pre-release:
-//   1) /releases/latest   2) /releases?per_page=1   3) the releases.atom feed on github.com
-internal fun MainActivity.fetchLatestRelease(): ReleaseInfo? {
-    // Own server first (GitHub is blocked on many networks): SUB_BASE/update.json
-    try {
-        val own = httpGet(SUB_BASE + "/update.json", 8000, 20000)
-        if (own != null && own.trimStart().startsWith("{")) {
-            val o = JSONObject(own)
-            val v = o.optString("version", "").trim()
-            if (v.isNotEmpty()) {
-                val u = o.optString("url", "").trim()
-                return ReleaseInfo(v, if (u.isNotEmpty()) u else RELEASES_PAGE, o.optString("notes", "").trim().take(500))
-            }
-        }
-    } catch (_: Exception) {
-    }
-    val repo = ghRepo()
-    try {
-        val b1 = httpGet("https://api.github.com/repos/$repo/releases/latest", 8000, 1000000)
-        if (b1 != null) {
-            val r = releaseFromJson(JSONObject(b1))
-            if (r != null) return r
-        }
-    } catch (_: Exception) {
-    }
-    try {
-        val b2 = httpGet("https://api.github.com/repos/$repo/releases?per_page=1", 8000, 1000000)
-        if (b2 != null) {
-            val arr = org.json.JSONArray(b2)
-            if (arr.length() > 0) {
-                val r = releaseFromJson(arr.getJSONObject(0))
-                if (r != null) return r
-            }
-        }
-    } catch (_: Exception) {
-    }
-    try {
-        val b3 = httpGet("https://github.com/$repo/releases.atom", 8000, 1000000)
-        if (b3 != null) {
-            val m = Regex("href=\"[^\"]*/releases/tag/([^\"]+)\"").find(b3)
-            if (m != null) {
-                val tag = android.net.Uri.decode(m.groupValues[1])
-                return ReleaseInfo(tag, "https://github.com/$repo/releases/tag/" + m.groupValues[1], "")
-            }
-        }
-    } catch (_: Exception) {
-    }
-    return null
-}
-
-// onDone gets "new", "latest", or "fail|<reason>"
-internal fun MainActivity.checkUpdate(manual: Boolean, onDone: ((String) -> Unit)?) {
-    val last = prefs.getLong("updTry", 0L)
-    if (!manual && System.currentTimeMillis() - last < 12L * 3600L * 1000L) return
-    prefs.edit().putLong("updTry", System.currentTimeMillis()).apply()
-    runBg {
-        var msg = "fail|" + lastHttpErr
-        val r = fetchLatestRelease()
-        if (r != null) {
-            prefs.edit()
-                .putString("updTag", r.tag)
-                .putString("updUrl", r.url)
-                .putString("updNotes", r.notes)
-                .apply()
-            msg = if (isNewerVersion(r.tag, currentVersion())) "new" else "latest"
         }
         ui {
-            onDone?.invoke(msg)
-            if (msg == "new" && tab == 5) refreshUpdateNotice()
-        }
-    }
-}
-
-internal fun MainActivity.showUpdateDialogIfNeeded() {
-    val tag = prefs.getString("updTag", "") ?: ""
-    if (tag.isEmpty() || !isNewerVersion(tag, currentVersion())) return
-    if (prefs.getString("updPromptedTag", "") == tag) return
-    prefs.edit().putString("updPromptedTag", tag).apply()
-    val message = buildString {
-        append("نسخه فعلی: ")
-        append(currentVersion())
-        append("\\nنسخه جدید: ")
-        append(tag)
-        append("\\n\\n")
-        append("عملکرد بهتر سرور گیمینگ")
-    }
-    try {
-        AlertDialog.Builder(this)
-            .setTitle("🆕 آپدیت جدید منتشر شد")
-            .setMessage(message)
-            .setPositiveButton("به‌روزرسانی") { _, _ ->
-                val url = prefs.getString("updUrl", RELEASES_PAGE) ?: RELEASES_PAGE
-                openUrl(url)
+            if (listed.isNotEmpty()) markNewKeys("wg", listed)
+            if (silent) {
+                if (added > 0) onDone()
+            } else if (added > 0) {
+                toast(added.toString() + " " + Tr.t("کانفیگ اضافه شد"))
+                onDone()
+            } else {
+                toast(err)
             }
-            .setNegativeButton("بعداً", null)
-            .setCancelable(true)
-            .show()
-    } catch (_: Exception) {
-        prefs.edit().remove("updPromptedTag").apply()
-    }
-}
-
-internal fun MainActivity.addUpdateBanner() {
-    val tag = prefs.getString("updTag", "") ?: ""
-    if (tag.isEmpty() || !isNewerVersion(tag, currentVersion())) return
-    val url = prefs.getString("updUrl", RELEASES_PAGE) ?: RELEASES_PAGE
-    val c = card()
-    c.background = rounded(accentAlpha(40), 16, accent)
-    c.addView(label(Tr.t("🆕 نسخه جدید موجود است:") + " " + tag, 14f, white, true, false))
-    c.addView(button("⬇️ دانلود آپدیت") { openUrl(url) }, vlp(8, 0))
-    content.addView(c, vlp(0, 6))
-}
-
-// ----- "New" badge: an item first seen in an online list is marked new for 24 hours.
-// The very first sync of a list is the baseline (nothing is marked new).
-
-internal fun MainActivity.newMap(kind: String): HashMap<String, Long> {
-    val m = HashMap<String, Long>()
-    val raw = prefs.getString("newSeen_" + kind, null) ?: return m
-    for (ln in raw.split("\n")) {
-        val p = ln.split("\t")
-        if (p.size == 2) m[p[0]] = p[1].toLongOrNull() ?: 0L
-    }
-    return m
-}
-
-internal fun MainActivity.markNewKeys(kind: String, keys: List<String>) {
-    val baselined = prefs.contains("newSeen_" + kind)
-    val old = newMap(kind)
-    val now = System.currentTimeMillis()
-    val sb = StringBuilder()
-    for (k0 in keys) {
-        val k = k0.replace("\t", " ").replace("\n", " ").trim()
-        if (k.isEmpty()) continue
-        val ts = old[k] ?: if (baselined) now else 0L
-        if (sb.isNotEmpty()) sb.append("\n")
-        sb.append(k).append("\t").append(ts)
-    }
-    prefs.edit().putString("newSeen_" + kind, sb.toString()).apply()
-}
-
-internal fun MainActivity.isNewKey(kind: String, key: String): Boolean {
-    val ts = newMap(kind)[key.replace("\t", " ").replace("\n", " ").trim()] ?: return false
-    return ts > 0L && System.currentTimeMillis() - ts < 24L * 3600L * 1000L
-}
-
-// ----- 3) WireGuard only for games ------------------------------------------
-
-// Tunnels (WireGuard and V2Ray) always apply to games only. There is no user choice.
-internal fun MainActivity.wgScopeGames(@Suppress("UNUSED_PARAMETER") base: String): Boolean = true
-
-internal fun MainActivity.wgIncludePackages(base: String): List<String> = scopedPackages(base)
-
-internal fun MainActivity.scopedPackages(base: String?): List<String> {
-    val set = LinkedHashSet<String>()
-    for (a in loadApps()) if (a.isGame) set.add(a.pkg)
-    set.addAll(favoriteSet())
-    for (k in prefs.all.keys) {
-        if (k.startsWith("prof_")) {
-            val pkg = k.removePrefix("prof_")
-            val p = getProfile(pkg)
-            if (p != null && base != null && p.wg == base) set.add(pkg)
         }
     }
-    val out = ArrayList<String>()
-    for (p in set) {
+}
+
+// ----- Import WireGuard configs from GitHub -------------------------------
+
+internal fun githubRawUrl(u: String): String {
+    var s = u.trim()
+    if (!s.startsWith("http")) s = "https://" + s
+    val isGh = s.contains("://github.com/") || s.contains("://gist.github.com/")
+    if (isGh) s = s.substringBefore("#").substringBefore("?")
+    val m = Regex("^https?://github\\.com/([^/]+)/([^/]+)/(?:blob|raw)/(.+)$").find(s)
+    if (m != null) {
+        return "https://raw.githubusercontent.com/" + m.groupValues[1] + "/" + m.groupValues[2] + "/" + m.groupValues[3]
+    }
+    val g = Regex("^https?://gist\\.github\\.com/([^/]+)/([0-9a-fA-F]+)").find(s)
+    if (g != null) {
+        return "https://gist.githubusercontent.com/" + g.groupValues[1] + "/" + g.groupValues[2] + "/raw"
+    }
+    return s
+}
+
+internal fun MainActivity.importFromGithub(url: String, wantedName: String, onDone: () -> Unit) {
+    val u = url.trim()
+    if (u.isEmpty()) {
+        toast("لینک GitHub را وارد کن.")
+        return
+    }
+    if (listCfg("wg").size >= 20) {
+        toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
+        return
+    }
+    toast("در حال دریافت از GitHub…")
+    runBg {
+        var added = 0
+        var err = ""
         try {
-            packageManager.getApplicationInfo(p, 0)
-            out.add(p)
-        } catch (_: Exception) {
+            val files = ArrayList<Pair<String, String>>()
+            val clean = u.substringBefore("#").substringBefore("?").trimEnd('/')
+            val m = Regex("^(?:https?://)?github\\.com/([^/]+)/([^/]+?)(?:\\.git)?(?:/tree/([^/]+)(?:/(.*))?)?$").find(clean)
+            if (m != null) {
+                val dir = m.groupValues[4].replace(" ", "%20")
+                var api = "https://api.github.com/repos/" + m.groupValues[1] + "/" + m.groupValues[2] + "/contents"
+                if (dir.isNotEmpty()) api += "/" + dir
+                if (m.groupValues[3].isNotEmpty()) api += "?ref=" + m.groupValues[3]
+                val body = httpGet(api, 10000, 1500000)
+                if (body == null) {
+                    err = "لیست فایل‌ها از GitHub دریافت نشد. (" + lastHttpErr + ")"
+                } else {
+                    val arr = org.json.JSONArray(body)
+                    for (i in 0 until arr.length()) {
+                        val o = arr.getJSONObject(i)
+                        val nm = o.optString("name")
+                        val dl = o.optString("download_url")
+                        if (o.optString("type") == "file" && nm.endsWith(".conf", ignoreCase = true) && dl.isNotEmpty()) {
+                            files.add(Pair(nm, dl))
+                        }
+                    }
+                    if (files.isEmpty()) err = "هیچ فایل .conf در این مسیر پیدا نشد."
+                }
+            } else {
+                val raw = githubRawUrl(u)
+                files.add(Pair(raw.substringAfterLast('/').substringBefore('?'), raw))
+            }
+            var failed = 0
+            var awgN = 0
+            for (f in files) {
+                if (listCfg("wg").size >= 20) break
+                val text = httpGet(f.second, 10000, 262144)
+                if (text == null || !text.contains("[Interface]")) {
+                    failed++
+                    continue
+                }
+                try {
+                    wgParseCheck(text)
+                } catch (_: Throwable) {
+                    if (isAwgConfig(text)) awgN++ else failed++
+                    continue
+                }
+                val nm = if (files.size == 1 && wantedName.isNotBlank()) wantedName else f.first
+                writeCfg("wg", uniqueFile("wg", cleanName(nm, "wg"), ".conf"), text)
+                added++
+            }
+            if (added == 0 && err.isEmpty()) {
+                err = if (awgN > 0) {
+                    "کانفیگ AmneziaWG پیدا شد ولی پارامترهای آن (Jc/S1/H1/…) معتبر نبود."
+                } else if (failed > 0) {
+                    "کانفیگ معتبر وایرگارد پیدا نشد."
+                } else {
+                    "دریافت از GitHub ناموفق بود."
+                }
+            }
+        } catch (e: Throwable) {
+            if (err.isEmpty()) err = "دریافت از GitHub ناموفق بود."
         }
+        ui {
+            if (added > 0) {
+                toast(added.toString() + " " + Tr.t("کانفیگ اضافه شد"))
+                onDone()
+            } else {
+                toast(err)
+            }
+        }
+    }
+}
+
+// ----- Custom DNS (IPv4 / IPv6) -------------------------------------------
+
+internal fun MainActivity.isIpv4(s: String): Boolean {
+    val p = s.split(".")
+    if (p.size != 4) return false
+    for (x in p) {
+        if (x.isEmpty() || x.length > 3) return false
+        val n = x.toIntOrNull() ?: return false
+        if (n < 0 || n > 255) return false
+    }
+    return true
+}
+
+internal fun MainActivity.isIpv6(s: String): Boolean {
+    if (!s.contains(":")) return false
+    if (!Regex("^[0-9a-fA-F:.]+\$").matches(s)) return false
+    return try {
+        InetAddress.getByName(s) is java.net.Inet6Address
+    } catch (_: Exception) {
+        false
+    }
+}
+
+internal fun MainActivity.customDnsLines(): List<List<String>> {
+    val raw = prefs.getString("customDns", "") ?: ""
+    val out = ArrayList<List<String>>()
+    for (line in raw.split("\n")) {
+        if (line.isBlank()) continue
+        val p = line.split("\t")
+        if (p.size >= 5) out.add(p)
     }
     return out
 }
 
-internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
-    // Pro Gaming accepts standard WireGuard .conf files, preserving the user's
-    // Endpoint, keys, addresses, DNS, MTU and peer settings. For a single-peer
-    // game tunnel, ensure the peer routes traffic through the tunnel; configs
-    // such as AllowedIPs=0.0.0.0/32 otherwise route only one address and games
-    // will not use the tunnel. This changes only the in-memory runtime config;
-    // the imported .conf file on disk remains untouched.
-    @Suppress("UNUSED_VARIABLE")
-    val ignoredBase = base
-    // AmneziaWG configs (Jc/S1/H1... keys) take the same normalization; they run on the AmneziaWG
-    // backend (Awg.kt), and the obfuscation keys are left exactly as the server gave them.
-    if (wgIsDnsOnly(text)) return wgDnsOnlyConfig(text)
-    // Games only: the tunnel carries just the installed games and the favorited apps (plus apps whose
-    // profile uses this config), everything else on the phone keeps using the normal connection.
-    // With no game to include, null makes the caller show "no game found" instead of tunnelling nothing.
-    val pkgs = scopedPackages(base)
-    if (pkgs.isEmpty()) return null
-    return wgScopeToPackages(text, pkgs)
+internal fun MainActivity.writeCustomDns(lines: List<List<String>>) {
+    prefs.edit().putString("customDns", lines.joinToString("\n") { it.joinToString("\t") }).apply()
+    dnsCache = null
 }
 
-// A config used only to set the phone's DNS (e.g. a DNS-provider .conf): its peer has no Endpoint, or its
-// AllowedIPs is the placeholder 0.0.0.0/32. There is no server to reach, so such a tunnel counts as connected
-// as soon as it is up, and its routes must stay as written (forcing 0.0.0.0/0 would cut the internet).
-internal fun wgIsDnsOnly(text: String): Boolean {
-    var peers = 0
-    var hasEndpoint = false
-    var allowed = ""
-    var inPeer = false
-    for (ln in text.split("\n")) {
-        val t = ln.trim()
-        val low = t.lowercase()
-        if (low.startsWith("[")) {
-            inPeer = low == "[peer]"
-            if (inPeer) peers++
-            continue
-        }
-        if (!inPeer) continue
-        if (low.startsWith("endpoint")) hasEndpoint = true
-        if (low.startsWith("allowedips")) allowed = t.substringAfter("=", "").replace(" ", "")
-    }
-    if (peers != 1) return false
-    return !hasEndpoint || allowed == "0.0.0.0/32"
-}
-
-// Runtime copy of a DNS-only config: no Endpoint (nothing to resolve or handshake with) and no keepalive.
-internal fun wgDnsOnlyConfig(text: String): String {
-    val out = ArrayList<String>()
-    for (ln in text.split("\n")) {
-        val low = ln.trim().lowercase()
-        if (low.startsWith("endpoint") || low.startsWith("persistentkeepalive")) continue
-        out.add(ln)
-    }
-    return out.joinToString("\n")
-}
-
-// A game-only tunnel has to carry all traffic of the selected apps. A peer whose AllowedIPs lists only
-// a few addresses leaves the game servers and the DNS server outside the tunnel, so the game loses its
-// network right after it starts even though the tunnel shows as connected. Single-peer configs only.
-internal fun wgEnsureFullRoute(text: String): String {
-    val lines = text.split("\n")
-    var peers = 0
-    var v6 = false
-    for (ln in lines) {
-        val t = ln.trim().lowercase()
-        if (t == "[peer]") peers++
-        if (t.startsWith("address") && t.contains(":")) v6 = true
-    }
-    if (peers != 1) return text
-    val full = if (v6) "AllowedIPs = 0.0.0.0/0, ::/0" else "AllowedIPs = 0.0.0.0/0"
-    val out = ArrayList<String>()
-    var inPeer = false
-    var seen = false
-    for (ln in lines) {
-        val t = ln.trim()
-        if (t.startsWith("[")) {
-            if (inPeer && !seen) out.add(full)
-            inPeer = t.equals("[Peer]", ignoreCase = true)
-            seen = false
-            out.add(ln)
-            continue
-        }
-        if (inPeer && t.lowercase().startsWith("allowedips")) {
-            seen = true
-            val v = t.substringAfter("=", "")
-            if (!v.contains("0.0.0.0/0")) {
-                out.add(full)
-                continue
+internal fun MainActivity.testDnsAddrs(addrs: List<Pair<String, String>>, onDone: (String) -> Unit) {
+    runBg {
+        val sb = StringBuilder()
+        for (a in addrs) {
+            var best = -1
+            for (k in 0 until 2) {
+                val ms = dnsPingMs(a.second, 2000)
+                if (ms >= 0 && (best < 0 || ms < best)) best = ms
             }
+            sb.append(a.first).append(":  ").append(a.second).append("  →  ")
+            sb.append(if (best >= 0) "$best ms ✅" else "✕").append("\n")
         }
-        out.add(ln)
+        ui { onDone(sb.toString().trim()) }
     }
-    if (inPeer && !seen) out.add(full)
-    return out.joinToString("\n")
 }
 
-// Mobile links often have a path MTU below 1420: a tunnel MTU that is too large gets fragmented or
-// dropped, which games feel as packet loss and ping spikes. This only lowers an MTU that is too high
-// (1380 for WireGuard, 1280 for AmneziaWG, whose obfuscation adds overhead) and never raises one.
-// It also keeps PersistentKeepalive within 1..25 s so mobile NATs do not drop the UDP mapping.
-internal fun wgTuneForGaming(text: String): String {
-    val mtuCap = if (isAwgConfig(text)) 1280 else 1380
-    val out = ArrayList<String>()
-    var section = ""
-    for (ln in text.split("\n")) {
-        val t = ln.trim()
-        if (t.startsWith("[")) {
-            section = t.lowercase()
-            out.add(ln)
-            continue
+// True once the server has answered the handshake. PersistentKeepalive makes the tunnel start one
+// right away, so no handshake within a few seconds means wrong endpoint/key or a closed UDP port.
+internal fun wgLatestHandshake(be: GoBackend, tun: Tunnel): Long {
+    var best = 0L
+    try {
+        val st = be.getStatistics(tun)
+        for (k in st.peers()) {
+            val ps = st.peer(k)
+            if (ps != null && ps.latestHandshakeEpochMillis() > best) best = ps.latestHandshakeEpochMillis()
         }
-        val key = t.substringBefore("=", "").trim().lowercase()
-        val value = t.substringAfter("=", "").trim()
-        if (section == "[interface]" && key == "mtu") {
-            val v = value.toIntOrNull()
-            if (v != null && v > mtuCap) {
-                out.add("MTU = " + mtuCap)
-                continue
-            }
-        } else if (section == "[peer]" && key == "persistentkeepalive") {
-            val v = value.toIntOrNull()
-            if (v == null || v < 1 || v > 25) {
-                out.add("PersistentKeepalive = 25")
-                continue
-            }
-        }
-        out.add(ln)
+    } catch (_: Throwable) {
     }
-    return out.joinToString("\n")
+    return best
 }
 
-// Mobile NATs drop idle UDP mappings; a peer without PersistentKeepalive then stops receiving.
-internal fun wgEnsureKeepalive(text: String): String {
-    val src = text.split("\n")
-    val needs = ArrayList<Boolean>()
-    var cur = -1
-    for (ln in src) {
-        val t = ln.trim().lowercase()
-        if (t == "[peer]") {
-            cur++
-            needs.add(true)
-        } else if (cur >= 0 && t.startsWith("persistentkeepalive")) {
-            needs[cur] = false
+internal fun waitWgHandshake(be: GoBackend, tun: Tunnel, timeoutMs: Long): Boolean {
+    val end = System.currentTimeMillis() + timeoutMs
+    while (System.currentTimeMillis() < end) {
+        if (wgLatestHandshake(be, tun) > 0L) return true
+        try {
+            Thread.sleep(500)
+        } catch (_: Throwable) {
         }
-    }
-    val out = ArrayList<String>()
-    var idx = -1
-    for (ln in src) {
-        out.add(ln)
-        if (ln.trim().equals("[Peer]", ignoreCase = true)) {
-            idx++
-            if (needs[idx]) out.add("PersistentKeepalive = 25")
-        }
-    }
-    return out.joinToString("\n")
-}
-
-
-// ----- Endpoint given as a hostname (e.g. vpnjantit: ae1.vpnjantit.com:1024) -----
-// The saved .conf keeps the hostname exactly as written. Only the in-memory runtime copy gets a numeric
-// Endpoint: the name is resolved here (IPv4 first, retried, then DNS-over-HTTPS when the phone's own
-// resolver cannot answer), so the tunnel does not depend on the resolver while it connects.
-// If nothing can be resolved the hostname is left as it was.
-internal fun wgHostEndpointParts(value: String): Pair<String, String>? {
-    val v = value.trim()
-    if (v.isEmpty() || v.startsWith("[")) return null
-    val i = v.lastIndexOf(':')
-    if (i <= 0 || i == v.length - 1) return null
-    val host = v.substring(0, i).trim()
-    val port = v.substring(i + 1).trim()
-    if (port.toIntOrNull() == null) return null
-    if (!Regex("^[A-Za-z0-9._-]+\$").matches(host)) return null
-    val p = host.split(".")
-    if (p.size == 4 && p.all { it.toIntOrNull() != null }) return null
-    return Pair(host, port)
-}
-
-internal fun wgHasHostEndpoint(text: String): Boolean {
-    for (ln in text.split("\n")) {
-        val t = ln.trim()
-        if (t.substringBefore("=", "").trim().lowercase() == "endpoint" &&
-            wgHostEndpointParts(t.substringAfter("=", "")) != null
-        ) return true
     }
     return false
 }
 
-internal fun wgLookupIpv4(host: String): String? {
-    for (k in 0 until 3) {
+// One line for the active row: how often the watchdog had to bring the tunnel back, and why.
+internal fun wgHealthInfo(): String =
+    if (WgState.reconnects > 0 || WgState.lastDrop.isNotEmpty()) {
+        "\n🔁 " + WgState.reconnects + " بار دوباره وصل شد" +
+            (if (WgState.lastDrop.isNotEmpty()) " • " + WgState.lastDrop else "")
+    } else {
+        ""
+    }
+
+internal fun MainActivity.wgBackendGet(): GoBackend {
+    var b = wgBackend
+    if (b == null) {
+        b = GoBackend(applicationContext)
+        wgBackend = b
+    }
+    return b
+}
+
+internal fun MainActivity.connectWg(base: String) {
+    if (V2VpnService.running || V2VpnService.busy) {
+        toast("برای جلوگیری از اختلال، ابتدا EzzGaming را دستی قطع کن؛ سپس Pro Gaming را وصل کن.")
+        return
+    }
+    if (wgBusy) return
+    pendingWg = base
+    val prep = try {
+        VpnService.prepare(this)
+    } catch (_: Exception) {
+        null
+    }
+    if (prep != null) {
         try {
-            for (a in InetAddress.getAllByName(host)) {
-                if (a is java.net.Inet4Address) {
-                    val ip = a.hostAddress
-                    if (ip != null) return ip
+            startActivityForResult(prep, 4720)
+        } catch (_: Exception) {
+            toast("این دستگاه از VPN محلی پشتیبانی نمی‌کند.")
+        }
+    } else {
+        doConnectWg(base)
+    }
+}
+
+internal fun MainActivity.doConnectWg(base: String) {
+    val text = readCfg("wg", base + ".conf")
+    if (text.isEmpty()) {
+        toast("کانفیگ پیدا نشد.")
+        return
+    }
+    wgBusy = true
+    toast(Tr.t("در حال اتصال به") + " " + base + "…")
+    vpnRefresh?.invoke()
+    WgState.wanted = false
+    runBg {
+        var err = ""
+        var noGames = false
+        var noReply = false
+        var isAwg = false
+        var dnsOnly = false
+        try {
+            val scoped = try {
+                wgScopedConfig(base, text)
+            } catch (_: Throwable) {
+                null
+            }
+            if (scoped == null) {
+                noGames = true
+            } else {
+                isAwg = isAwgConfig(scoped)
+                dnsOnly = wgIsDnsOnly(scoped)
+                // Only one tunnel at a time, whichever engine it runs on.
+                wgStopCurrent()
+                var replied: Boolean
+                if (isAwg) {
+                    val cfg = AwgEngine.parse(scoped)
+                    val be = AwgEngine.backend(applicationContext)
+                    val tun = AwgTun(base)
+                    be.setState(tun, org.amnezia.awg.backend.Tunnel.State.UP, cfg)
+                    // Junk packets make the first handshake a little slower than plain WireGuard.
+                    replied = dnsOnly || awgWaitHandshake(be, tun, 12000L)
+                    if (replied) {
+                        AwgEngine.tunnel = tun
+                    } else {
+                        try {
+                            be.setState(tun, org.amnezia.awg.backend.Tunnel.State.DOWN, null)
+                        } catch (_: Throwable) {
+                        }
+                        AwgEngine.tunnel = null
+                    }
+                } else {
+                    val cfg = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+                    val be = wgBackendGet()
+                    val tun = WgTun(base)
+                    be.setState(tun, Tunnel.State.UP, cfg)
+                    replied = dnsOnly || waitWgHandshake(be, tun, 9000L)
+                    if (replied) {
+                        wgTunnel = tun
+                    } else {
+                        try {
+                            be.setState(tun, Tunnel.State.DOWN, null)
+                        } catch (_: Throwable) {
+                        }
+                        wgTunnel = null
+                    }
+                }
+                if (!replied) {
+                    // Do not show "connected" for a tunnel that carries nothing.
+                    WgState.up = false
+                    WgState.activeName = ""
+                    WgState.awg = false
+                    WgState.dnsOnly = false
+                    noReply = true
+                } else {
+                    // the other engine holds no tunnel any more
+                    if (isAwg) wgTunnel = null else AwgEngine.tunnel = null
+                    WgState.awg = isAwg
+                    WgState.dnsOnly = dnsOnly
+                    WgState.activeName = base
+                    WgState.up = true
+                    WgState.baseName = base
+                    WgState.cfgText = scoped
+                    WgState.upSince = System.currentTimeMillis()
+                    WgState.attempts = 0
+                    WgState.reconnects = 0
+                    WgState.lastDrop = ""
+                    WgState.wanted = true
+                    // keep the process alive (foreground) while the tunnel is up
+                    try {
+                        startForegroundService(Intent(this, WgKeepService::class.java).putExtra("name", base))
+                    } catch (_: Throwable) {
+                    }
+                    try {
+                        val pk = wgIncludePackages(base)
+                        val labels = loadApps().filter { pk.contains(it.pkg) }.map { it.label }
+                        wgAppsInfo[base] = if (labels.isEmpty()) "" else labels.take(4).joinToString("، ") + (if (labels.size > 4) " +" + (labels.size - 4) else "")
+                    } catch (_: Throwable) {
+                    }
                 }
             }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            err = (e.message ?: e.javaClass.simpleName).take(160)
         }
-        try {
-            Thread.sleep(600)
-        } catch (_: Throwable) {
-        }
-    }
-    val urls = listOf(
-        "https://1.1.1.1/dns-query?name=" + host + "&type=A&ct=application/dns-json",
-        "https://8.8.8.8/resolve?name=" + host + "&type=A"
-    )
-    for (u in urls) {
-        val body = httpGet(u, 4000, 20000)
-        if (body == null) continue
-        try {
-            val ans = org.json.JSONObject(body).optJSONArray("Answer")
-            if (ans == null) continue
-            for (i in 0 until ans.length()) {
-                val o = ans.getJSONObject(i)
-                val d = o.optString("data")
-                if (o.optInt("type") == 1 && Regex("^\\d{1,3}(\\.\\d{1,3}){3}\$").matches(d)) return d
+        ui {
+            wgBusy = false
+            if (noGames) {
+                toast(Tr.t("بازی‌ای پیدا نشد. یک بازی نصب کن یا آن را در تب بازی‌ها علاقه‌مند کن."))
+            } else if (noReply) {
+                if (isAwg) {
+                    toast(Tr.t("سرور AmneziaWG جواب نداد (Endpoint یا کلید اشتباه، پورت UDP بسته، یا پارامترهای Jc/S1/H1 با سرور یکی نیست). این کانفیگ را عوض کن."))
+                } else {
+                    toast(Tr.t("سرور وایرگارد جواب نداد (Endpoint یا کلید اشتباه، یا پورت UDP بسته). این کانفیگ را عوض کن."))
+                }
+            } else if (err.isEmpty()) {
+                toast(Tr.t("متصل شد"))
+            } else {
+                toast(Tr.t(if (isAwg) "خطای AmneziaWG:" else "خطای وایرگارد:") + " " + hideAddr(err))
             }
-        } catch (_: Throwable) {
+            vpnRefresh?.invoke()
+            homeRefresh?.invoke()
+            launchPendingSoon(300)
         }
     }
-    return null
 }
 
-internal fun wgResolveEndpoints(text: String): String {
-    val out = ArrayList<String>()
-    var inPeer = false
-    for (ln in text.split("\n")) {
-        val t = ln.trim()
-        if (t.startsWith("[")) {
-            inPeer = t.equals("[Peer]", ignoreCase = true)
-            out.add(ln)
-            continue
+internal fun MainActivity.disconnectWg() {
+    if (wgBusy) return
+    WgState.wanted = false
+    wgBusy = true
+    runBg {
+        wgStopCurrent()
+        WgState.up = false
+        WgState.activeName = ""
+        WgState.awg = false
+        WgState.dnsOnly = false
+        try {
+            stopService(Intent(this, WgKeepService::class.java))
+        } catch (_: Throwable) {
         }
-        if (inPeer && t.substringBefore("=", "").trim().lowercase() == "endpoint") {
-            val parts = wgHostEndpointParts(t.substringAfter("=", ""))
-            if (parts != null) {
-                val ip = wgLookupIpv4(parts.first)
-                if (ip != null) {
-                    out.add("Endpoint = " + ip + ":" + parts.second)
-                    continue
+        ui {
+            wgBusy = false
+            toast(Tr.t("وایرگارد قطع شد"))
+            vpnRefresh?.invoke()
+            homeRefresh?.invoke()
+        }
+    }
+}
+
+internal fun MainActivity.smallBtn(text: String, filled: Boolean, action: () -> Unit): TextView {
+    val b = button(text, filled, action)
+    b.textSize = 12.5f
+    b.setPadding(dp(14), dp(8), dp(14), dp(8))
+    return b
+}
+
+internal fun MainActivity.buildVpn() {
+    // ---------------- WireGuard
+    section("WireGuard Gaming")
+    val wCard = card()
+    val wStatus = label("", 15f, white, true, false)
+    wCard.addView(wStatus)
+    val nameIn = input("نام کانفیگ (اختیاری)")
+    wCard.addView(nameIn, vlp(8, 8))
+    val wRow = LinearLayout(this)
+    wRow.orientation = LinearLayout.HORIZONTAL
+    val bFile = button("📁 افزودن فایل .conf / .ezz", false) {
+        importName = nameIn.text.toString()
+        pickFile(4730)
+    }
+    val bClip = button("📋 از کلیپ‌بورد", false) {
+        val txt = clipText().trim()
+        if (txt.isEmpty() || !(txt.contains("[Interface]") || EzzLock.isSealed(txt))) {
+            toast(Tr.t("کانفیگ وایرگارد در کلیپ‌بورد پیدا نشد."))
+        } else if (listCfg("wg").size >= 20) {
+            toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
+        } else {
+            importWg(txt, nameIn.text.toString()) { vpnRender?.invoke() }
+        }
+    }
+    val lp1 = LinearLayout.LayoutParams(0, WRAP, 1f)
+    lp1.marginEnd = dp(4)
+    val lp2 = LinearLayout.LayoutParams(0, WRAP, 1f)
+    lp2.marginStart = dp(4)
+    wRow.addView(bFile, lp1)
+    wRow.addView(bClip, lp2)
+    wCard.addView(wRow, vlp(0, 10))
+    val ghIn = input("لینک GitHub (اختیاری: فایل .conf، پوشه یا ریپو)")
+    wCard.addView(ghIn, vlp(0, 8))
+    val bGh = button("دریافت سرور گیمینگ وایرگارد", true) {
+        val gl = ghIn.text.toString().trim()
+        if (gl.isEmpty()) importDefaultWgList { vpnRender?.invoke() }
+        else importFromGithub(gl, nameIn.text.toString()) {
+            ghIn.setText("")
+            vpnRender?.invoke()
+        }
+    }
+    wCard.addView(bGh, vlp(0, 10))
+    val wList = LinearLayout(this)
+    wList.orientation = LinearLayout.VERTICAL
+    wCard.addView(wList)
+    content.addView(wCard, vlp(0, 4))
+
+    var wKey = ""
+    fun renderW(force: Boolean) {
+        val up = WgState.up
+        val act = WgState.activeName
+        wStatus.text = if (wgBusy) "⏳ ..." else if (up) Tr.t("🟢 متصل: ") + act else Tr.t("⚪ قطع")
+        wStatus.setTextColor(if (up) good else white)
+        val acct = subWgNameSet()
+        val dnsWg = dnsWgNameSet()
+        val names = listCfg("wg").filter { !acct.contains(it.removeSuffix(".conf")) && !dnsWg.contains(it.removeSuffix(".conf")) }
+        val key = "$up|$act|$wgBusy|" + names.joinToString(",") + "|" + wgTestRes.toString() + "|" + (System.currentTimeMillis() / 3600000L)
+        if (!force && key == wKey) return
+        wKey = key
+        wList.removeAllViews()
+        if (names.isEmpty()) {
+            wList.addView(label("هنوز کانفیگی اضافه نشده.", 12.5f, muted))
+            return
+        }
+        for (file in names) {
+            val base = file.removeSuffix(".conf")
+            val isActive = up && act == base
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.HORIZONTAL
+            row.gravity = Gravity.CENTER_VERTICAL
+            row.setPadding(dp(12), dp(10), dp(12), dp(10))
+            row.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
+            val col = LinearLayout(this)
+            col.orientation = LinearLayout.VERTICAL
+            col.addView(label((if (isActive) "$base  ✓" else base) + (if (wgIsAwgBase(base)) "  🛡 AWG" else "") + (if (isNewKey("wg", base)) "  🆕 جدید" else ""), 13.5f, white, true, false))
+            val gi = if (isActive) ((wgAppsInfo[base] ?: "") + wgHealthInfo()) else ""
+            if (gi.isNotEmpty()) col.addView(label("🎮 " + gi, 11.5f, muted, false, false))
+            val tr = wgTestRes[base] ?: ""
+            if (tr.isNotEmpty()) col.addView(label(tr, 11.5f, white, false, false), vlp(2, 2))
+            row.addView(col, LinearLayout.LayoutParams(0, WRAP, 1f))
+            val tbtn = smallBtn("🧪 تست", false) { testWg(base) }
+            val tlp = LinearLayout.LayoutParams(WRAP, WRAP)
+            tlp.marginEnd = dp(6)
+            row.addView(tbtn, tlp)
+            row.addView(smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
+                if (isActive) disconnectWg() else connectWg(base)
+            })
+            val del = smallBtn("🗑", false) {
+                if (isActive) disconnectWg()
+                deleteCfg("wg", file)
+                renderW(true)
+            }
+            val dlp = LinearLayout.LayoutParams(WRAP, WRAP)
+            dlp.marginStart = dp(6)
+            row.addView(del, dlp)
+            wList.addView(row, vlp(0, 6))
+        }
+    }
+
+    val renderV = buildV2Section()
+
+    // ---------------- Custom DNS (IPv4 / IPv6)
+    section("CUSTOM DNS • IPv4 / IPv6")
+    val cCard = card()
+    val cName = input("نام (اختیاری)")
+    val c4a = input("IPv4 اصلی  (مثل 1.1.1.1)")
+    val c4b = input("IPv4 دوم  (مثل 1.0.0.1)")
+    val c6a = input("IPv6 اصلی  (مثل 2606:4700:4700::1111)")
+    val c6b = input("IPv6 دوم  (مثل 2606:4700:4700::1001)")
+    for (e in arrayOf(c4a, c4b, c6a, c6b)) {
+        e.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        e.textDirection = View.TEXT_DIRECTION_LTR
+    }
+    cCard.addView(cName, vlp(8, 0))
+    cCard.addView(c4a, vlp(8, 0))
+    cCard.addView(c4b, vlp(8, 0))
+    cCard.addView(c6a, vlp(8, 0))
+    cCard.addView(c6b, vlp(8, 0))
+
+    fun collect(): List<Pair<String, String>>? {
+        val out = ArrayList<Pair<String, String>>()
+        val fields = arrayOf(
+            Pair("IPv4 #1", c4a), Pair("IPv4 #2", c4b),
+            Pair("IPv6 #1", c6a), Pair("IPv6 #2", c6b)
+        )
+        for ((i, f) in fields.withIndex()) {
+            val v = f.second.text.toString().trim()
+            if (v.isEmpty()) continue
+            val ok = if (i < 2) isIpv4(v) else isIpv6(v)
+            if (!ok) {
+                toast(f.first + ": " + Tr.t("آدرس نامعتبر است"))
+                return null
+            }
+            out.add(Pair(f.first, v))
+        }
+        if (out.isEmpty()) {
+            toast(Tr.t("حداقل یک آدرس DNS وارد کن"))
+            return null
+        }
+        return out
+    }
+
+    val cRes = label("", 12.5f, white, false, false)
+    val cRow = LinearLayout(this)
+    cRow.orientation = LinearLayout.HORIZONTAL
+    val bTest = button("🧪 تست آدرس‌ها", false) {
+        val a = collect()
+        if (a != null) {
+            cRes.text = Tr.t("در حال تست…")
+            testDnsAddrs(a) { cRes.text = it }
+        }
+    }
+    val bSave = button("💾 ذخیره‌ی DNS") {
+        val a = collect()
+        if (a != null) {
+            val lines = ArrayList<List<String>>(customDnsLines())
+            if (lines.size >= 20) {
+                toast(Tr.t("حداکثر ۲۰ DNS دلخواه قابل ذخیره است."))
+            } else {
+                var nm = cName.text.toString().trim().replace("\t", " ").replace("\n", " ").take(24)
+                if (nm.isEmpty()) nm = "Custom " + (lines.size + 1)
+                lines.add(
+                    listOf(
+                        nm,
+                        c4a.text.toString().trim(), c4b.text.toString().trim(),
+                        c6a.text.toString().trim(), c6b.text.toString().trim()
+                    )
+                )
+                writeCustomDns(lines)
+                toast(Tr.t("DNS ذخیره شد"))
+                vpnRender?.invoke()
+            }
+        }
+    }
+    val lpT = LinearLayout.LayoutParams(0, WRAP, 1f)
+    lpT.marginEnd = dp(4)
+    val lpS = LinearLayout.LayoutParams(0, WRAP, 1f)
+    lpS.marginStart = dp(4)
+    cRow.addView(bTest, lpT)
+    cRow.addView(bSave, lpS)
+    cCard.addView(cRow, vlp(10, 6))
+    cCard.addView(cRes, vlp(0, 6))
+    val cList = LinearLayout(this)
+    cList.orientation = LinearLayout.VERTICAL
+    cCard.addView(cList)
+    content.addView(cCard, vlp(0, 4))
+
+    var cKey = ""
+    fun renderC(force: Boolean) {
+        val lines = customDnsLines()
+        val key = lines.joinToString("|") { it.joinToString(",") } + "|" +
+            DnsVpnService.running + "|" + DnsVpnService.activeName
+        if (!force && key == cKey) return
+        cKey = key
+        cList.removeAllViews()
+        if (lines.isEmpty()) {
+            cList.addView(label("هنوز DNS دلخواهی ذخیره نشده.", 12.5f, muted))
+            return
+        }
+        for ((idx, ln) in lines.withIndex()) {
+            val nm = ln[0]
+            val addrs = ArrayList<String>()
+            for (j in 1..4) if (ln[j].isNotBlank()) addrs.add(ln[j])
+            val provName = "★ " + nm
+            val isActive = DnsVpnService.running && DnsVpnService.activeName == provName
+            val box = LinearLayout(this)
+            box.orientation = LinearLayout.VERTICAL
+            box.setPadding(dp(12), dp(10), dp(12), dp(10))
+            box.background = rounded(if (isActive) accentAlpha(35) else panel2, 12, if (isActive) accent else stroke)
+            box.addView(label(if (isActive) "$nm  ✓" else nm, 13.5f, white, true, false))
+            box.addView(label(addrs.joinToString("\n"), 11.5f, muted, false, false))
+            val br = LinearLayout(this)
+            br.orientation = LinearLayout.HORIZONTAL
+            val b1 = smallBtn(if (isActive) "قطع اتصال" else "اتصال", !isActive) {
+                if (isActive) {
+                    stopDns()
+                } else {
+                    val pr = dnsProviders.firstOrNull { it.name == provName }
+                    if (pr != null) connectDns(pr)
                 }
             }
+            val b2 = smallBtn("🧪", false) {
+                val pairs = ArrayList<Pair<String, String>>()
+                for (a in addrs) pairs.add(Pair(if (a.contains(":")) "IPv6" else "IPv4", a))
+                cRes.text = Tr.t("در حال تست…")
+                testDnsAddrs(pairs) { cRes.text = it }
+            }
+            val b3 = smallBtn("🗑", false) {
+                if (isActive) stopDns()
+                val l = ArrayList<List<String>>(customDnsLines())
+                if (idx < l.size) l.removeAt(idx)
+                writeCustomDns(l)
+                renderC(true)
+            }
+            val m1 = LinearLayout.LayoutParams(WRAP, WRAP)
+            m1.marginEnd = dp(6)
+            val m2 = LinearLayout.LayoutParams(WRAP, WRAP)
+            m2.marginEnd = dp(6)
+            br.addView(b1, m1)
+            br.addView(b2, m2)
+            br.addView(b3)
+            box.addView(br, vlp(8, 0))
+            cList.addView(box, vlp(0, 6))
         }
-        out.add(ln)
     }
-    return out.joinToString("\n")
-}
 
-
-internal fun MainActivity.ghRepo(): String =
-    prefs.getString("ghRepo", "ezzdigi/EzzBoostGame") ?: "ezzdigi/EzzBoostGame"
-
-internal fun parseRepo(raw: String): String? {
-    val s = raw.trim().trimEnd('/')
-    val m = Regex("^(?:https?://)?(?:www\\.)?(?:github\\.com/)?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\\.git)?(?:/.*)?$").find(s) ?: return null
-    return m.groupValues[1] + "/" + m.groupValues[2]
-}
-
-
-// With an active subscription the server's DNS list (free + premium) is tried first.
-// V2Gaming / WireGuard account servers are not merged here: they are downloaded into the
-// "اشتراک ویژه" tab only (see Subscription.kt). An expired code gets an HTTP error and the
-// free GitHub list is used.
-internal fun MainActivity.listUrls(file: String): List<String> {
-    val token = prefs.getString("subCode", "") ?: ""
-    val base = remoteUrls(ghRepo(), file)
-    if (file != "dns.json") return base
-    if (token.isEmpty() || !prefs.getBoolean("subActive", false)) return base
-    return listOf(SUB_API + "?a=list&f=" + file + "&t=" + android.net.Uri.encode(token)) + base
+    vpnRefresh = {
+        renderW(false)
+        renderC(false)
+        renderV(false)
+    }
+    vpnRender = {
+        renderW(true)
+        renderC(true)
+        renderV(true)
+    }
+    renderW(true)
+    renderC(true)
 }
