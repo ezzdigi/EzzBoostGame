@@ -286,7 +286,7 @@ internal fun MainActivity.fetchSubStatus(token: String): SubStatus {
 }
 
 // Drops comments, blank lines and keys the WireGuard library does not know; fixes spacing around "=".
-fun wgSanitize(text: String): String
+internal fun wgSanitize(text: String): String {
     val known = setOf(
         "privatekey", "publickey", "presharedkey", "address", "dns", "mtu", "listenport",
         "endpoint", "allowedips", "persistentkeepalive",
@@ -296,27 +296,30 @@ fun wgSanitize(text: String): String
     )
     val out = ArrayList<String>()
     var first = true
-    for (ln in text.replace("\r", "").split("\n")) {
-        val t = ln.trim()
-        if (t.isEmpty() || t.startsWith("#") || t.startsWith(";")) continue
-        if (t.startsWith("[")) {
-            val h = t.trim('[', ']', ' ').lowercase()
-            if (h == "interface" || h == "peer") {
-                if (!first) out.add("")
-                first = false
-                out.add(if (h == "interface") "[Interface]" else "[Peer]")
+    text.replace("\r", "").split("\n").forEach { rawLine ->
+        val t = rawLine.trim()
+        if (t.isNotEmpty() && !t.startsWith("#") && !t.startsWith(";")) {
+            if (t.startsWith("[")) {
+                val h = t.trim('[', ']', ' ').lowercase()
+                if (h == "interface" || h == "peer") {
+                    if (!first) out.add("")
+                    first = false
+                    out.add(if (h == "interface") "[Interface]" else "[Peer]")
+                }
+            } else {
+                val i = t.indexOf('=')
+                if (i > 0) {
+                    val k = t.substring(0, i).trim()
+                    var v = t.substring(i + 1).trim()
+                    if (v.isNotEmpty() && known.contains(k.lowercase())) {
+                        if (k.lowercase() == "dns" || k.lowercase() == "address" || k.lowercase() == "allowedips") {
+                            v = v.split(",").joinToString(",") { it.trim() }
+                        }
+                        out.add(k + " = " + v)
+                    }
+                }
             }
-            continue
         }
-        val i = t.indexOf('=')
-        if (i <= 0) continue
-        val k = t.substring(0, i).trim()
-        var v = t.substring(i + 1).trim()
-        if (v.isEmpty() || !known.contains(k.lowercase())) continue
-        if (k.lowercase() == "dns" || k.lowercase() == "address" || k.lowercase() == "allowedips") {
-            v = v.split(",").joinToString(",") { it.trim() }
-        }
-        out.add(k + " = " + v)
     }
     return out.joinToString("\n")
 }
