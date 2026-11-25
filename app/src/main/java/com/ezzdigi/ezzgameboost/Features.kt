@@ -472,13 +472,15 @@ internal fun MainActivity.wgScopedConfig(base: String, text: String): String? {
     val ignoredBase = base
     // AmneziaWG configs (Jc/S1/H1... keys) take the same normalization; they run on the AmneziaWG
     // backend (Awg.kt), and the obfuscation keys are left exactly as the server gave them.
-    if (wgIsDnsOnly(text)) return wgDnsOnlyConfig(text)
+    if (wgIsDnsOnly(text)) return wgResolveEndpoints(wgDnsOnlyConfig(text))
     // Games only: the tunnel carries just the installed games and the favorited apps (plus apps whose
     // profile uses this config), everything else on the phone keeps using the normal connection.
     // With no game to include, null makes the caller show "no game found" instead of tunnelling nothing.
     val pkgs = scopedPackages(base)
     if (pkgs.isEmpty()) return null
-    return wgScopeToPackages(text, pkgs)
+    // Resolve host Endpoints before the backend starts. Some backend/device combinations do not
+    // resolve hostnames reliably at tunnel-start time. The saved config remains unchanged.
+    return wgResolveEndpoints(wgScopeToPackages(text, pkgs) ?: return null)
 }
 
 // A config used only to set the phone's DNS (e.g. a DNS-provider .conf): its peer has no Endpoint, or its
@@ -647,12 +649,17 @@ internal fun wgHasHostEndpoint(text: String): Boolean {
     return false
 }
 
-internal fun wgLookupIpv4(host: String): String? {
+internal fun wgLookupAddress(host: String): String? {
     for (k in 0 until 3) {
         try {
             for (a in InetAddress.getAllByName(host)) {
+                // Prefer IPv4 when available, but accept IPv6-only hostnames too.
                 if (a is java.net.Inet4Address) {
                     val ip = a.hostAddress
+                    if (ip != null) return ip
+                }
+                if (a is java.net.Inet6Address) {
+                    val ip = a.hostAddress?.substringBefore('%')
                     if (ip != null) return ip
                 }
             }
@@ -697,9 +704,9 @@ internal fun wgResolveEndpoints(text: String): String {
         if (inPeer && t.substringBefore("=", "").trim().lowercase() == "endpoint") {
             val parts = wgHostEndpointParts(t.substringAfter("=", ""))
             if (parts != null) {
-                val ip = wgLookupIpv4(parts.first)
+                val ip = wgLookupAddress(parts.first)
                 if (ip != null) {
-                    out.add("Endpoint = " + ip + ":" + parts.second)
+                    out.add("Endpoint = " + (if (ip.contains(':')) "[" + ip + "]" else ip) + ":" + parts.second)
                     continue
                 }
             }

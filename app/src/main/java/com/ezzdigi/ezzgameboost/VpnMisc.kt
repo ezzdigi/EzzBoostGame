@@ -441,7 +441,9 @@ internal fun MainActivity.wgScopeToPackages(text: String, pkgs: List<String>): S
     }
     if (!inserted) return null
     val joined = out.joinToString("\n")
-    return if (wgIsDnsOnly(joined)) wgDnsOnlyConfig(joined) else wgTuneForGaming(wgEnsureKeepalive(wgEnsureFullRoute(joined)))
+    val runtimeConfig = if (wgIsDnsOnly(joined)) wgDnsOnlyConfig(joined) else wgTuneForGaming(wgEnsureKeepalive(wgEnsureFullRoute(joined)))
+    // Resolve DNS Endpoint hosts before bringing up the tunnel, while keeping the imported file intact.
+    return wgResolveEndpoints(runtimeConfig)
 }
 
 internal fun MainActivity.testWg(base: String, speed: Boolean = true) {
