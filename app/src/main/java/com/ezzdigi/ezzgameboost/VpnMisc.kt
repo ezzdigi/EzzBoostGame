@@ -399,17 +399,24 @@ internal fun MainActivity.importWg(raw: String, wantedName: String, onDone: () -
     val text = if (EzzLock.isSealed(raw)) (EzzLock.open(raw) ?: "") else raw
     runBg {
         var err = ""
+        var useText = text.replace("\r", "").removePrefix("\uFEFF")
         try {
-            wgParseCheck(text)
-        } catch (e: Throwable) {
-            err = (e.message ?: e.javaClass.simpleName).take(120)
+            wgParseCheck(useText)
+        } catch (first: Throwable) {
+            val cleaned = wgSanitize(useText)
+            try {
+                wgParseCheck(cleaned)
+                useText = cleaned
+            } catch (second: Throwable) {
+                err = (second.message ?: first.message ?: second.javaClass.simpleName).take(120)
+            }
         }
         ui {
             if (err.isNotEmpty()) {
                 toast(Tr.t("کانفیگ وایرگارد نامعتبر است:") + " " + err)
             } else {
                 val file = uniqueFile("wg", cleanName(wantedName, "wg"), ".conf")
-                writeCfg("wg", file, text)
+                writeCfg("wg", file, useText)
                 toast(Tr.t("کانفیگ ذخیره شد"))
                 onDone()
             }
@@ -604,11 +611,18 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     val url = o.optString("url")
                     if (text.isEmpty() && url.isNotEmpty()) text = httpGet(githubRawUrl(url), 10000, 262144) ?: ""
                     if (!text.contains("[Interface]")) continue
+                    var useText = text.replace("\r", "").removePrefix("\uFEFF")
                     try {
-                        wgParseCheck(text)
+                        wgParseCheck(useText)
                     } catch (_: Throwable) {
-                        if (isAwgConfig(text)) awg++
-                        continue
+                        val cleaned = wgSanitize(useText)
+                        try {
+                            wgParseCheck(cleaned)
+                            useText = cleaned
+                        } catch (_: Throwable) {
+                            if (isAwgConfig(text)) awg++
+                            continue
+                        }
                     }
                     val base = cleanName(nm, "wg")
                     // never overwrite an account server with a free one of the same name
@@ -616,7 +630,7 @@ internal fun MainActivity.importDefaultWgList(silent: Boolean = false, onDone: (
                     listed.add(base)
                     val exists = java.io.File(cfgDir("wg"), base + ".conf").exists()
                     if (!exists && listCfg("wg").size >= 20) continue
-                    writeCfg("wg", base + ".conf", text)
+                    writeCfg("wg", base + ".conf", useText)
                     added++
                 }
             } catch (_: Throwable) {

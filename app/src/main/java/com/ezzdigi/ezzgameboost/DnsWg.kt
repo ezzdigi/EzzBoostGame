@@ -125,13 +125,19 @@ internal fun MainActivity.importDnsWg(raw: String, wantedName: String, onDone: (
         toast(Tr.t("حداکثر ۲۰ کانفیگ وایرگارد قابل ذخیره است."))
         return
     }
-    val clean = text.replace("\r", "").trim() + "\n"
+    var clean = text.replace("\r", "").removePrefix("\uFEFF").trim() + "\n"
     runBg {
         var err = ""
         try {
             wgParseCheck(clean)
-        } catch (e: Throwable) {
-            err = (e.message ?: e.javaClass.simpleName).take(120)
+        } catch (first: Throwable) {
+            val cleaned = wgSanitize(clean)
+            try {
+                wgParseCheck(cleaned)
+                clean = cleaned
+            } catch (second: Throwable) {
+                err = (second.message ?: first.message ?: second.javaClass.simpleName).take(120)
+            }
         }
         ui {
             if (err.isNotEmpty()) {
