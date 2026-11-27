@@ -226,8 +226,8 @@ internal fun MainActivity.buildGames() {
 
     val chipRow = LinearLayout(this)
     chipRow.orientation = LinearLayout.HORIZONTAL
-    val names = arrayOf("بازی‌ها", "علاقه‌مندی‌ها")
-    if (gamesFilter > 1) gamesFilter = 0
+    val names = arrayOf("بازی‌ها", "علاقه‌مندی‌ها", "همه برنامه‌ها")
+    if (gamesFilter > 2) gamesFilter = 0
     fun fillChips() {
         chipRow.removeAllViews()
         for (i in names.indices) {
@@ -318,7 +318,8 @@ internal fun MainActivity.renderGames(box: LinearLayout) {
             when (gamesFilter) {
                 0 -> it.isGame
                 1 -> favs.contains(it.pkg)
-                else -> true
+                2 -> true // Show all installed launchable apps so users can favorite any app.
+                else -> it.isGame
             }
     }
     val list = filtered.sortedWith(
