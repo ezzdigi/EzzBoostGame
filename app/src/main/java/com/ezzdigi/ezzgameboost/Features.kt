@@ -441,13 +441,15 @@ internal fun MainActivity.wgIncludePackages(base: String): List<String> = scoped
 
 internal fun MainActivity.scopedPackages(base: String?): List<String> {
     val set = LinkedHashSet<String>()
-    for (a in loadApps()) if (a.isGame) set.add(a.pkg)
-    set.addAll(favoriteSet())
+    val apps = loadApps()
+    val eligible = apps.filter { it.isGame || isAiApp(it.pkg, it.label) }.map { it.pkg }.toHashSet()
+    for (a in apps) if (a.isGame || isAiApp(a.pkg, a.label) { set.add(a.pkg) }
+    for (pkg in favoriteSet()) if (pkg in eligible) set.add(pkg)
     for (k in prefs.all.keys) {
         if (k.startsWith("prof_")) {
             val pkg = k.removePrefix("prof_")
             val p = getProfile(pkg)
-            if (p != null && base != null && p.wg == base) set.add(pkg)
+            if (pkg in eligible && p != null && base != null && p.wg == base) set.add(pkg)
         }
     }
     val out = ArrayList<String>()
