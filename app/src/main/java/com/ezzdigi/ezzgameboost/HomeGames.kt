@@ -219,11 +219,12 @@ internal fun MainActivity.appTile(pkg: String): View {
 internal fun isAiApp(packageName: String, label: String = ""): Boolean {
     val p = packageName.lowercase()
     val n = label.lowercase().trim()
-    // Only ChatGPT, Claude, and Microsoft Copilot are included in the AI category.
+    // Only ChatGPT, Claude, Gemini, and Microsoft Copilot are included in the AI category.
     return p.contains("openai") || p.contains("chatgpt") ||
         p.contains("claude") || p.contains("anthropic") ||
-        p.contains("copilot") || n.contains("chatgpt") ||
-        n.contains("claude") || n.contains("copilot")
+        p.contains("copilot") || p.contains("gemini") ||
+        n.contains("chatgpt") || n.contains("claude") ||
+        n.contains("copilot") || n.contains("gemini")
 }
 
 internal fun MainActivity.buildGames() {
