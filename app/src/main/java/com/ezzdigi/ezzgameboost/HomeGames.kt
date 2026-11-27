@@ -218,21 +218,24 @@ internal fun MainActivity.appTile(pkg: String): View {
 // AI apps are auto-detected by package/name; only these apps are added to the AI favorites scope.
 internal fun isAiApp(packageName: String, label: String = ""): Boolean {
     val p = packageName.lowercase()
-    val n = label.lowercase()
+    val n = label.lowercase().trim()
+    // Use recognizable AI brands; avoid short fragments that can match unrelated apps.
     val packageHints = listOf(
         "openai", "chatgpt", "gemini", "claude", "anthropic", "copilot",
-        "perplexity", "deepseek", "poe", "character.ai", "characterai",
-        "grok", "x.ai", "huggingface", "huggingchat", "qwen", "kimi",
-        "you.com", "writesonic", "jasper", "pi.ai", "inflection", "midjourney",
-        "stability.ai", "runway", "elevenlabs", "suno", "udio", "blackbox"
+        "perplexity", "deepseek", "character.ai", "characterai", "grok", "x.ai",
+        "huggingface", "huggingchat", "qwen", "kimi", "you.com", "writesonic",
+        "jasper", "pi.ai", "inflection", "midjourney", "stability.ai", "runway",
+        "elevenlabs", "suno", "udio", "blackbox"
     )
     val nameHints = listOf(
         "chatgpt", "gemini", "claude", "copilot", "perplexity", "deepseek",
-        "poe", "character ai", "grok", "huggingchat", "qwen", "kimi",
-        "you.com", "midjourney", "runway", "elevenlabs", "suno", "udio",
-        "blackbox ai", "ai assistant", "artificial intelligence"
+        "character ai", "grok", "huggingchat", "qwen", "kimi", "you.com",
+        "midjourney", "runway", "elevenlabs", "suno", "udio", "blackbox ai"
     )
-    return packageHints.any { p.contains(it) } || nameHints.any { n.contains(it) }
+    val standaloneAi = Regex("\\b(ai|artificial intelligence)\\b").containsMatchIn(n)
+    val standalonePoe = Regex("\\bpoe\\b").containsMatchIn(n)
+    return packageHints.any { p.contains(it) } || nameHints.any { n.contains(it) } ||
+        standaloneAi || standalonePoe
 }
 
 internal fun MainActivity.buildGames() {
