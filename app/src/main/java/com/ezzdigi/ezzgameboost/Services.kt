@@ -98,18 +98,25 @@ import java.util.concurrent.Executors
 // Everything else on the phone keeps its normal connection and DNS.
 internal fun dnsGamePackages(ctx: Context): List<String> {
     val set = LinkedHashSet<String>()
+    val eligible = HashSet<String>()
     try {
         val pm = ctx.packageManager
         val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
         for (ri in pm.queryIntentActivities(intent, 0)) {
             val ai = ri.activityInfo.applicationInfo
+            val pkg = ri.activityInfo.packageName
+            val label = ri.loadLabel(pm).toString()
             @Suppress("DEPRECATION")
             val game = ai.category == ApplicationInfo.CATEGORY_GAME ||
                 (ai.flags and ApplicationInfo.FLAG_IS_GAME) != 0
-            if (game) set.add(ri.activityInfo.packageName)
+            val aiApp = isAiApp(pkg, label)
+            if (game || aiApp) {
+                set.add(pkg)
+                eligible.add(pkg)
+            }
         }
         val fav = ctx.getSharedPreferences("ezzgameboost", Context.MODE_PRIVATE).getStringSet("fav", null)
-        if (fav != null) set.addAll(fav)
+        if (fav != null) for (pkg in fav) if (pkg in eligible) set.add(pkg)
     } catch (_: Throwable) {
     }
     set.remove(ctx.packageName)
