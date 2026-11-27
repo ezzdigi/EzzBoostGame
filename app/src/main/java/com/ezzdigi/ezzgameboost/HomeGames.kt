@@ -257,28 +257,22 @@ internal fun MainActivity.buildGames() {
 
 internal fun MainActivity.loadApps(): List<AppItem> {
     val pm = packageManager
+    val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
     val result = ArrayList<AppItem>()
     val seen = HashSet<String>()
-    // Enumerate installed apps (visibility is granted by QUERY_ALL_PACKAGES in the manifest),
-    // then keep apps that Android can launch. This is more reliable than launcher-intent
-    // enumeration alone for apps that were missing from the favorites picker.
-    @Suppress("DEPRECATION")
-    val installed = pm.getInstalledApplications(0)
-    for (ai in installed) {
-        val pkg = ai.packageName
-        if (pkg == packageName || !seen.add(pkg) || pm.getLaunchIntentForPackage(pkg) == null) continue
-        val label = try { pm.getApplicationLabel(ai).toString() } catch (_: Exception) { pkg }
+    for (ri in pm.queryIntentActivities(intent, 0)) {
+        val pkg = ri.activityInfo.packageName
+        if (pkg == packageName || !seen.add(pkg)) continue
+        val ai = ri.activityInfo.applicationInfo
         @Suppress("DEPRECATION")
         val game = ai.category == ApplicationInfo.CATEGORY_GAME ||
             (ai.flags and ApplicationInfo.FLAG_IS_GAME) != 0
-        result.add(AppItem(label, pkg, game))
+        result.add(AppItem(ri.loadLabel(pm).toString(), pkg, game))
     }
     autoFavoriteGames(result)
-    return result.sortedBy { it.label.lowercase() }
+    return result
 }
 
-// Every detected game is a favorite by default. A game is auto-added only once, so a
-// favorite the user removes stays removed.
 internal fun MainActivity.autoFavoriteGames(apps: List<AppItem>) {
     try {
         val done = HashSet<String>(prefs.getStringSet("favAuto", null) ?: emptySet<String>())
@@ -340,9 +334,12 @@ internal fun MainActivity.renderGames(box: LinearLayout) {
         box.addView(label(msg, 13f, muted))
         return
     }
-    // Display the complete launcher-app list; do not silently truncate after 60 items.
-    for (item in list) {
+    val shown = list.take(60)
+    for (item in shown) {
         box.addView(appRow(item, favs.contains(item.pkg), box), vlp(0, 8))
+    }
+    if (list.size > shown.size) {
+        box.addView(label("${list.size - shown.size} مورد دیگر… برای پیداکردن، جستجو کن.", 12f, muted))
     }
 }
 
