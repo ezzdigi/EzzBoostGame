@@ -215,6 +215,26 @@ internal fun MainActivity.appTile(pkg: String): View {
 
 // ----- GAMES ------------------------------------------------------------
 
+// AI apps are auto-detected by package/name; only these apps are added to the AI favorites scope.
+internal fun isAiApp(packageName: String, label: String = ""): Boolean {
+    val p = packageName.lowercase()
+    val n = label.lowercase()
+    val packageHints = listOf(
+        "openai", "chatgpt", "gemini", "claude", "anthropic", "copilot",
+        "perplexity", "deepseek", "poe", "character.ai", "characterai",
+        "grok", "x.ai", "huggingface", "huggingchat", "qwen", "kimi",
+        "you.com", "writesonic", "jasper", "pi.ai", "inflection", "midjourney",
+        "stability.ai", "runway", "elevenlabs", "suno", "udio", "blackbox"
+    )
+    val nameHints = listOf(
+        "chatgpt", "gemini", "claude", "copilot", "perplexity", "deepseek",
+        "poe", "character ai", "grok", "huggingchat", "qwen", "kimi",
+        "you.com", "midjourney", "runway", "elevenlabs", "suno", "udio",
+        "blackbox ai", "ai assistant", "artificial intelligence"
+    )
+    return packageHints.any { p.contains(it) } || nameHints.any { n.contains(it) }
+}
+
 internal fun MainActivity.buildGames() {
     section("GAME LIBRARY")
     val search = input("جستجوی بازی یا برنامه…")
@@ -226,7 +246,7 @@ internal fun MainActivity.buildGames() {
 
     val chipRow = LinearLayout(this)
     chipRow.orientation = LinearLayout.HORIZONTAL
-    val names = arrayOf("بازی‌ها", "علاقه‌مندی‌ها", "همه برنامه‌ها")
+    val names = arrayOf("بازی‌ها", "علاقه‌مندی‌ها", "هوش مصنوعی")
     if (gamesFilter > 2) gamesFilter = 0
     fun fillChips() {
         chipRow.removeAllViews()
@@ -270,7 +290,24 @@ internal fun MainActivity.loadApps(): List<AppItem> {
         result.add(AppItem(ri.loadLabel(pm).toString(), pkg, game))
     }
     autoFavoriteGames(result)
+    autoFavoriteAiApps(result)
     return result
+}
+
+internal fun MainActivity.autoFavoriteAiApps(apps: List<AppItem>) {
+    try {
+        val done = HashSet<String>(prefs.getStringSet("favAutoAI", null) ?: emptySet<String>())
+        val favs = HashSet<String>(favoriteSet())
+        var changed = false
+        for (a in apps) {
+            if (isAiApp(a.pkg, a.label) && done.add(a.pkg)) {
+                favs.add(a.pkg)
+                changed = true
+            }
+        }
+        if (changed) prefs.edit().putStringSet("favAutoAI", done).putStringSet("fav", favs).apply()
+    } catch (_: Throwable) {
+    }
 }
 
 internal fun MainActivity.autoFavoriteGames(apps: List<AppItem>) {
@@ -315,8 +352,8 @@ internal fun MainActivity.renderGames(box: LinearLayout) {
         (q.isEmpty() || it.label.lowercase().contains(q)) &&
             when (gamesFilter) {
                 0 -> it.isGame
-                1 -> favs.contains(it.pkg)
-                2 -> true // Show all installed launchable apps so users can favorite any app.
+                1 -> favs.contains(it.pkg) && (it.isGame || isAiApp(it.pkg, it.label))
+                2 -> isAiApp(it.pkg, it.label)
                 else -> it.isGame
             }
     }
