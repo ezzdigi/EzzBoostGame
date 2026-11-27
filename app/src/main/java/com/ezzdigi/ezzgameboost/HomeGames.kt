@@ -257,20 +257,24 @@ internal fun MainActivity.buildGames() {
 
 internal fun MainActivity.loadApps(): List<AppItem> {
     val pm = packageManager
-    val intent = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
     val result = ArrayList<AppItem>()
     val seen = HashSet<String>()
-    for (ri in pm.queryIntentActivities(intent, 0)) {
-        val pkg = ri.activityInfo.packageName
-        if (pkg == packageName || !seen.add(pkg)) continue
-        val ai = ri.activityInfo.applicationInfo
+    // Enumerate installed apps (visibility is granted by QUERY_ALL_PACKAGES in the manifest),
+    // then keep apps that Android can launch. This is more reliable than launcher-intent
+    // enumeration alone for apps that were missing from the favorites picker.
+    @Suppress("DEPRECATION")
+    val installed = pm.getInstalledApplications(0)
+    for (ai in installed) {
+        val pkg = ai.packageName
+        if (pkg == packageName || !seen.add(pkg) || pm.getLaunchIntentForPackage(pkg) == null) continue
+        val label = try { pm.getApplicationLabel(ai).toString() } catch (_: Exception) { pkg }
         @Suppress("DEPRECATION")
         val game = ai.category == ApplicationInfo.CATEGORY_GAME ||
             (ai.flags and ApplicationInfo.FLAG_IS_GAME) != 0
-        result.add(AppItem(ri.loadLabel(pm).toString(), pkg, game))
+        result.add(AppItem(label, pkg, game))
     }
     autoFavoriteGames(result)
-    return result
+    return result.sortedBy { it.label.lowercase() }
 }
 
 // Every detected game is a favorite by default. A game is auto-added only once, so a
