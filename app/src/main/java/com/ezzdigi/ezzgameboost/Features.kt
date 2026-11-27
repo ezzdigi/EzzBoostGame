@@ -443,7 +443,7 @@ internal fun MainActivity.scopedPackages(base: String?): List<String> {
     val set = LinkedHashSet<String>()
     val apps = loadApps()
     val eligible = apps.filter { it.isGame || isAiApp(it.pkg, it.label) }.map { it.pkg }.toHashSet()
-    for (a in apps) if (a.isGame || isAiApp(a.pkg, a.label) { set.add(a.pkg) }
+    for (a in apps) if (a.isGame || isAiApp(a.pkg, a.label)) set.add(a.pkg
     for (pkg in favoriteSet()) if (pkg in eligible) set.add(pkg)
     for (k in prefs.all.keys) {
         if (k.startsWith("prof_")) {
