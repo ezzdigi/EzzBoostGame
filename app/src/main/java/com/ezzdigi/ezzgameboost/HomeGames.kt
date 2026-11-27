@@ -219,23 +219,11 @@ internal fun MainActivity.appTile(pkg: String): View {
 internal fun isAiApp(packageName: String, label: String = ""): Boolean {
     val p = packageName.lowercase()
     val n = label.lowercase().trim()
-    // Use recognizable AI brands; avoid short fragments that can match unrelated apps.
-    val packageHints = listOf(
-        "openai", "chatgpt", "gemini", "claude", "anthropic", "copilot",
-        "perplexity", "deepseek", "character.ai", "characterai", "grok", "x.ai",
-        "huggingface", "huggingchat", "qwen", "kimi", "you.com", "writesonic",
-        "jasper", "pi.ai", "inflection", "midjourney", "stability.ai", "runway",
-        "elevenlabs", "suno", "udio", "blackbox"
-    )
-    val nameHints = listOf(
-        "chatgpt", "gemini", "claude", "copilot", "perplexity", "deepseek",
-        "character ai", "grok", "huggingchat", "qwen", "kimi", "you.com",
-        "midjourney", "runway", "elevenlabs", "suno", "udio", "blackbox ai"
-    )
-    val standaloneAi = Regex("\\b(ai|artificial intelligence)\\b").containsMatchIn(n)
-    val standalonePoe = Regex("\\bpoe\\b").containsMatchIn(n)
-    return packageHints.any { p.contains(it) } || nameHints.any { n.contains(it) } ||
-        standaloneAi || standalonePoe
+    // Only ChatGPT, Claude, and Microsoft Copilot are included in the AI category.
+    return p.contains("openai") || p.contains("chatgpt") ||
+        p.contains("claude") || p.contains("anthropic") ||
+        p.contains("copilot") || n.contains("chatgpt") ||
+        n.contains("claude") || n.contains("copilot")
 }
 
 internal fun MainActivity.buildGames() {
