@@ -336,12 +336,9 @@ internal fun MainActivity.renderGames(box: LinearLayout) {
         box.addView(label(msg, 13f, muted))
         return
     }
-    val shown = list.take(60)
-    for (item in shown) {
+    // Display the complete launcher-app list; do not silently truncate after 60 items.
+    for (item in list) {
         box.addView(appRow(item, favs.contains(item.pkg), box), vlp(0, 8))
-    }
-    if (list.size > shown.size) {
-        box.addView(label("${list.size - shown.size} مورد دیگر… برای پیداکردن، جستجو کن.", 12f, muted))
     }
 }
 
